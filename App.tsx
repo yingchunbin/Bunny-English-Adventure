@@ -18,6 +18,30 @@ import { MapScreen } from './components/MapScreen';
 import { Map, ShoppingBag, ArrowLeft, Play, Flame, Zap, Trophy, Sprout, Droplets, Settings as SettingsIcon, Book, Languages, Mic, GraduationCap, AlertTriangle, Volume2, VolumeX, Home, Coins, Edit3, X } from 'lucide-react';
 import { playSFX, setVolumes, initAudio, playBGM, toggleBgmMute, isBgmMuted } from './utils/sound';
 
+// --- NEW: EXTENDED FARM ACHIEVEMENTS LIST ---
+const FARM_ACHIEVEMENTS: Mission[] = [
+    // Harvesting
+    { id: 'fa_h1', desc: 'Thánh Nhổ Củ: Thu hoạch 20 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
+    { id: 'fa_h2', desc: 'Bàn Tay Vàng: Thu hoạch 100 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
+    { id: 'fa_h3', desc: 'Vựa Lúa Miền Tây: Thu hoạch 500 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
+    
+    // Earning
+    { id: 'fa_e1', desc: 'Khởi Nghiệp: Kiếm 1,000 Vàng', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'WATER', amount: 10 }, completed: false, claimed: false },
+    { id: 'fa_e2', desc: 'Đại Gia Chân Đất: Kiếm 10,000 Vàng', type: 'EARN', category: 'ACHIEVEMENT', target: 10000, current: 0, reward: { type: 'FERTILIZER', amount: 5 }, completed: false, claimed: false },
+    { id: 'fa_e3', desc: 'Tỷ Phú Ruộng Đồng: Kiếm 50,000 Vàng', type: 'EARN', category: 'ACHIEVEMENT', target: 50000, current: 0, reward: { type: 'COIN', amount: 2000 }, completed: false, claimed: false },
+
+    // Feeding
+    { id: 'fa_f1', desc: 'Bảo Mẫu Gà Con: Cho ăn 10 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
+    { id: 'fa_f2', desc: 'Sen Của Boss: Cho ăn 50 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'WATER', amount: 15 }, completed: false, claimed: false },
+    
+    // Watering
+    { id: 'fa_w1', desc: 'Thợ Tưới Cây: Tưới 20 lần', type: 'WATER', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
+    { id: 'fa_w2', desc: 'Hô Mưa Gọi Gió: Tưới 100 lần', type: 'WATER', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'FERTILIZER', amount: 5 }, completed: false, claimed: false },
+
+    // Fertilizing
+    { id: 'fa_fer1', desc: 'Bác Sĩ Cây Trồng: Bón phân 10 lần', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 300 }, completed: false, claimed: false },
+];
+
 const App: React.FC = () => {
   const [userState, setUserState] = useState<UserState>(() => {
     const saved = localStorage.getItem('bunny_english_state');
@@ -32,12 +56,9 @@ const App: React.FC = () => {
                   id: i + 1, isUnlocked: i < 2, cropId: null, plantedAt: null, isWatered: false, hasWeed: false, hasBug: false, hasMysteryBox: false
               }));
           }
-          // Fix: Ensure livestock slots exist and handle legacy data
           if (!parsed.livestockSlots || !Array.isArray(parsed.livestockSlots) || parsed.livestockSlots.length === 0) {
-              // Default: 4 unlocked, 1 locked
               parsed.livestockSlots = [1,2,3,4].map(id => ({ id, isUnlocked: true, animalId: null, fedAt: null })).concat([{ id: 5, isUnlocked: false, animalId: null, fedAt: null }]);
           }
-          // Fix: Ensure machine slots exist and support unlimited expansion (start with 1 unlocked, 1 locked)
           if (!parsed.machineSlots || !Array.isArray(parsed.machineSlots) || parsed.machineSlots.length === 0) {
               parsed.machineSlots = [
                   { id: 1, machineId: null, isUnlocked: true, activeRecipeId: null, startedAt: null },
@@ -93,13 +114,35 @@ const App: React.FC = () => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [isBgmMutedState, setIsBgmMutedState] = useState(isBgmMuted);
   const [showAchievements, setShowAchievements] = useState(false); 
-  const [showReOnboardModal, setShowReOnboardModal] = useState(false); // NEW STATE FOR MODAL
+  const [showReOnboardModal, setShowReOnboardModal] = useState(false); 
 
   const hasInteracted = useRef(false);
 
   useEffect(() => {
     localStorage.setItem('bunny_english_state', JSON.stringify(userState));
   }, [userState]);
+
+  // INJECT NEW FARM ACHIEVEMENTS ON LOAD
+  useEffect(() => {
+    setUserState(prev => {
+        const currentMissions = prev.missions || [];
+        const existingIds = new Set(currentMissions.map(m => m.id));
+        const newMissions = [...currentMissions];
+        let hasNew = false;
+
+        FARM_ACHIEVEMENTS.forEach(ach => {
+            if (!existingIds.has(ach.id)) {
+                newMissions.push(ach);
+                hasNew = true;
+            }
+        });
+
+        if (hasNew) {
+            return { ...prev, missions: newMissions };
+        }
+        return prev;
+    });
+  }, []);
 
   useEffect(() => {
       const { sfxVolume, bgmVolume } = userState.settings;
@@ -187,11 +230,12 @@ const App: React.FC = () => {
     const levels = getLevels(grade, textbookId);
     const startId = levels[0]?.id || 0;
     
-    // Only init missions if not already present
     const initialMissions: Mission[] = userState.missions && userState.missions.length > 0 ? userState.missions : [
         { id: 'm0', desc: 'Hoàn thành bài học mới', type: 'LEARN', category: 'DAILY', target: 1, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
         { id: 'm1', desc: 'Thu hoạch 5 nông sản', type: 'HARVEST', category: 'DAILY', target: 5, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
-        { id: 'm2', desc: 'Kiếm được 500 vàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, reward: { type: 'WATER', amount: 10 }, completed: false, claimed: false }
+        { id: 'm2', desc: 'Kiếm được 500 vàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, reward: { type: 'WATER', amount: 10 }, completed: false, claimed: false },
+        // Inject Farm Achievements immediately for new users
+        ...FARM_ACHIEVEMENTS
     ];
 
     setUserState(prev => ({
