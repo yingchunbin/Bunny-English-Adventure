@@ -404,15 +404,14 @@ const App: React.FC = () => {
     if (activeLevel.type === 'GAME' && gameStep < 4) return <MemoryGame words={activeLevel.words} onComplete={handleGameComplete} />;
     
     // EXAM / LESSON LOGIC:
-    // If it's an EXAM, we jump straight to Quiz mode in Flashcards (or we could make it harder).
-    // For now, treats EXAM as a comprehensive review of that unit.
-    // The "Time Attack" game is now exclusively in the main menu.
+    // Ensure both LESSON and EXAM start with Learning mode to provide full knowledge and tips.
+    // The distinction for exams can be in the difficulty or strictness of the quiz phase later if needed.
 
     if (gameStep === 0) {
         return <FlashcardGame 
             words={activeLevel.words} 
             onComplete={() => handleGameComplete(activeLevel.words.length * 5)} 
-            initialMode={activeLevel.type === 'EXAM' || isReviewMode ? 'QUIZ' : 'LEARN'}
+            initialMode={isReviewMode ? 'QUIZ' : 'LEARN'} // Allow Learning for EXAMs too
         />;
     }
     if (gameStep === 1) return <TranslationGame sentences={activeLevel.sentences} onComplete={handleGameComplete} />;
@@ -468,7 +467,7 @@ const App: React.FC = () => {
     // Show tabs for both LESSON and EXAM types (EXAM acts as a review lesson now)
     if (!activeLevel || isReviewMode || (activeLevel.type !== 'LESSON' && activeLevel.type !== 'EXAM')) return null;
     const steps = [
-       { icon: <Book size={16}/>, label: activeLevel.type === 'EXAM' ? "Kiểm tra từ" : "Từ vựng", has: activeLevel.words.length > 0 },
+       { icon: <Book size={16}/>, label: "Từ vựng", has: activeLevel.words.length > 0 }, // Normalized label
        { icon: <Languages size={16}/>, label: "Dịch câu", has: activeLevel.sentences.length > 0 },
        { icon: <Mic size={16}/>, label: "Luyện nói", has: activeLevel.words.length > 0 },
        { icon: <GraduationCap size={16}/>, label: "Bí kíp", has: true }
