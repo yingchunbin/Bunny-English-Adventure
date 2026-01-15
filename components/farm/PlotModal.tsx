@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { FarmPlot, Crop } from '../../types';
 import { CROPS } from '../../data/farmData';
@@ -35,7 +36,7 @@ export const PlotModal: React.FC<PlotModalProps> = ({ plot, inventory, waterDrop
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-fadeIn">
-        <div className="bg-white rounded-[3rem] w-full max-sm relative overflow-hidden border-8 border-emerald-100 shadow-2xl flex flex-col">
+        <div className="bg-white rounded-[3rem] w-full max-w-sm relative overflow-hidden border-8 border-emerald-100 shadow-2xl flex flex-col">
             <button onClick={onClose} className="absolute top-6 right-6 text-slate-300 hover:text-slate-500 z-10 transition-colors"><X size={28}/></button>
             
             {/* Header with Thầy Rùa */}

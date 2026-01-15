@@ -9,11 +9,12 @@ interface FlashcardGameProps {
   words: Word[];
   onComplete: () => void;
   initialMode?: 'LEARN' | 'QUIZ';
+  backupWords?: Word[]; // Allow providing extra words for distractors
 }
 
 type QuestionType = 'EN_TO_VI' | 'VI_TO_EN' | 'AUDIO_TO_IMAGE';
 
-export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete, initialMode = 'LEARN' }) => {
+export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete, initialMode = 'LEARN', backupWords = [] }) => {
   if (!words || words.length === 0) {
       return (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
@@ -71,12 +72,22 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
       const nextType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
       setQuestionType(nextType);
 
-      // Distractors fix: handle case when words list is short
-      const distractors = words
+      // Create a pool of potential distractors
+      const fullPool = [...words, ...backupWords];
+      // Deduplicate by ID
+      const uniquePool = Array.from(new Map(fullPool.map(item => [item.id, item])).values());
+
+      const distractors = uniquePool
         .filter(w => w.id !== currentQuizWord.id)
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
       
+      // Ensure we have at least some options, even if duplicates (fallback)
+      while (distractors.length < 3 && uniquePool.length > 1) {
+          const random = uniquePool[Math.floor(Math.random() * uniquePool.length)];
+          if (random.id !== currentQuizWord.id) distractors.push(random);
+      }
+
       const options = [currentQuizWord, ...distractors].sort(() => 0.5 - Math.random());
       setCurrentOptions(options);
       
@@ -87,7 +98,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
           setTimeout(() => playAudio(currentQuizWord.english), 500);
       }
     }
-  }, [mode, quizIndex, currentQuizWord, words]);
+  }, [mode, quizIndex, currentQuizWord, words, backupWords]);
 
   const handleOptionSelect = (optionId: string) => {
     if (selectedOption) return;
