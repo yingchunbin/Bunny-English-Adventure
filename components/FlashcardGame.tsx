@@ -65,6 +65,8 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
   useEffect(() => {
     if (mode === 'QUIZ' && currentQuizWord) {
+      // NOTE: Removed 'words' and 'backupWords' from dependency array to prevent infinite re-renders if parent re-renders
+      // logic is driven by 'quizIndex' changing.
       const availableTypes: QuestionType[] = ['EN_TO_VI', 'VI_TO_EN'];
       // Only enable Image question if the word has an emoji
       if (currentQuizWord.emoji) availableTypes.push('AUDIO_TO_IMAGE');
@@ -98,7 +100,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
           setTimeout(() => playAudio(currentQuizWord.english), 500);
       }
     }
-  }, [mode, quizIndex, currentQuizWord, words, backupWords]);
+  }, [mode, quizIndex]); 
 
   const handleOptionSelect = (optionId: string) => {
     if (selectedOption) return;

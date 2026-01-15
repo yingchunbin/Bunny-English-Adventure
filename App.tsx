@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Screen, UserState, LessonLevel, UserSettings, Mission } from './types';
 import { AVATARS, getLevels, TEXTBOOKS } from './constants';
 import { Avatar } from './components/Avatar';
@@ -219,7 +219,13 @@ const App: React.FC = () => {
   };
 
   const currentAvatar = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
-  const currentLevels = getLevels(userState.grade, userState.textbook);
+  
+  // FIX: MEMOIZE LEVELS TO PREVENT RE-RENDERS & JUMPING ISSUES IN GAMES
+  const currentLevels = useMemo(() => 
+    getLevels(userState.grade, userState.textbook), 
+    [userState.grade, userState.textbook]
+  );
+
   const currentTextbookName = TEXTBOOKS.find(t => t.id === userState.textbook)?.name || "Chưa chọn sách";
   
   const activeLevel = isReviewMode && reviewLevel 
@@ -234,7 +240,6 @@ const App: React.FC = () => {
         { id: 'm0', desc: 'Hoàn thành bài học mới', type: 'LEARN', category: 'DAILY', target: 1, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
         { id: 'm1', desc: 'Thu hoạch 5 nông sản', type: 'HARVEST', category: 'DAILY', target: 5, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
         { id: 'm2', desc: 'Kiếm được 500 vàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, reward: { type: 'WATER', amount: 10 }, completed: false, claimed: false },
-        // Inject Farm Achievements immediately for new users
         ...FARM_ACHIEVEMENTS
     ];
 

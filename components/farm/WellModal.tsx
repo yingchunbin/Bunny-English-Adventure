@@ -36,7 +36,7 @@ export const WellModal: React.FC<WellModalProps> = ({ words, onSuccess, onClose 
 
   useEffect(() => {
     pickNewWord();
-  }, [words]);
+  }, []); // Run ONLY once on mount
 
   const playWord = () => {
     if (!targetWord) return;
