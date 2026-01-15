@@ -65,7 +65,7 @@ export default function App() {
   
   const [screen, setScreen] = useState<Screen>(userState.grade ? Screen.HOME : Screen.ONBOARDING);
   const [activeLevel, setActiveLevel] = useState<LessonLevel | null>(null);
-  const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('GUIDE');
+  const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -113,7 +113,11 @@ export default function App() {
       const level = LEVELS.find(l => l.id === levelId);
       if (level) {
           setActiveLevel(level);
-          setGameStep('GUIDE');
+          // Flow: Flashcard -> Translation -> Speaking -> Guide
+          if (level.words.length > 0) setGameStep('FLASHCARD');
+          else if (level.sentences.length > 0) setGameStep('TRANSLATION');
+          else setGameStep('GUIDE');
+          
           setScreen(Screen.GAME);
           playSFX('click');
       }
@@ -122,7 +126,7 @@ export default function App() {
   const handleLevelComplete = (bonusCoins: number) => {
       if (!activeLevel) return;
       
-      const stars = 3; // Simplified: always 3 stars on completion for now
+      const stars = 3; 
       
       setUserState(prev => {
           const newCompleted = prev.completedLevels.includes(activeLevel.id) ? prev.completedLevels : [...prev.completedLevels, activeLevel.id];
@@ -242,30 +246,40 @@ export default function App() {
                       <div className="w-8"></div>
                   </div>
                   <div className="flex-1 overflow-hidden relative">
-                      {gameStep === 'GUIDE' && (
-                          <LessonGuide 
-                              level={activeLevel} 
-                              userState={userState}
-                              onUpdateState={setUserState}
-                              onComplete={() => setGameStep('FLASHCARD')}
-                          />
-                      )}
                       {gameStep === 'FLASHCARD' && (
                           <FlashcardGame 
                               words={activeLevel.words} 
-                              onComplete={() => setGameStep('TRANSLATION')}
+                              onComplete={() => {
+                                  if (activeLevel.sentences.length > 0) setGameStep('TRANSLATION');
+                                  else if (activeLevel.words.length > 0) setGameStep('SPEAKING');
+                                  else setGameStep('GUIDE');
+                              }}
                           />
                       )}
                       {gameStep === 'TRANSLATION' && (
                           <TranslationGame 
                               sentences={activeLevel.sentences} 
-                              onComplete={() => setGameStep('SPEAKING')}
+                              onComplete={() => {
+                                  if (activeLevel.words.length > 0) setGameStep('SPEAKING');
+                                  else setGameStep('GUIDE');
+                              }}
                           />
                       )}
                       {gameStep === 'SPEAKING' && (
                           <SpeakingGame 
                               words={activeLevel.words} 
-                              onComplete={(coins) => handleLevelComplete(coins)}
+                              onComplete={(coins) => {
+                                  setUserState(prev => ({ ...prev, coins: prev.coins + coins }));
+                                  setGameStep('GUIDE');
+                              }}
+                          />
+                      )}
+                      {gameStep === 'GUIDE' && (
+                          <LessonGuide 
+                              level={activeLevel} 
+                              userState={userState}
+                              onUpdateState={setUserState}
+                              onComplete={() => handleLevelComplete(0)}
                           />
                       )}
                   </div>
