@@ -1,0 +1,7 @@
+{
+  "name": "Bunny English Adventure",
+  "description": "A gamified English learning app for primary school students featuring flashcards, translation games with AI feedback, and pronunciation practice.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
