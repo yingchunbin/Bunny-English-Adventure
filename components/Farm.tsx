@@ -47,6 +47,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const [selectedMachineSlotId, setSelectedMachineSlotId] = useState<number | null>(null);
   const [quizContext, setQuizContext] = useState<{ type: MiniGameType; words: Word[]; plotId?: number; rewardType?: 'WEED' | 'BUG' | 'MYSTERY' | 'REFRESH'; } | null>(null);
   const [toast, setToast] = useState<{ msg: string, type: 'error' | 'success' | 'info' } | null>(null);
+  
+  // Custom Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+      isOpen: boolean;
+      title: string;
+      message: React.ReactNode;
+      onConfirm: () => void;
+      confirmText?: string;
+      isDanger?: boolean;
+  } | null>(null);
 
   const showToast = (msg: string, type: 'error' | 'success' | 'info' = 'info') => {
       setToast({ msg, type });
@@ -266,18 +276,24 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           }
 
           if (canAfford(nextBarnCost)) {
-              if (confirm(`Mở rộng chuồng trại với giá ${nextBarnCost} xu?`)) {
-                  onUpdateState(prev => {
-                      const newSlots = prev.livestockSlots?.map(s => s.id === slot.id ? { ...s, isUnlocked: true } : s) || [];
-                      // Expand Logic: If this is the last slot (regardless of total count), push a new locked one
-                      if (slot.id === (prev.livestockSlots?.length || 0)) {
-                          newSlots.push({ id: slot.id + 1, isUnlocked: false, animalId: null, fedAt: null });
-                      }
-                      return { ...prev, coins: prev.coins - nextBarnCost, livestockSlots: newSlots };
-                  });
-                  playSFX('success');
-                  showToast("Mở rộng chuồng thành công!", "success");
-              }
+              setConfirmModal({
+                  isOpen: true,
+                  title: "Mở rộng chuồng trại",
+                  message: <span>Bé có muốn chi <b>{nextBarnCost} xu</b> để mở thêm chuồng nuôi không?</span>,
+                  onConfirm: () => {
+                      onUpdateState(prev => {
+                          const newSlots = prev.livestockSlots?.map(s => s.id === slot.id ? { ...s, isUnlocked: true } : s) || [];
+                          if (slot.id === (prev.livestockSlots?.length || 0)) {
+                              newSlots.push({ id: slot.id + 1, isUnlocked: false, animalId: null, fedAt: null });
+                          }
+                          return { ...prev, coins: prev.coins - nextBarnCost, livestockSlots: newSlots };
+                      });
+                      playSFX('success');
+                      showToast("Mở rộng chuồng thành công!", "success");
+                      setConfirmModal(null);
+                  },
+                  confirmText: "Mở ngay"
+              });
           } else {
               showToast(`Cần ${nextBarnCost} xu để mở rộng!`, "error");
           }
@@ -324,15 +340,24 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (!animal) return;
       
       const refund = Math.floor(animal.cost * 0.5);
-      if (confirm(`Bán ${animal.name} để nhận lại ${refund} xu?`)) {
-          onUpdateState(prev => ({
-              ...prev,
-              coins: prev.coins + refund,
-              livestockSlots: prev.livestockSlots?.map(s => s.id === slot.id ? { ...s, animalId: null, fedAt: null } : s)
-          }));
-          playSFX('success');
-          showToast(`Đã bán ${animal.name}!`, "info");
-      }
+      
+      setConfirmModal({
+          isOpen: true,
+          title: "Bán vật nuôi?",
+          message: <div className="text-center">Bé có chắc muốn bán <b>{animal.name}</b> không?<br/><span className="text-xs text-slate-500">Bé sẽ nhận lại {refund} xu.</span></div>,
+          isDanger: true,
+          confirmText: "Bán luôn",
+          onConfirm: () => {
+              onUpdateState(prev => ({
+                  ...prev,
+                  coins: prev.coins + refund,
+                  livestockSlots: prev.livestockSlots?.map(s => s.id === slot.id ? { ...s, animalId: null, fedAt: null } : s)
+              }));
+              playSFX('success');
+              showToast(`Đã bán ${animal.name}!`, "info");
+              setConfirmModal(null);
+          }
+      });
   };
 
   // --- MACHINE LOGIC ---
@@ -346,18 +371,24 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           }
 
           if (canAfford(nextMachineSlotCost)) {
-              if (confirm(`Mở rộng nhà máy với giá ${nextMachineSlotCost} xu?`)) {
-                  onUpdateState(prev => {
-                      const newSlots = prev.machineSlots?.map(s => s.id === slot.id ? { ...s, isUnlocked: true } : s) || [];
-                      // Logic now handled in useEffect, but redundancy here is safe for instant update
-                      if (slot.id === (prev.machineSlots?.length || 0)) {
-                          newSlots.push({ id: slot.id + 1, machineId: null, isUnlocked: false, activeRecipeId: null, startedAt: null });
-                      }
-                      return { ...prev, coins: prev.coins - nextMachineSlotCost, machineSlots: newSlots };
-                  });
-                  playSFX('success');
-                  showToast("Mở rộng thành công!", "success");
-              }
+              setConfirmModal({
+                  isOpen: true,
+                  title: "Mở rộng nhà máy",
+                  message: <span>Bé muốn chi <b>{nextMachineSlotCost} xu</b> để mở thêm chỗ đặt máy không?</span>,
+                  confirmText: "Mở ngay",
+                  onConfirm: () => {
+                      onUpdateState(prev => {
+                          const newSlots = prev.machineSlots?.map(s => s.id === slot.id ? { ...s, isUnlocked: true } : s) || [];
+                          if (slot.id === (prev.machineSlots?.length || 0)) {
+                              newSlots.push({ id: slot.id + 1, machineId: null, isUnlocked: false, activeRecipeId: null, startedAt: null });
+                          }
+                          return { ...prev, coins: prev.coins - nextMachineSlotCost, machineSlots: newSlots };
+                      });
+                      playSFX('success');
+                      showToast("Mở rộng thành công!", "success");
+                      setConfirmModal(null);
+                  }
+              });
           } else {
               showToast(`Cần ${nextMachineSlotCost} xu!`, "error");
           }
@@ -449,15 +480,23 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (!machine) return;
       
       const refund = Math.floor(machine.cost * 0.5);
-      if (confirm(`Bán máy ${machine.name} để nhận lại ${refund} xu?`)) {
-          onUpdateState(prev => ({
-              ...prev,
-              coins: prev.coins + refund,
-              machineSlots: prev.machineSlots?.map(s => s.id === slot.id ? { ...s, machineId: null, activeRecipeId: null, startedAt: null } : s)
-          }));
-          playSFX('success');
-          showToast(`Đã bán máy!`, "info");
-      }
+      setConfirmModal({
+          isOpen: true,
+          title: "Bán máy móc?",
+          message: <div className="text-center">Bé có chắc muốn bán máy <b>{machine.name}</b> không?<br/><span className="text-xs text-slate-500">Nhận lại {refund} xu.</span></div>,
+          isDanger: true,
+          confirmText: "Bán luôn",
+          onConfirm: () => {
+              onUpdateState(prev => ({
+                  ...prev,
+                  coins: prev.coins + refund,
+                  machineSlots: prev.machineSlots?.map(s => s.id === slot.id ? { ...s, machineId: null, activeRecipeId: null, startedAt: null } : s)
+              }));
+              playSFX('success');
+              showToast(`Đã bán máy!`, "info");
+              setConfirmModal(null);
+          }
+      });
   }
 
   // --- BARN SELL HANDLERS (Fixed Logic) ---
@@ -890,6 +929,25 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           }`}>
               {toast.type === 'error' ? <AlertCircle size={20} /> : toast.type === 'success' ? <CheckCircle size={20} /> : <Info size={20} />}
               <span className="uppercase tracking-tight">{toast.msg}</span>
+          </div>
+      )}
+
+      {/* CUSTOM CONFIRMATION MODAL */}
+      {confirmModal && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 p-6 backdrop-blur-sm animate-fadeIn">
+              <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl border-4 border-slate-200 text-center relative">
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-4 ${confirmModal.isDanger ? 'bg-red-100 text-red-500 border-red-200' : 'bg-blue-100 text-blue-500 border-blue-200'}`}>
+                      {confirmModal.isDanger ? <AlertCircle size={32}/> : <Info size={32}/>}
+                  </div>
+                  <h3 className="text-xl font-black text-slate-800 mb-2">{confirmModal.title}</h3>
+                  <div className="text-sm font-bold text-slate-500 mb-6">{confirmModal.message}</div>
+                  <div className="flex gap-3">
+                      <button onClick={() => setConfirmModal(null)} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-xl font-bold transition-colors">Hủy</button>
+                      <button onClick={confirmModal.onConfirm} className={`flex-1 py-3 text-white rounded-xl font-bold shadow-lg transition-transform active:scale-95 ${confirmModal.isDanger ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-blue-500 hover:bg-blue-600 shadow-blue-200'}`}>
+                          {confirmModal.confirmText || "Đồng ý"}
+                      </button>
+                  </div>
+              </div>
           </div>
       )}
 

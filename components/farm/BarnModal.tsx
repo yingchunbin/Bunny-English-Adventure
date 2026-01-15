@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Crop, Product, FarmOrder } from '../../types';
-import { Warehouse, X, Coins, Sparkles, Sprout, Egg, AlertTriangle, Truck, Trash } from 'lucide-react';
+import { Warehouse, X, Coins, Sparkles, Sprout, Egg, AlertTriangle, Truck, Trash, Info } from 'lucide-react';
 
 interface BarnModalProps {
   crops: (Crop | Product)[];
@@ -15,7 +15,7 @@ interface BarnModalProps {
 
 export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOrders, onSell, onSellAll, onSellEverything, onClose }) => {
   const [activeTab, setActiveTab] = useState<'CROPS' | 'PRODUCTS'>('CROPS');
-  const [confirmSellAll, setConfirmSellAll] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ type: 'SELL_ALL_TAB' | 'SELL_SINGLE' | 'SELL_ALL_ITEM', itemId?: string, itemName?: string, value?: number } | null>(null);
 
   // Helper: Kiểm tra xem vật phẩm có đang cần cho đơn hàng không
   const isNeededForOrder = (itemId: string) => {
@@ -33,6 +33,37 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
 
   const hasItems = filteredItems.length > 0;
   const totalValue = filteredItems.reduce((acc, item) => acc + (item.sellPrice * (harvested[item.id] || 0)), 0);
+
+  const handleSellClick = (item: Crop | Product, mode: 'SINGLE' | 'ALL') => {
+      const isWanted = isNeededForOrder(item.id);
+      
+      // If not wanted for order, just sell immediately (fast UX)
+      if (!isWanted) {
+          if (mode === 'SINGLE') onSell(item.id);
+          else onSellAll(item.id);
+          return;
+      }
+
+      // If wanted, show local confirmation
+      setConfirmState({
+          type: mode === 'SINGLE' ? 'SELL_SINGLE' : 'SELL_ALL_ITEM',
+          itemId: item.id,
+          itemName: item.name,
+          value: item.sellPrice * (mode === 'SINGLE' ? 1 : (harvested[item.id] || 0))
+      });
+  };
+
+  const executeConfirm = () => {
+      if (!confirmState) return;
+      if (confirmState.type === 'SELL_ALL_TAB') {
+          filteredItems.forEach(item => onSellAll(item.id));
+      } else if (confirmState.type === 'SELL_SINGLE' && confirmState.itemId) {
+          onSell(confirmState.itemId);
+      } else if (confirmState.type === 'SELL_ALL_ITEM' && confirmState.itemId) {
+          onSellAll(confirmState.itemId);
+      }
+      setConfirmState(null);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
@@ -60,30 +91,41 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                 </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-emerald-50/20">
-                {/* Global Sell All Button with Confirmation */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-emerald-50/20 relative">
+                
+                {/* Internal Confirmation Overlay */}
+                {confirmState && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 p-6 animate-fadeIn">
+                        <div className="text-center w-full">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 border-4 border-white shadow-lg">
+                                <AlertTriangle size={32} />
+                            </div>
+                            <h4 className="text-lg font-black text-slate-800 mb-2">
+                                {confirmState.type === 'SELL_ALL_TAB' ? "Bán hết sạch?" : "Cẩn thận!"}
+                            </h4>
+                            <p className="text-sm font-bold text-slate-500 mb-6">
+                                {confirmState.type === 'SELL_ALL_TAB' 
+                                    ? "Bé có chắc muốn bán tất cả mọi thứ trong tab này không?" 
+                                    : <span>Đơn hàng đang cần <b>{confirmState.itemName}</b>.<br/>Bán đi là không giao được đâu đó!</span>}
+                            </p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setConfirmState(null)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold hover:bg-slate-200">Hủy</button>
+                                <button onClick={executeConfirm} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-200 hover:bg-red-600">
+                                    Bán luôn
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Global Sell All Button */}
                 {hasItems && (
-                  !confirmSellAll ? (
                     <button 
-                        onClick={() => setConfirmSellAll(true)}
+                        onClick={() => setConfirmState({ type: 'SELL_ALL_TAB' })}
                         className="w-full py-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-white rounded-[2rem] font-black text-xs uppercase shadow-lg shadow-amber-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all mb-2 border-2 border-white"
                     >
                         <Sparkles size={18}/> Bán tất cả tab này (+{totalValue} <Coins size={14} fill="currentColor"/>)
                     </button>
-                  ) : (
-                    <div className="bg-red-50 p-3 rounded-2xl border-2 border-red-200 mb-2 flex items-center justify-between animate-fadeIn">
-                        <span className="text-[10px] font-bold text-red-600 flex items-center gap-1"><AlertTriangle size={12}/> Bé chắc chắn bán hết sạch không?</span>
-                        <div className="flex gap-2">
-                            <button onClick={() => setConfirmSellAll(false)} className="px-3 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-500">Hủy</button>
-                            <button 
-                                onClick={() => { filteredItems.forEach(item => onSellAll(item.id)); setConfirmSellAll(false); }}
-                                className="px-3 py-1 bg-red-500 text-white rounded-lg text-xs font-bold shadow-sm"
-                            >
-                                Bán luôn
-                            </button>
-                        </div>
-                    </div>
-                  )
                 )}
 
                 {/* Items List */}
@@ -107,14 +149,14 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                             </div>
                             <div className="flex flex-col gap-1.5 items-end">
                                 <button 
-                                  onClick={() => { if(isWanted && !confirm(`Đơn hàng đang cần ${item.name}. Bé có chắc muốn bán không?`)) return; onSell(item.id); }}
+                                  onClick={() => handleSellClick(item, 'SINGLE')}
                                   className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[10px] shadow-sm active:scale-90 flex items-center justify-center gap-2 border border-amber-200 transition-all uppercase w-28"
                                 >
                                     Bán 1 (+{item.sellPrice})
                                 </button>
                                 {count > 1 && (
                                     <button 
-                                      onClick={() => { if(isWanted && !confirm(`Đơn hàng đang cần ${item.name}. Bé có chắc muốn bán hết không?`)) return; onSellAll(item.id); }}
+                                      onClick={() => handleSellClick(item, 'ALL')}
                                       className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] shadow-md active:scale-90 flex items-center justify-center gap-2 transition-all uppercase w-28"
                                     >
                                         Bán hết (+{item.sellPrice * count})
