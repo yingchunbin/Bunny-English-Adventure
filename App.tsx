@@ -304,16 +304,15 @@ const App: React.FC = () => {
     let earnedFertilizer = 0;
 
     // GAMIFICATION BALANCE:
-    // Review Mode: Gives Farming Resources to encourage daily reviews
     if (isReviewMode) {
         earnedCoins = 20; 
-        earnedWater = 5;  // More water for farming
-        earnedFertilizer = 2; // Rare item
+        earnedWater = 5;  
+        earnedFertilizer = 2; 
     } else if (activeLevel.type === 'EXAM') {
-        // Time Attack: Score / 5 = Coins (Better rate)
-        earnedCoins = Math.floor(scoreOrCoins / 5); 
-        // Bonus water for good performance
-        if (scoreOrCoins > 100) earnedWater = 3;
+        // Exams are harder, reward more
+        earnedCoins = scoreOrCoins; // Use direct score
+        if (scoreOrCoins > 80) earnedWater = 5;
+        if (scoreOrCoins > 120) earnedFertilizer = 2;
     }
 
     setLevelRewards(prev => prev ? { 
@@ -390,7 +389,7 @@ const App: React.FC = () => {
   const renderGame = () => {
     if (!activeLevel) return <div>Error: Level not found</div>;
 
-    if ((activeLevel.type === 'LESSON' || activeLevel.type === 'GAME') && (!activeLevel.words || activeLevel.words.length === 0)) {
+    if ((activeLevel.type === 'LESSON' || activeLevel.type === 'GAME' || activeLevel.type === 'EXAM') && (!activeLevel.words || activeLevel.words.length === 0)) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center text-gray-500">
                 <AlertTriangle size={48} className="mb-2 text-yellow-500" />
@@ -401,16 +400,21 @@ const App: React.FC = () => {
         );
     }
 
+    // GAME LEVEL (Every 5th unit)
     if (activeLevel.type === 'GAME' && gameStep < 4) return <MemoryGame words={activeLevel.words} onComplete={handleGameComplete} />;
     
-    if (activeLevel.type === 'EXAM' && gameStep < 4) {
-        const reviewPool = currentLevels.filter(l => userState.completedLevels.includes(l.id)).flatMap(l => l.words);
-        const finalPool = reviewPool.length > 5 ? reviewPool : activeLevel.words;
-        // NOTE: onComplete here passes Score, handled by logic above to convert to Coins
-        return <TimeAttackGame words={finalPool} onComplete={handleGameComplete} onExit={() => setScreen(Screen.MAP)} mode="BOSS" />;
-    }
+    // EXAM / LESSON LOGIC:
+    // If it's an EXAM, we jump straight to Quiz mode in Flashcards (or we could make it harder).
+    // For now, treats EXAM as a comprehensive review of that unit.
+    // The "Time Attack" game is now exclusively in the main menu.
 
-    if (gameStep === 0) return <FlashcardGame words={activeLevel.words} onComplete={() => handleGameComplete(activeLevel.words.length * 5)} initialMode={isReviewMode ? 'QUIZ' : 'LEARN'}/>;
+    if (gameStep === 0) {
+        return <FlashcardGame 
+            words={activeLevel.words} 
+            onComplete={() => handleGameComplete(activeLevel.words.length * 5)} 
+            initialMode={activeLevel.type === 'EXAM' || isReviewMode ? 'QUIZ' : 'LEARN'}
+        />;
+    }
     if (gameStep === 1) return <TranslationGame sentences={activeLevel.sentences} onComplete={handleGameComplete} />;
     if (gameStep === 2) return <SpeakingGame words={activeLevel.words} onComplete={handleGameComplete} />;
     if (gameStep === 3) return <LessonGuide level={activeLevel} userState={userState} onUpdateState={setUserState} onComplete={() => handleGameComplete(0)} />;
@@ -461,9 +465,10 @@ const App: React.FC = () => {
   };
 
   const renderGameTabs = () => {
-    if (!activeLevel || isReviewMode || activeLevel.type !== 'LESSON') return null;
+    // Show tabs for both LESSON and EXAM types (EXAM acts as a review lesson now)
+    if (!activeLevel || isReviewMode || (activeLevel.type !== 'LESSON' && activeLevel.type !== 'EXAM')) return null;
     const steps = [
-       { icon: <Book size={16}/>, label: "Từ vựng", has: activeLevel.words.length > 0 },
+       { icon: <Book size={16}/>, label: activeLevel.type === 'EXAM' ? "Kiểm tra từ" : "Từ vựng", has: activeLevel.words.length > 0 },
        { icon: <Languages size={16}/>, label: "Dịch câu", has: activeLevel.sentences.length > 0 },
        { icon: <Mic size={16}/>, label: "Luyện nói", has: activeLevel.words.length > 0 },
        { icon: <GraduationCap size={16}/>, label: "Bí kíp", has: true }
