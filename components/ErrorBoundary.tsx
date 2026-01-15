@@ -37,9 +37,9 @@ export class ErrorBoundary extends Component<Props, State> {
   public render(): ReactNode {
     // Accessing 'this.state' which is correctly inherited from the Component base class.
     const { hasError, error } = this.state;
-    // Fix: Accessing 'props' from the inherited property of Component. 
-    // Using direct import of Component ensures generics are correctly applied to the instance.
-    const { children } = this.props;
+    // Fix: Accessing 'props' from 'this' which is standard for React class components.
+    // Using an explicit type assertion to satisfy the TypeScript compiler if inheritance is obscured.
+    const { children } = (this as Component<Props, State>).props;
 
     if (hasError) {
       return (
