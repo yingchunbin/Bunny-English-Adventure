@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { ChatMessage } from "../types";
 
 const cleanAndParseJSON = (text: string) => {
@@ -19,6 +19,13 @@ const cleanAndParseJSON = (text: string) => {
     return null;
   }
 };
+
+const SAFETY_SETTINGS = [
+  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
+];
 
 export interface FeedbackResponse {
   isCorrect: boolean;
@@ -56,6 +63,7 @@ export const getTranslationFeedback = async (
       config: { 
         systemInstruction: 'You are Thầy Rùa (Mr. Turtle), a supportive English teacher for Vietnamese kids. Use turtle emojis 🐢 and encouraging tone.',
         responseMimeType: "application/json",
+        safetySettings: SAFETY_SETTINGS,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -73,6 +81,7 @@ export const getTranslationFeedback = async (
     const result = cleanAndParseJSON(text);
     return result || { isCorrect: false, hint: "Thầy Rùa đang ngủ...", highlight: [], encouragement: "Thử lại sau nhé! 🐢" };
   } catch (error) {
+    console.error("Gemini Error:", error);
     return { isCorrect: false, hint: "Mất kết nối với Thầy Rùa.", highlight: [], encouragement: "Thử lại sau nhé! 🐢" };
   }
 };
@@ -88,6 +97,7 @@ export const checkPronunciation = async (word: string, recognizedText: string): 
       config: { 
         systemInstruction: 'You are Thầy Rùa. Evaluate pronunciation for kids.',
         responseMimeType: "application/json",
+        safetySettings: SAFETY_SETTINGS,
         responseSchema: {
           type: Type.OBJECT,
           properties: {
@@ -100,23 +110,31 @@ export const checkPronunciation = async (word: string, recognizedText: string): 
     });
     return cleanAndParseJSON(response.text || '{}') || { score: 0, feedback: "Lỗi xử lý" };
   } catch (error) {
+    console.error("Gemini Error:", error);
     return { score: 0, feedback: "Lỗi kết nối." };
   }
 }
 
 export const getLessonSummary = async (title: string, words: string[], sentences: string[]): Promise<string> => {
-  if (!process.env.API_KEY) return `### 🐢 Bí Kíp Thầy Rùa\nBài học này rất thú vị!\n\n### 💌 Lời Nhắn\nChúc con học vui! 🐢`;
+  const fallback = `### 🐢 Bí Kíp Thầy Rùa\n\n**${title}**\n\n**Từ vựng:**\n${words.join(', ')}\n\n**Mẫu câu:**\n${sentences.map(s => `- ${s}`).join('\n')}\n\n### 💌 Lời Nhắn\nChúc con học vui vẻ và chăm chỉ nhé! 🐢`;
+
+  if (!process.env.API_KEY) return fallback;
+  
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Create a fun summary for "${title}". Vocab: ${words.join(', ')}.`;
+    const prompt = `Create a fun summary for "${title}". Vocab: ${words.join(', ')}. Sentences: ${sentences.join('. ')}. Keep it simple for kids. Use structure: ### 🐢 Bí Kíp Thầy Rùa, then content, then ### 💌 Lời Nhắn.`;
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
-      config: { systemInstruction: 'Act as Thầy Rùa 🐢.' }
+      config: { 
+        systemInstruction: 'Act as Thầy Rùa 🐢.',
+        safetySettings: SAFETY_SETTINGS
+      }
     });
-    return response.text || "Thầy Rùa đang suy nghĩ... 🐢";
+    return response.text || fallback;
   } catch (error) {
-    return "Thầy Rùa không thể kết nối. 🐢";
+    console.error("Gemini Error:", error);
+    return fallback;
   }
 }
 
@@ -131,10 +149,14 @@ export const getChatResponse = async (history: ChatMessage[], userMessage: strin
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: contents as any,
-      config: { systemInstruction: `You are Thầy Rùa (Mr. Turtle), English tutor for Grade ${grade} kids. Keep it fun and use 🐢.` }
+      config: { 
+        systemInstruction: `You are Thầy Rùa (Mr. Turtle), English tutor for Grade ${grade} kids. Keep it fun and use 🐢.`,
+        safetySettings: SAFETY_SETTINGS
+      }
     });
     return response.text || "Thầy Rùa đang lắng nghe... 🐢";
   } catch (error) {
+    console.error("Gemini Error:", error);
     return "Thầy Rùa đang bị cảm... 🐢";
   }
 }

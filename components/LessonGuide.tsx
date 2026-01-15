@@ -40,6 +40,16 @@ export const LessonGuide: React.FC<LessonGuideProps> = ({ level, userState, onUp
     fetchSummary();
   }, [level.id]);
 
+  // Check if content fits without scrolling
+  useEffect(() => {
+      if (!isLoading && scrollContainerRef.current) {
+          const { scrollHeight, clientHeight } = scrollContainerRef.current;
+          if (scrollHeight <= clientHeight + 50) { // Tolerance
+              setHasScrolledToBottom(true);
+          }
+      }
+  }, [isLoading, summary]);
+
   const handleScroll = () => {
     if (scrollContainerRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
