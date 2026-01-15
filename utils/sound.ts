@@ -146,7 +146,7 @@ const playTone = (freq: number, type: OscillatorType, duration: number, startTim
   osc.stop(ctx.currentTime + startTime + duration);
 };
 
-export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer') => {
+export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer' | 'eat') => {
   try {
     switch (type) {
       case 'correct':
@@ -191,6 +191,12 @@ export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip'
             playTone(400 + Math.random()*300, 'sawtooth', 0.5, i * 0.05, 0.4);
             playTone(200 + Math.random()*200, 'triangle', 0.5, i * 0.08, 0.3);
           }
+          break;
+      case 'eat':
+          // Crunching sound
+          playTone(300, 'sawtooth', 0.1, 0);
+          playTone(450, 'sawtooth', 0.1, 0.1);
+          playTone(250, 'sawtooth', 0.15, 0.2);
           break;
     }
   } catch (e) {

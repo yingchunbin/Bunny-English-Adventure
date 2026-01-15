@@ -957,6 +957,225 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           </div>
       </div>
 
+      {/* FLYING ITEMS ANIMATION */}
+      {flyingItems.map(item => (
+          <div key={item.id} className="absolute z-[100] animate-floatUp pointer-events-none flex flex-col items-center" style={{ left: item.x, top: item.y }}>
+              <div className="text-4xl drop-shadow-md">{item.icon}</div>
+              {item.type === 'COIN' && <div className="text-yellow-400 font-black text-xs stroke-black text-shadow">+Vàng</div>}
+          </div>
+      ))}
+
+      {/* MODALS */}
+      {activeModal === 'SHOP' && (
+          <ShopModal 
+              crops={CROPS} 
+              decorations={DECORATIONS} 
+              userState={userState} 
+              onBuySeed={(crop, amount) => {
+                  if (userState.coins >= crop.cost * amount) {
+                      playSFX('success');
+                      onUpdateState(prev => ({ 
+                          ...prev, 
+                          coins: prev.coins - (crop.cost * amount), 
+                          inventory: { ...prev.inventory, [crop.id]: (prev.inventory[crop.id] || 0) + amount } 
+                      }));
+                      showToast(`Đã mua ${amount} hạt ${crop.name}`, "success");
+                  }
+              }} 
+              onBuyDecor={(decor) => {
+                  onUpdateState(prev => ({ ...prev, coins: prev.coins - decor.cost, decorations: [...(prev.decorations || []), decor.id] }));
+                  playSFX('success');
+                  showToast(`Đã mua ${decor.name}!`, "success");
+              }}
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'BARN' && (
+          <BarnModal 
+              crops={[...CROPS, ...PRODUCTS]} 
+              harvested={userState.harvestedCrops || {}} 
+              activeOrders={userState.activeOrders || []}
+              onSell={handleSellOne}
+              onSellAll={handleSellAllItem}
+              onSellEverything={handleSellEverything}
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'ORDERS' && (
+          <OrderBoard 
+              orders={userState.activeOrders || []} 
+              items={[...CROPS, ...PRODUCTS]} 
+              inventory={userState.harvestedCrops || {}} 
+              onDeliver={deliverOrder}
+              onRefresh={triggerOrderRefreshQuiz}
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'WELL' && (
+          <WellModal 
+              words={reviewPool} 
+              onSuccess={(amount) => {
+                  onUpdateState(prev => ({ ...prev, waterDrops: (prev.waterDrops || 0) + amount }));
+                  showToast(`Nhận được ${amount} giọt nước!`, "success");
+                  setActiveModal('NONE');
+              }} 
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'PLOT' && selectedPlotId && (
+          <PlotModal 
+              plot={userState.farmPlots.find(p => p.id === selectedPlotId)!}
+              inventory={userState.inventory}
+              waterDrops={userState.waterDrops}
+              fertilizers={userState.fertilizers}
+              userCoins={userState.coins}
+              weather={userState.weather}
+              nextPlotCost={nextPlotCost}
+              onAction={handlePlotAction}
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'MISSIONS' && (
+          <MissionModal 
+              missions={userState.missions || []} 
+              onClaim={(m) => {
+                  playSFX('success');
+                  addReward(m.reward.type, m.reward.amount);
+                  onUpdateState(prev => ({
+                      ...prev,
+                      missions: prev.missions?.map(mis => mis.id === m.id ? { ...mis, claimed: true } : mis)
+                  }));
+                  showToast("Đã nhận thưởng nhiệm vụ!", "success");
+              }} 
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'ANIMAL_BUY' && selectedSlotId && (
+          <AnimalShopModal 
+              animals={ANIMALS} 
+              crops={[...CROPS, ...PRODUCTS]} 
+              products={PRODUCTS} 
+              userLevel={Math.floor((userState.petExp || 0)/300) + 1}
+              userCoins={userState.coins}
+              onBuy={(animal) => {
+                  const res = buyAnimal(selectedSlotId, animal.id);
+                  if (res.success) {
+                      showToast(`Đã mua ${animal.name}!`, "success");
+                      setActiveModal('NONE');
+                  } else {
+                      showToast(res.msg || "Lỗi", "error");
+                  }
+              }} 
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {/* PET INTERACT MODAL */}
+      {activeModal === 'PET_INTERACT' && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fadeIn">
+              <div className="bg-white rounded-[2.5rem] w-full max-w-sm relative p-6 text-center border-8 border-rose-200 shadow-2xl">
+                  <button onClick={() => setActiveModal('NONE')} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X size={24}/></button>
+                  <h3 className="text-xl font-black text-rose-500 mb-4 uppercase">Chăm sóc thú cưng</h3>
+                  <div className="mb-6 transform scale-125">
+                      <Avatar emoji={currentAvatar?.emoji || '🐰'} bgGradient={currentAvatar?.bgGradient || 'bg-pink-100'} size="lg" animate />
+                  </div>
+                  <p className="text-sm font-bold text-slate-500 mb-4">Cho tớ ăn nông sản để tớ lớn nhanh nhé!</p>
+                  
+                  <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto no-scrollbar p-2 bg-slate-50 rounded-xl">
+                      {[...CROPS, ...PRODUCTS].map(item => {
+                          const count = userState.harvestedCrops?.[item.id] || 0;
+                          if (count === 0) return null;
+                          return (
+                              <button key={item.id} onClick={() => {
+                                  const res = feedPet(item.id);
+                                  if (res.success) {
+                                      if (res.msg) showToast(res.msg, "success");
+                                      else playSFX('eat'); 
+                                  }
+                              }} className="flex flex-col items-center bg-white p-2 rounded-xl shadow-sm border-2 border-slate-100 active:scale-90 transition-transform">
+                                  <span className="text-2xl">{item.emoji}</span>
+                                  <span className="text-[10px] font-black text-slate-600">x{count}</span>
+                              </button>
+                          )
+                      })}
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {activeModal === 'MACHINE_BUY' && selectedMachineSlotId && (
+          <MachineShopModal 
+              machines={MACHINES} 
+              recipes={RECIPES} 
+              allItems={[...CROPS, ...PRODUCTS]} 
+              userLevel={Math.floor((userState.petExp || 0)/300) + 1} 
+              userCoins={userState.coins} 
+              onBuy={buyMachine} 
+              onClose={() => setActiveModal('NONE')} 
+          />
+      )}
+
+      {activeModal === 'MACHINE_CRAFT' && selectedMachineSlotId && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fadeIn">
+              <div className="bg-white rounded-[2.5rem] w-full max-w-md relative border-8 border-slate-200 shadow-2xl overflow-hidden">
+                  <div className="bg-slate-100 p-4 flex justify-between items-center">
+                      <h3 className="font-black text-slate-700 uppercase">Chế biến</h3>
+                      <button onClick={() => setActiveModal('NONE')}><X className="text-slate-400"/></button>
+                  </div>
+                  <div className="p-4 bg-slate-50 space-y-3 max-h-[60vh] overflow-y-auto no-scrollbar">
+                      {(() => {
+                          const slot = userState.machineSlots?.find(s => s.id === selectedMachineSlotId);
+                          const machine = MACHINES.find(m => m.id === slot?.machineId);
+                          const availableRecipes = RECIPES.filter(r => r.machineId === machine?.id);
+                          
+                          if (!machine) return <div>Lỗi máy móc</div>;
+
+                          return availableRecipes.map(recipe => {
+                              const product = PRODUCTS.find(p => p.id === recipe.outputId);
+                              const canCraft = recipe.input.every(req => (userState.harvestedCrops?.[req.id] || 0) >= req.amount);
+
+                              return (
+                                  <button 
+                                      key={recipe.id} 
+                                      onClick={() => startCrafting(recipe)}
+                                      className={`w-full bg-white p-3 rounded-2xl border-4 flex items-center justify-between shadow-sm transition-all ${canCraft ? 'border-green-100 hover:border-green-300' : 'border-slate-200 opacity-60'}`}
+                                  >
+                                      <div className="flex items-center gap-3">
+                                          <div className="text-4xl">{product?.emoji}</div>
+                                          <div className="text-left">
+                                              <div className="font-black text-sm text-slate-800">{product?.name}</div>
+                                              <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                                                  {recipe.input.map(inItem => {
+                                                      const item = [...CROPS, ...PRODUCTS].find(i => i.id === inItem.id);
+                                                      const has = userState.harvestedCrops?.[inItem.id] || 0;
+                                                      return (
+                                                          <span key={inItem.id} className={has < inItem.amount ? "text-red-500" : "text-green-600"}>
+                                                              {item?.emoji} {inItem.amount}
+                                                          </span>
+                                                      )
+                                                  })}
+                                                  <span className="ml-1 flex items-center"><Timer size={10}/> {recipe.duration}s</span>
+                                              </div>
+                                          </div>
+                                      </div>
+                                      <div className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg font-black text-xs">
+                                          Chế biến
+                                      </div>
+                                  </button>
+                              )
+                          });
+                      })()}
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* QUIZ MODAL FIXED */}
       {activeModal === 'QUIZ' && quizContext && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/90 p-4 backdrop-blur-2xl animate-fadeIn">
