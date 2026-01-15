@@ -121,17 +121,18 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
     return { isReady: progress >= 100, progress, crop, elapsed };
   }, [now]);
 
-  // EXPONENTIAL COST FORMULA for Land Expansion (Coin Sink)
+  // LINEAR COST FORMULA (Easier for kids)
   const unlockedCount = userState.farmPlots.filter(p => p.isUnlocked).length;
-  const nextPlotCost = Math.ceil((1000 * Math.pow(1.8, Math.max(0, unlockedCount - 2))) / 100) * 100;
+  // Cost = 500 * (count - 1)
+  const nextPlotCost = 500 * (Math.max(1, unlockedCount - 1));
 
-  // Livestock Expansion Cost
+  // Livestock Expansion Cost (Linear)
   const unlockedBarnCount = userState.livestockSlots?.filter(s => s.isUnlocked).length || 4;
-  const nextBarnCost = Math.ceil((2000 * Math.pow(1.5, Math.max(0, unlockedBarnCount - 4))) / 100) * 100;
+  const nextBarnCost = 1000 + ((unlockedBarnCount - 4) * 500);
 
   // Machine Expansion Cost
   const unlockedMachineCount = userState.machineSlots?.filter(s => s.isUnlocked).length || 1;
-  const nextMachineSlotCost = Math.ceil((5000 * Math.pow(2, Math.max(0, unlockedMachineCount - 1))) / 100) * 100;
+  const nextMachineSlotCost = 2000 + ((unlockedMachineCount - 1) * 1000);
 
   const startMiniGame = (rewardType: 'WEED' | 'BUG' | 'MYSTERY' | 'REFRESH', plotId?: number) => {
       let type: MiniGameType = 'FLASHCARD';
@@ -551,7 +552,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   const currentAvatar = AVATARS.find(a => a.id === userState.currentAvatarId);
-  const petExpProgress = Math.min(100, ((userState.petExp || 0) / 300) * 100);
+  const XP_FOR_NEXT_LEVEL = ((userState.petLevel || 1) * 100);
+  const petExpProgress = Math.min(100, ((userState.petExp || 0) / XP_FOR_NEXT_LEVEL) * 100);
 
   // --- RENDERERS ---
   const renderFields = () => (
@@ -875,7 +877,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 <div className="flex-1 h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                     <div className="h-full bg-gradient-to-r from-indigo-400 to-purple-500 transition-all duration-1000" style={{ width: `${petExpProgress}%` }} />
                 </div>
-                <span className="text-xs font-black text-indigo-600 tabular-nums">{userState.petExp}/300</span>
+                <span className="text-xs font-black text-indigo-600 tabular-nums">{userState.petExp}/{XP_FOR_NEXT_LEVEL}</span>
             </div>
       </div>
 

@@ -213,10 +213,15 @@ export const useFarmGame = (
           
           let newExp = (prev.petExp || 0) + crop.exp;
           let newLevel = prev.petLevel || 1;
-          const XP_PER_LEVEL = 300; 
-          if (newExp >= XP_PER_LEVEL) { 
+          
+          // DYNAMIC XP CURVE: Level * 100
+          // Lv1 -> Lv2: 100 XP
+          // Lv2 -> Lv3: 200 XP
+          const XP_NEEDED = newLevel * 100;
+          
+          if (newExp >= XP_NEEDED) { 
               newLevel += 1; 
-              newExp -= XP_PER_LEVEL; 
+              newExp -= XP_NEEDED; 
           }
 
           return {
@@ -290,7 +295,8 @@ export const useFarmGame = (
 
           let newExp = (prev.petExp || 0) + animal.exp;
           let newLevel = prev.petLevel || 1;
-          if (newExp >= 300) { newLevel += 1; newExp -= 300; }
+          const XP_NEEDED = newLevel * 100;
+          if (newExp >= XP_NEEDED) { newLevel += 1; newExp -= XP_NEEDED; }
 
           return {
               ...prev,
@@ -350,8 +356,8 @@ export const useFarmGame = (
           
           let newExp = (prev.petExp || 0) + order.rewardExp;
           let newLevel = prev.petLevel || 1;
-          const XP_PER_LEVEL = 300; 
-          if (newExp >= XP_PER_LEVEL) { newLevel += 1; newExp -= XP_PER_LEVEL; }
+          const XP_NEEDED = newLevel * 100; 
+          if (newExp >= XP_NEEDED) { newLevel += 1; newExp -= XP_NEEDED; }
 
           return {
               ...prev,

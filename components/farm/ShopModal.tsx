@@ -136,7 +136,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({ crops, decorations, userSt
                                             </div>
                                         ) : (
                                             <div className="bg-slate-100 text-slate-400 py-1.5 px-3 rounded-lg flex items-center gap-2 text-[9px] font-black uppercase w-fit border border-slate-200">
-                                                <Lock size={10}/> Học bài {crop.unlockReq} để mở
+                                                <Lock size={10}/> Hoàn thành {crop.unlockReq} bài học
                                             </div>
                                         )}
                                     </div>
