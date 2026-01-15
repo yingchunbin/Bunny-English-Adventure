@@ -12,7 +12,7 @@ export const useFarmGame = (
   
   // Helper: Tạo 1 đơn hàng duy nhất (để trám vào chỗ trống)
   const createSingleOrder = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
-      const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa"];
+      const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa", "Chị Ong Vàng", "Anh Kiến", "Cụ Voi"];
       const unlockedCrops = CROPS.filter(c => !c.isMagic && (completedCount || 0) >= (c.unlockReq || 0));
       
       const ownedAnimalIds = currentLivestock ? currentLivestock.map(s => s.animalId).filter(Boolean) : [];
@@ -42,10 +42,15 @@ export const useFarmGame = (
           const itemData = [...CROPS, ...PRODUCTS].find(x => x.id === itemId);
           if (itemData) {
               totalValue += itemData.sellPrice * amount;
-              const expBase = itemData.type === 'PRODUCT' ? 15 : (itemData as Crop).exp || 5;
-              totalExp += expBase * amount * 2.5; 
+              const expBase = itemData.type === 'PRODUCT' ? 20 : (itemData as Crop).exp || 10;
+              // BOOSTED XP: Increased multiplier from 2.5 to 6.0 to make orders the best way to level up
+              totalExp += expBase * amount * 6.0; 
           }
       }
+
+      // Round reward to look nice
+      const finalCoins = Math.ceil((totalValue * 1.5) / 10) * 10;
+      const finalExp = Math.ceil(totalExp / 5) * 5;
 
       const duration = (Math.random() * 5 + 2) * 60 * 1000; // 2-7 minutes
 
@@ -53,8 +58,8 @@ export const useFarmGame = (
           id: Math.random().toString(36).substr(2, 9),
           npcName: npcs[Math.floor(Math.random() * npcs.length)],
           requirements,
-          rewardCoins: Math.floor(totalValue * 1.5),
-          rewardExp: Math.floor(totalExp),
+          rewardCoins: finalCoins,
+          rewardExp: finalExp,
           expiresAt: Date.now() + duration
       };
   };

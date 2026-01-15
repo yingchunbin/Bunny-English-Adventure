@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { FarmOrder, FarmItem } from '../../types';
 import { Truck, X, RefreshCw, Coins, Zap } from 'lucide-react';
@@ -44,8 +45,8 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                         <span className="font-black text-slate-800 text-xs uppercase tracking-tighter">{order.npcName}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                        <div className="flex items-center gap-1 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-100"><Coins size={10} fill="currentColor"/> {order.rewardCoins}</div>
-                                        <div className="flex items-center gap-1 text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-full border border-blue-100"><Zap size={10} fill="currentColor"/> {order.rewardExp}</div>
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200"><Coins size={12} fill="currentColor"/> {order.rewardCoins}</div>
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-purple-700 bg-purple-100 px-3 py-1.5 rounded-full border border-purple-200"><Zap size={12} fill="currentColor"/> {order.rewardExp} XP</div>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between">
