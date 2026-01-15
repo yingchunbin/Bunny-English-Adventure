@@ -68,7 +68,11 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
       // NOTE: Removed 'words' and 'backupWords' from dependency array to prevent infinite re-renders if parent re-renders
       // logic is driven by 'quizIndex' changing.
       const availableTypes: QuestionType[] = ['EN_TO_VI', 'VI_TO_EN'];
-      // Only enable Image question if the word has an emoji
+      // Only enable Image question if the word has an emoji OR if we can fallback to text image
+      // Since WordImage now handles text fallbacks gracefully, we can enable it more often,
+      // BUT for "Image" quiz, seeing the English text is a giveaway.
+      // So we ONLY enable AUDIO_TO_IMAGE if it has an emoji, OR we accept that WordImage will show text (which makes it easy).
+      // Let's stick to Emoji only for Audio->Image to keep it challenging, otherwise it's just reading.
       if (currentQuizWord.emoji) availableTypes.push('AUDIO_TO_IMAGE');
       
       const nextType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
@@ -134,7 +138,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
           case 'AUDIO_TO_IMAGE':
               return (
                   <div className="flex flex-col items-center justify-center w-full h-full p-1 sm:p-2">
-                      <WordImage word={opt} className="w-full h-20 sm:h-32 rounded-lg" />
+                      <WordImage word={opt} className="w-full h-20 sm:h-32 rounded-lg" hideLabel={true} />
                   </div>
               );
       }
@@ -168,7 +172,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
   if (mode === 'LEARN') {
     return (
-      <div className="flex flex-col items-center w-full max-w-md mx-auto p-4 animate-fadeIn relative h-full max-h-[500px]">
+      <div className="flex flex-col items-center w-full max-w-md mx-auto p-4 animate-fadeIn relative h-full max-h-[600px]">
         <div className="w-full flex items-center justify-between mb-4 flex-shrink-0">
             <h2 className="text-xs font-black text-blue-600 bg-blue-100 px-3 py-1 rounded-full border border-blue-200">
                 Học từ ({currentIndex + 1}/{words.length})
@@ -180,7 +184,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
             </div>
         </div>
         
-        <div className="relative w-full flex-1 perspective-1000 group z-10 mb-4">
+        <div className="relative w-full flex-1 perspective-1000 group z-10 mb-4 min-h-[300px]">
           <div className={`relative w-full h-full duration-500 transform-style-3d transition-transform cursor-pointer ${isFlipped ? 'rotate-y-180' : ''}`} onClick={handleFlip}>
             
             {/* FRONT */}
@@ -188,12 +192,12 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
                 <div className="flex-1 w-full bg-blue-50 p-2 sm:p-4 relative flex items-center justify-center overflow-hidden">
                     <WordImage word={currentWord} className="w-full h-full rounded-2xl shadow-inner bg-white object-contain" />
                     <div className="absolute bottom-2 right-2 bg-white/80 p-1 rounded-full text-blue-300">
-                        <RotateCw size={16} />
+                        <RotateCw size={20} />
                     </div>
                 </div>
                 
                 <div className="h-auto min-h-[100px] sm:min-h-[140px] flex flex-col items-center justify-center p-3 sm:p-4 bg-white relative z-20">
-                    <h3 className="text-xl sm:text-3xl font-black text-slate-800 mb-2 tracking-tight text-center leading-tight line-clamp-2">
+                    <h3 className="text-2xl sm:text-4xl font-black text-slate-800 mb-2 tracking-tight text-center leading-tight line-clamp-2">
                         {currentWord.english}
                     </h3>
                     
@@ -203,39 +207,41 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
                             e.stopPropagation();
                             playAudio(currentWord.english); 
                         }} 
-                        className="flex items-center gap-1 px-4 py-2 sm:px-6 sm:py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-bold shadow-lg transition-transform active:scale-95 z-30"
+                        className="flex items-center gap-1 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-full font-bold shadow-lg transition-transform active:scale-95 z-30"
                     >
-                        <Volume2 size={18} /> 
-                        <span className="text-xs sm:text-base">Nghe từ</span>
+                        <Volume2 size={20} /> 
+                        <span className="text-sm sm:text-lg">Nghe từ</span>
                     </button>
                 </div>
             </div>
 
             {/* BACK */}
             <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white border-2 sm:border-4 border-orange-100 rounded-3xl shadow-xl flex flex-col overflow-hidden">
-                <div className="bg-orange-50 p-4 flex flex-col items-center justify-center h-[35%] border-b border-orange-100 relative">
-                     <h3 className="text-xl sm:text-2xl font-black text-orange-600 mb-1 text-center leading-tight break-words px-2">
+                <div className="bg-orange-50 p-6 flex flex-col items-center justify-center h-[35%] border-b border-orange-100 relative">
+                     <h3 className="text-2xl sm:text-3xl font-black text-orange-600 mb-2 text-center leading-tight break-words px-2">
                         {currentWord.vietnamese}
                      </h3>
-                     <p className="text-gray-400 font-mono text-sm italic">/{currentWord.pronunciation}/</p>
+                     <p className="text-gray-400 font-mono text-base italic">/{currentWord.pronunciation}/</p>
                 </div>
-                <div className="flex-1 p-3 sm:p-4 flex flex-col justify-center bg-white">
-                    <div className="bg-blue-50 p-3 rounded-xl border-l-4 border-blue-400 relative">
-                        <span className="absolute -top-2 left-2 bg-blue-400 text-white text-[8px] px-2 py-0.5 rounded-full font-bold">Ví dụ</span>
+                <div className="flex-1 p-4 sm:p-6 flex flex-col justify-center bg-white">
+                    <div className="bg-blue-50 p-4 rounded-2xl border-l-4 border-blue-400 relative">
+                        <span className="absolute -top-3 left-3 bg-blue-400 text-white text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider shadow-sm">Ví dụ</span>
                         
-                        <div className="flex items-start gap-2 mt-2">
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    playAudio(currentWord.exampleEn, 0.7);
-                                }}
-                                className="mt-0.5 text-blue-500 hover:text-blue-700 bg-white p-1.5 rounded-full shadow-sm active:scale-90 transition-transform"
-                            >
-                                <Headphones size={14} />
-                            </button>
-                            <div>
-                                <p className="text-sm sm:text-base font-bold text-slate-700 leading-snug">"{currentWord.exampleEn}"</p>
-                                <p className="text-[10px] sm:text-xs text-slate-500 mt-1 italic">{currentWord.exampleVi}</p>
+                        <div className="flex flex-col gap-3 mt-3">
+                            <div className="flex items-start gap-3">
+                                <button 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        playAudio(currentWord.exampleEn, 0.7);
+                                    }}
+                                    className="mt-1 text-blue-500 hover:text-blue-700 bg-white p-2 rounded-full shadow-sm active:scale-90 transition-transform shrink-0"
+                                >
+                                    <Headphones size={20} />
+                                </button>
+                                <div>
+                                    <p className="text-xl sm:text-2xl font-black text-slate-700 leading-snug mb-1">"{currentWord.exampleEn}"</p>
+                                    <p className="text-base sm:text-lg text-slate-500 italic font-medium">{currentWord.exampleVi}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -245,8 +251,8 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
         </div>
 
         <div className="w-full flex gap-2 px-1 flex-shrink-0">
-          <button onClick={handleNextLearn} className="w-full py-3 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-2xl font-bold text-base shadow-[0_4px_0_rgb(21,128,61)] active:translate-y-1 transition-all flex items-center justify-center gap-2">
-            {currentIndex < words.length - 1 ? "Tiếp theo" : "Làm bài tập"} <ArrowRight size={20} />
+          <button onClick={handleNextLearn} className="w-full py-4 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-2xl font-bold text-lg shadow-[0_4px_0_rgb(21,128,61)] active:translate-y-1 transition-all flex items-center justify-center gap-2">
+            {currentIndex < words.length - 1 ? "Tiếp theo" : "Làm bài tập"} <ArrowRight size={24} />
           </button>
         </div>
       </div>
