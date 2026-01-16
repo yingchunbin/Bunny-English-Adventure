@@ -54,7 +54,7 @@ export interface Achievement {
   icon: string;
   condition: (state: UserState) => boolean;
   isUnlocked: boolean; 
-  reward?: { type: 'COIN' | 'WATER' | 'FERTILIZER', amount: number }; // Added reward to achievement
+  reward?: { type: 'COIN' | 'WATER' | 'FERTILIZER' | 'STAR', amount: number }; 
 }
 
 export type ItemType = 'CROP' | 'DECOR' | 'TOOL' | 'ANIMAL' | 'PRODUCT' | 'PROCESSED' | 'MACHINE';
@@ -95,12 +95,12 @@ export interface Product extends FarmItem {
 
 export interface MachineItem extends FarmItem {
     type: 'MACHINE';
-    unlockPrice: number; // Cost to unlock the slot/machine
+    unlockPrice: number; 
 }
 
 export interface ProcessingRecipe {
     id: string;
-    machineId: string; // Which machine makes this?
+    machineId: string; 
     name: string;
     input: { id: string; amount: number }[]; 
     outputId: string; 
@@ -134,7 +134,7 @@ export interface LivestockSlot {
 
 export interface MachineSlot {
     id: number;
-    machineId: string | null; // e.g., 'bakery'
+    machineId: string | null; 
     isUnlocked: boolean;
     activeRecipeId: string | null;
     startedAt: number | null;
@@ -153,7 +153,7 @@ export interface FarmOrder {
 export interface Mission {
   id: string;
   desc: string;
-  type: 'LEARN' | 'HARVEST' | 'EARN' | 'WATER' | 'FERTILIZE' | 'FEED';
+  type: 'LEARN' | 'HARVEST' | 'EARN' | 'WATER' | 'FERTILIZE' | 'FEED' | 'QUIZ';
   category: 'DAILY' | 'ACHIEVEMENT';
   target: number;
   current: number;
@@ -173,6 +173,7 @@ export interface UserState {
   grade: number | null;
   textbook: string | null;
   coins: number;
+  stars: number; // Added Premium Currency
   currentAvatarId: string;
   completedLevels: number[];
   levelStars: Record<number, number>; 
@@ -184,19 +185,19 @@ export interface UserState {
   farmPlots: FarmPlot[];
   livestockSlots?: LivestockSlot[]; 
   machineSlots?: MachineSlot[]; 
-  inventory: { [itemId: string]: number }; // Seeds
-  harvestedCrops?: { [itemId: string]: number }; // Crops, Products, Processed items
+  inventory: { [itemId: string]: number }; // Seeds & Items
+  harvestedCrops?: { [itemId: string]: number }; // Harvested Products
   fertilizers: number; 
   waterDrops: number; 
   weather?: 'SUNNY' | 'RAINY'; 
   lastWeatherUpdate?: number; 
   decorations?: string[]; 
   
-  // Replaced Pet stats with Farm stats
   farmLevel?: number;
   farmExp?: number;
 
   missions?: Mission[];
+  lastMissionUpdate?: string; // Track day for daily reset
   activeOrders?: FarmOrder[]; 
   settings: UserSettings; 
 }

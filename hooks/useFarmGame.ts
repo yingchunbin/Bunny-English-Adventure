@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot } from '../types';
-import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA } from '../data/farmData';
+import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from '../data/farmData';
 import { playSFX } from '../utils/sound';
 
 export const useFarmGame = (
@@ -59,21 +59,48 @@ export const useFarmGame = (
 
   // --- INIT LOGIC (Effect) ---
   useEffect(() => {
-      // Ensure Missions are initialized
-      if (!userState.missions || userState.missions.length === 0) {
-          onUpdateState(prev => ({ ...prev, missions: FARM_ACHIEVEMENTS_DATA }));
-      }
-      
-      // Ensure Orders are initialized
-      if (!userState.activeOrders || userState.activeOrders.length === 0) {
-          const initialOrders = [
-              createSingleOrder(1, 0, userState.livestockSlots || []),
-              createSingleOrder(1, 0, userState.livestockSlots || []),
-              createSingleOrder(1, 0, userState.livestockSlots || [])
-          ];
-          onUpdateState(prev => ({ ...prev, activeOrders: initialOrders }));
-      }
-  }, []); // Run once on mount
+      const todayStr = new Date().toDateString();
+      onUpdateState(prev => {
+          let newState = { ...prev };
+          let changed = false;
+
+          // 1. Initialize Achievements if missing
+          const hasAchievements = prev.missions?.some(m => m.category === 'ACHIEVEMENT');
+          if (!hasAchievements) {
+              const achievements = FARM_ACHIEVEMENTS_DATA;
+              newState.missions = [...(prev.missions || []), ...achievements];
+              changed = true;
+          }
+
+          // 2. Initialize Daily Missions if new day
+          if (prev.lastMissionUpdate !== todayStr) {
+              const currentAchievements = newState.missions?.filter(m => m.category === 'ACHIEVEMENT') || [];
+              
+              // Pick 3 random daily missions from pool
+              const dailies = [...DAILY_MISSION_POOL]
+                  .sort(() => 0.5 - Math.random())
+                  .slice(0, 3)
+                  .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
+              
+              newState.missions = [...currentAchievements, ...dailies];
+              newState.lastMissionUpdate = todayStr;
+              changed = true;
+          }
+
+          // 3. Ensure Orders are initialized
+          if (!prev.activeOrders || prev.activeOrders.length === 0) {
+              const initialOrders = [
+                  createSingleOrder(1, 0, prev.livestockSlots || []),
+                  createSingleOrder(1, 0, prev.livestockSlots || []),
+                  createSingleOrder(1, 0, prev.livestockSlots || [])
+              ];
+              newState.activeOrders = initialOrders;
+              changed = true;
+          }
+
+          return changed ? newState : prev;
+      });
+  }, []); 
 
   // --- MAIN GAME LOOP ---
   useEffect(() => {
@@ -97,13 +124,15 @@ export const useFarmGame = (
                 }
             }
 
-            // 2. Bugs
-            if (Math.random() < 0.005) {
-                const eligiblePlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
-                if (eligiblePlots.length > 0) {
-                    const target = eligiblePlots[Math.floor(Math.random() * eligiblePlots.length)];
+            // 2. Bugs & Weeds Spawn
+            if (Math.random() < 0.01) { // 1% chance per second
+                // Prioritize finding plot without weed/bug
+                const cleanPlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
+                if (cleanPlots.length > 0) {
+                    const target = cleanPlots[Math.floor(Math.random() * cleanPlots.length)];
+                    const isBug = Math.random() > 0.5;
                     newState.farmPlots = prev.farmPlots.map(p => 
-                        p.id === target.id ? { ...p, hasBug: true } : p
+                        p.id === target.id ? { ...p, hasBug: isBug, hasWeed: !isBug } : p
                     );
                     hasChanges = true;
                 }
@@ -161,7 +190,10 @@ export const useFarmGame = (
       return newOrders;
   }, []);
 
-  const canAfford = (amount: number) => userState.coins >= amount;
+  const canAfford = (amount: number, currency: 'COIN' | 'STAR' = 'COIN') => {
+      if (currency === 'STAR') return (userState.stars || 0) >= amount;
+      return userState.coins >= amount;
+  };
 
   // --- ACTIONS ---
 
@@ -202,11 +234,23 @@ export const useFarmGame = (
       return { success: true };
   };
 
-  const catchBug = (plotId: number) => {
-      onUpdateState(prev => ({
-          ...prev,
-          farmPlots: prev.farmPlots.map(p => p.id === plotId ? { ...p, hasBug: false, isWatered: false } : p)
-      }));
+  // Resolve Pest/Weed via Quiz
+  const resolvePest = (plotId: number) => {
+      onUpdateState(prev => {
+          // Grant some EXP for learning
+          let newExp = (prev.farmExp || 0) + 10;
+          let newLevel = prev.farmLevel || 1;
+          if (newExp >= newLevel * 100) { newLevel += 1; newExp -= newLevel * 100; }
+
+          return {
+            ...prev,
+            farmExp: newExp,
+            farmLevel: newLevel,
+            farmPlots: prev.farmPlots.map(p => p.id === plotId ? { ...p, hasBug: false, hasWeed: false } : p)
+          };
+      });
+      playSFX('success');
+      updateMissionProgress('QUIZ', 1);
       return { success: true };
   };
 
@@ -245,17 +289,15 @@ export const useFarmGame = (
 
       // Harvest Crops
       newFarmPlots.forEach((plot, index) => {
-          if (plot.cropId && plot.plantedAt) {
+          if (plot.cropId && plot.plantedAt && !plot.hasBug && !plot.hasWeed) { // Can only harvest healthy crops
               const crop = CROPS.find(c => c.id === plot.cropId);
               if (crop) {
                   const elapsed = (now - plot.plantedAt) / 1000;
                   if (elapsed >= crop.growthTime) {
-                      // Harvest logic
                       harvestedCount++;
                       expGained += crop.exp;
                       newHarvestedCrops[crop.id] = (newHarvestedCrops[crop.id] || 0) + 1;
                       
-                      // Reset plot
                       newFarmPlots[index] = { 
                           ...plot, 
                           cropId: null, 
@@ -299,16 +341,20 @@ export const useFarmGame = (
   const buyAnimal = (slotId: number, animalId: string) => {
       const animal = ANIMALS.find(a => a.id === animalId);
       if (!animal) return { success: false, msg: "Lỗi dữ liệu vật nuôi" };
-      if (!canAfford(animal.cost)) return { success: false, msg: "Bé không đủ tiền rồi!" };
+      
+      const currency = animal.currency || 'COIN';
+      if (!canAfford(animal.cost, currency)) return { success: false, msg: `Bé không đủ ${currency === 'STAR' ? 'Sao' : 'Xu'} rồi!` };
 
       playSFX('success');
       onUpdateState(prev => {
           const currentSlots = prev.livestockSlots || Array(4).fill(null).map((_,i) => ({ id: i+1, isUnlocked: true, animalId: null, fedAt: null }));
-          return {
+          const newState = {
               ...prev,
-              coins: prev.coins - animal.cost,
               livestockSlots: currentSlots.map(s => s.id === slotId ? { ...s, animalId: animal.id, fedAt: null } : s)
           };
+          if (currency === 'STAR') newState.stars = (prev.stars || 0) - animal.cost;
+          else newState.coins = prev.coins - animal.cost;
+          return newState;
       });
       return { success: true };
   };
@@ -370,16 +416,19 @@ export const useFarmGame = (
   const buyMachine = (slotId: number, machineId: string) => {
       const machine = MACHINES.find(m => m.id === machineId);
       if (!machine) return { success: false, msg: "Lỗi dữ liệu máy móc" };
-      if (!canAfford(machine.cost)) return { success: false, msg: "Bé không đủ tiền rồi!" };
+      const currency = machine.currency || 'COIN';
+      if (!canAfford(machine.cost, currency)) return { success: false, msg: `Bé không đủ ${currency === 'STAR' ? 'Sao' : 'Xu'} rồi!` };
 
       playSFX('success');
       onUpdateState(prev => {
           const currentSlots = prev.machineSlots || []; 
-          return {
+          const newState = {
               ...prev,
-              coins: prev.coins - machine.cost,
               machineSlots: currentSlots.map(s => s.id === slotId ? { ...s, machineId: machine.id, activeRecipeId: null, startedAt: null } : s)
           };
+          if (currency === 'STAR') newState.stars = (prev.stars || 0) - machine.cost;
+          else newState.coins = prev.coins - machine.cost;
+          return newState;
       });
       return { success: true };
   };
@@ -395,7 +444,6 @@ export const useFarmGame = (
       // Check inputs
       for (const input of recipe.input) {
           if ((currentHarvest[input.id] || 0) < input.amount) {
-              // const item = [...CROPS, ...PRODUCTS].find(i => i.id === input.id);
               return { success: false, msg: `Thiếu nguyên liệu!` };
           }
       }
@@ -481,11 +529,11 @@ export const useFarmGame = (
       onUpdateState(prev => ({
           ...prev,
           coins: type === 'COIN' ? prev.coins + amount : prev.coins,
+          stars: type === 'STAR' ? (prev.stars || 0) + amount : (prev.stars || 0),
           fertilizers: type === 'FERTILIZER' ? prev.fertilizers + amount : prev.fertilizers,
           waterDrops: type === 'WATER' ? prev.waterDrops + amount : prev.waterDrops,
-          inventory: type === 'magic_bean' ? { ...prev.inventory, 'magic_bean': (prev.inventory['magic_bean']||0) + 1 } : prev.inventory
       }));
   };
 
-  return { now, plantSeed, waterPlot, catchBug, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, deliverOrder, generateOrders, addReward, canAfford, updateMissionProgress };
+  return { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, deliverOrder, generateOrders, addReward, canAfford, updateMissionProgress };
 };

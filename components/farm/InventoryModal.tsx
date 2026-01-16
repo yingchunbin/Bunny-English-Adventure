@@ -8,17 +8,17 @@ interface InventoryModalProps {
   inventory: Record<string, number>; // Seeds
   harvested: Record<string, number>; // Crops/Products
   seeds: Crop[];
-  animals: AnimalItem[]; // Not stored in inventory count but needed for ref if we change logic later
+  animals: AnimalItem[]; 
   products: (Crop | Product)[];
   
-  mode: 'VIEW' | 'SELECT_SEED'; // View mode (sell/check) or Selection mode (planting)
+  mode: 'VIEW' | 'SELECT_SEED'; 
   onSelectSeed?: (seedId: string) => void;
   onSell?: (itemId: string, amount: number) => void;
   onClose: () => void;
-  onGoToShop?: () => void; // Link to shop if empty
+  onGoToShop?: () => void; 
 }
 
-type Tab = 'SEEDS' | 'PRODUCE' | 'ITEMS';
+type Tab = 'SEEDS' | 'PRODUCE';
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({ 
     inventory, harvested, seeds, products, mode, onSelectSeed, onSell, onClose, onGoToShop 
@@ -27,10 +27,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
   // Helper to render an item row
   const renderItemRow = (item: FarmItem, count: number, isSeed: boolean) => {
-      if (count <= 0 && mode === 'SELECT_SEED') return null; // Hide empty in select mode? No, maybe show 0 to allow buy?
-      // Actually for Select Seed mode, we only show seeds.
-      
-      const isSelected = false; // Add logic if needed
+      // In select mode, show seeds even if 0 count to prompt buying
+      if (mode === 'SELECT_SEED' && !isSeed) return null;
+      if (mode === 'VIEW' && count <= 0) return null; 
 
       return (
           <div key={item.id} className="bg-white border-4 border-slate-100 rounded-3xl p-3 flex items-center justify-between shadow-sm">
@@ -62,19 +61,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                       </button>
                   )
               ) : mode === 'VIEW' && count > 0 ? (
-                  <div className="flex gap-1">
-                      <button 
-                          onClick={() => onSell && onSell(item.id, 1)}
-                          className="bg-amber-100 text-amber-700 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-amber-200 active:scale-95"
-                      >
-                          Bán 1 (+{(item as any).sellPrice})
-                      </button>
-                      <button 
-                          onClick={() => onSell && onSell(item.id, count)}
-                          className="bg-emerald-100 text-emerald-700 px-3 py-2 rounded-xl font-black text-[10px] uppercase border border-emerald-200 active:scale-95"
-                      >
-                          Bán hết
-                      </button>
+                  <div className="flex gap-1 items-center bg-slate-100 px-3 py-1 rounded-xl">
+                      <span className="text-[10px] font-black text-slate-400">Giá bán: { (item as any).sellPrice }</span>
+                      <Coins size={10} className="text-amber-500"/>
                   </div>
               ) : null}
           </div>
@@ -102,9 +91,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 <button onClick={() => setActiveTab('PRODUCE')} className={`flex-1 py-2 rounded-xl font-black text-xs flex flex-col items-center gap-1 transition-all ${activeTab === 'PRODUCE' ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-slate-400'}`}>
                     <Egg size={16}/> Nông Sản
                 </button>
-                <button onClick={() => setActiveTab('ITEMS')} className={`flex-1 py-2 rounded-xl font-black text-xs flex flex-col items-center gap-1 transition-all ${activeTab === 'ITEMS' ? 'bg-blue-500 text-white shadow-md' : 'bg-white text-slate-400'}`}>
-                    <Hammer size={16}/> Vật Phẩm
-                </button>
             </div>
 
             {/* Content */}
@@ -124,7 +110,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     <>
                         {products.map(p => {
                             const count = harvested[p.id] || 0;
-                            if (mode === 'VIEW' && count === 0) return null; // Only show owned in view mode
                             return renderItemRow(p, count, false);
                         })}
                         {Object.values(harvested).reduce((a,b)=>a+b, 0) === 0 && (
@@ -132,11 +117,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                         )}
                     </>
                 )}
-
-                {activeTab === 'ITEMS' && (
-                    <div className="text-center py-10 text-slate-400 font-bold text-sm">Chưa có vật phẩm nào!</div>
-                )}
-
             </div>
         </div>
     </div>

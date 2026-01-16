@@ -7,8 +7,10 @@ import { ShopModal } from './farm/ShopModal';
 import { MissionModal } from './farm/MissionModal';
 import { OrderBoard } from './farm/OrderBoard';
 import { InventoryModal } from './farm/InventoryModal';
+import { LearningQuizModal } from './farm/LearningQuizModal';
+import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, CloudRain, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, ArrowUp } from 'lucide-react';
+import { Lock, Droplets, CloudRain, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 
 interface FarmProps {
@@ -21,13 +23,18 @@ interface FarmProps {
 
 type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES';
 
-export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) => {
-  const { now, plantSeed, waterPlot, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders } = useFarmGame(userState, onUpdateState);
+export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
+  const { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'QUIZ'>('NONE');
+  const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST', plotId?: number } | null>(null);
+  
   const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED'>('VIEW');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  
+  // Custom Confirm Modal State
+  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; message: string; onConfirm: () => void } | null>(null);
 
   // --- EXPANSION LOGIC ---
   const handleExpand = (type: 'PLOT' | 'PEN' | 'MACHINE') => {
@@ -37,31 +44,72 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
       if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
       if (type === 'MACHINE') currentCount = userState.machineSlots?.length || 0;
 
-      // Price increases by 50% each time
       const cost = baseCost * Math.pow(1.5, Math.max(0, currentCount - 6)); 
       const finalCost = Math.floor(cost / 100) * 100; 
 
-      if (window.confirm(`Mở rộng thêm ô mới với giá ${finalCost} Xu?`)) {
-          if (canAfford(finalCost)) {
-              playSFX('success');
-              onUpdateState(prev => {
-                  const newState = { ...prev, coins: prev.coins - finalCost };
-                  const newId = Date.now();
-                  
-                  if (type === 'PLOT') {
-                      newState.farmPlots = [...prev.farmPlots, { id: newId, isUnlocked: true, cropId: null, plantedAt: null }];
-                  } else if (type === 'PEN') {
-                      newState.livestockSlots = [...(prev.livestockSlots || []), { id: newId, isUnlocked: true, animalId: null, fedAt: null }];
-                  } else if (type === 'MACHINE') {
-                      newState.machineSlots = [...(prev.machineSlots || []), { id: newId, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null }];
-                  }
-                  return newState;
-              });
-          } else {
-              playSFX('wrong');
-              alert("Bạn không đủ tiền!");
+      setConfirmConfig({
+          isOpen: true,
+          message: `Mở rộng thêm ô mới với giá ${finalCost} Xu?`,
+          onConfirm: () => {
+              if (canAfford(finalCost, 'COIN')) {
+                  playSFX('success');
+                  onUpdateState(prev => {
+                      const newState = { ...prev, coins: prev.coins - finalCost };
+                      const newId = Date.now();
+                      if (type === 'PLOT') newState.farmPlots = [...prev.farmPlots, { id: newId, isUnlocked: true, cropId: null, plantedAt: null }];
+                      else if (type === 'PEN') newState.livestockSlots = [...(prev.livestockSlots || []), { id: newId, isUnlocked: true, animalId: null, fedAt: null }];
+                      else if (type === 'MACHINE') newState.machineSlots = [...(prev.machineSlots || []), { id: newId, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null }];
+                      return newState;
+                  });
+              } else {
+                  playSFX('wrong');
+                  alert("Bạn không đủ tiền!");
+              }
+              setConfirmConfig(null);
+          }
+      });
+  };
+
+  // --- INTERACTION LOGIC ---
+  const handlePlotClick = (plot: any) => {
+      if (!plot.isUnlocked) return;
+      const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
+      
+      // Handle Pest/Weed via Quiz
+      if (crop && (plot.hasBug || plot.hasWeed)) {
+          setQuizContext({ type: 'PEST', plotId: plot.id });
+          setActiveModal('QUIZ');
+          return;
+      }
+
+      if (!crop) {
+          setSelectedId(plot.id);
+          setInventoryMode('SELECT_SEED');
+          setActiveModal('INVENTORY');
+      } else {
+          const elapsed = (now - plot.plantedAt) / 1000;
+          if (elapsed >= crop.growthTime) harvestPlot(plot.id, crop);
+          else {
+              setSelectedId(plot.id); 
+              setActiveModal('PLOT'); 
           }
       }
+  };
+
+  const handleWellClick = () => {
+      setQuizContext({ type: 'WATER' });
+      setActiveModal('QUIZ');
+  };
+
+  const onQuizSuccess = () => {
+      if (quizContext?.type === 'WATER') {
+          addReward('WATER', 5);
+          playSFX('water');
+      } else if (quizContext?.type === 'PEST' && quizContext.plotId) {
+          resolvePest(quizContext.plotId);
+      }
+      setActiveModal('NONE');
+      setQuizContext(null);
   };
 
   // --- RENDERERS ---
@@ -95,8 +143,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
 
   const renderHUD = () => (
       <div className="px-4 mb-4 flex gap-2 justify-center">
-          <button onClick={() => setActiveModal('MISSIONS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-indigo-100 text-indigo-600 font-black text-xs active:scale-95 transition-all">
+          <button onClick={() => setActiveModal('MISSIONS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-indigo-100 text-indigo-600 font-black text-xs active:scale-95 transition-all relative">
               <Scroll size={16} /> Nhiệm Vụ
+              {/* Notification Dot if tasks available */}
+              {userState.missions?.some(m => m.completed && !m.claimed) && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
           </button>
           <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all">
               <Truck size={16} /> Đơn Hàng
@@ -126,30 +176,35 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
 
   const renderCrops = () => (
       <div className="grid grid-cols-2 gap-4 px-4 pb-32 animate-fadeIn">
+          {/* Wisdom Well */}
+          <button 
+            onClick={handleWellClick}
+            className="col-span-2 bg-blue-100 rounded-[2rem] p-4 flex items-center justify-between border-4 border-blue-200 shadow-sm active:scale-95 transition-transform"
+          >
+              <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl border-2 border-blue-200">🚰</div>
+                  <div className="text-left">
+                      <div className="font-black text-blue-700 text-sm uppercase">Giếng Thần</div>
+                      <div className="text-[10px] font-bold text-blue-400">Trả lời câu hỏi lấy nước</div>
+                  </div>
+              </div>
+              <div className="bg-white px-3 py-1 rounded-full text-blue-600 font-black text-xs border border-blue-200 flex items-center gap-1">
+                  <Droplets size={12} fill="currentColor"/> {userState.waterDrops}
+              </div>
+          </button>
+
           {userState.farmPlots.map(plot => {
               const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
               const elapsed = crop && plot.plantedAt ? (now - plot.plantedAt) / 1000 : 0;
               const progress = crop ? Math.min(100, (elapsed / crop.growthTime) * 100) : 0;
               const isReady = progress >= 100;
               const isWatered = plot.isWatered || userState.weather === 'RAINY';
+              const hasPest = plot.hasBug || plot.hasWeed;
 
               return (
                   <button 
                     key={plot.id}
-                    onClick={() => { 
-                        if (!plot.isUnlocked) return;
-                        if (!crop) {
-                            setSelectedId(plot.id);
-                            setInventoryMode('SELECT_SEED');
-                            setActiveModal('INVENTORY');
-                        } else if (isReady) {
-                            // Immediate Harvest
-                            harvestPlot(plot.id, crop);
-                        } else {
-                            setSelectedId(plot.id); 
-                            setActiveModal('PLOT'); 
-                        }
-                    }}
+                    onClick={() => handlePlotClick(plot)}
                     className={`
                         relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] group overflow-hidden
                         ${!plot.isUnlocked ? 'bg-slate-200 border-slate-300' : isWatered ? 'bg-[#795548] border-[#5D4037]' : 'bg-[#A1887F] border-[#8D6E63]'}
@@ -163,16 +218,26 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                           </div>
                       ) : crop ? (
                           <>
+                              {hasPest && !isReady && (
+                                  <div className="absolute inset-0 bg-black/40 z-20 flex flex-col items-center justify-center animate-pulse">
+                                      {plot.hasBug ? <Bug className="text-red-400 mb-1" size={32}/> : <div className="text-3xl">🌿</div>}
+                                      <span className="text-[8px] font-black text-white bg-red-500 px-2 py-1 rounded-full uppercase">Dọn dẹp ngay!</span>
+                                  </div>
+                              )}
+                              
                               <div className={`text-7xl transition-all duration-500 z-10 ${isReady ? 'scale-110 drop-shadow-2xl' : 'scale-75 opacity-90 grayscale-[0.3]'}`}>
                                   {crop.emoji}
                               </div>
+                              
                               {!isReady && (
                                   <div className="absolute bottom-6 w-16 h-2 bg-black/20 rounded-full overflow-hidden border border-white/20 backdrop-blur-sm z-10">
                                       <div className="h-full bg-green-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                   </div>
                               )}
-                              {isReady && renderHarvestButton()}
-                              {isWatered && !isReady && (
+                              
+                              {isReady && !hasPest && renderHarvestButton()}
+                              
+                              {isWatered && !isReady && !hasPest && (
                                   <div className="absolute top-3 right-3 text-blue-300 opacity-90 bg-blue-500/20 p-1 rounded-full"><Droplets size={16} fill="currentColor" /></div>
                               )}
                           </>
@@ -301,7 +366,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
   const getReadyCount = () => {
       let count = 0;
       userState.farmPlots.forEach(p => {
-          if (p.cropId && p.plantedAt) {
+          if (p.cropId && p.plantedAt && !p.hasBug && !p.hasWeed) {
               const c = CROPS.find(crop => crop.id === p.cropId);
               if (c && (now - p.plantedAt)/1000 >= c.growthTime) count++;
           }
@@ -310,6 +375,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
   };
 
   const readyCount = getReadyCount();
+  const nextLevelExp = (userState.farmLevel || 1) * 100;
 
   return (
     <div className="w-full h-full bg-[#E0F7FA] relative overflow-y-auto no-scrollbar flex flex-col">
@@ -317,16 +383,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
         <div className="bg-white/90 backdrop-blur-md px-4 py-3 shadow-lg flex justify-between items-center z-40 sticky top-0 border-b-4 border-green-100/50">
             <button onClick={onExit} className="p-2 text-slate-600 hover:bg-slate-100 rounded-2xl active:scale-90 transition-all bg-white border border-slate-200 shadow-sm z-50 relative"><Home size={24}/></button>
             
-            <div className="flex flex-1 mx-4 items-center gap-3">
-                <div className="flex-1 bg-slate-100 h-8 rounded-full border-2 border-slate-200 relative overflow-hidden flex items-center px-3">
-                    <div className="absolute left-0 top-0 h-full bg-blue-400 transition-all duration-500" style={{ width: `${Math.min(100, ((userState.farmExp || 0) / ((userState.farmLevel || 1) * 100)) * 100)}%` }} />
-                    <span className="relative z-10 text-[10px] font-black text-slate-600 w-full text-center">
-                        LV {userState.farmLevel || 1}
-                    </span>
+            <div className="flex flex-1 mx-4 items-center gap-2">
+                <div className="flex-1 bg-slate-100 h-9 rounded-full border-2 border-slate-200 relative overflow-hidden flex items-center px-3">
+                    <div className="absolute left-0 top-0 h-full bg-blue-400 transition-all duration-500" style={{ width: `${Math.min(100, ((userState.farmExp || 0) / nextLevelExp) * 100)}%` }} />
+                    <div className="relative z-10 flex w-full justify-between items-center text-[10px] font-black text-slate-600">
+                        <span className="bg-white/50 px-1 rounded">LV {userState.farmLevel || 1}</span>
+                        <span>{userState.farmExp}/{nextLevelExp} XP</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-xl border border-amber-200">
-                    <Coins size={14} className="text-amber-500" fill="currentColor"/>
-                    <span className="text-xs font-black text-amber-700">{userState.coins}</span>
+                <div className="flex flex-col gap-1 items-end">
+                    <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 text-[10px] font-black text-amber-700 min-w-[60px] justify-between">
+                        <Coins size={10} fill="currentColor"/> {userState.coins}
+                    </div>
+                    <div className="flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200 text-[10px] font-black text-purple-700 min-w-[60px] justify-between">
+                        <Star size={10} fill="currentColor"/> {userState.stars}
+                    </div>
                 </div>
             </div>
         </div>
@@ -378,12 +449,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                         harvestPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
                         setActiveModal('NONE');
                     }
+                    if (action === 'UNLOCK') {
+                        // Redirect logic for unlock to button inside modal is redundant if modal handles it, 
+                        // but handleExpand is cleaner. Re-using handleExpand logic inside modal might be needed or close and confirm.
+                        // For simplicity, PlotModal's unlock button calls handleExpand via prop or we close and call it here.
+                        // Let's close and call expand.
+                        setActiveModal('NONE');
+                        handleExpand('PLOT');
+                    }
                 }}
                 onClose={() => setActiveModal('NONE')} 
             />
         )}
 
-        {/* UNIFIED SHOP: Opened contextually or globally */}
+        {/* SHOP MODAL */}
         {(activeModal === 'SHOP') && (
             <ShopModal 
                 crops={CROPS} 
@@ -392,13 +471,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                 decorations={DECORATIONS} 
                 userState={userState} 
                 onBuySeed={(crop, amount) => {
+                    const currency = crop.currency || 'COIN';
                     const cost = crop.cost * amount;
-                    if (userState.coins >= cost) {
-                        onUpdateState(prev => ({
-                            ...prev,
-                            coins: prev.coins - cost,
-                            inventory: { ...prev.inventory, [crop.id]: (prev.inventory[crop.id] || 0) + amount }
-                        }));
+                    if (canAfford(cost, currency)) {
+                        onUpdateState(prev => {
+                            const newState = { ...prev };
+                            if (currency === 'STAR') newState.stars = (prev.stars || 0) - cost;
+                            else newState.coins = prev.coins - cost;
+                            newState.inventory = { ...prev.inventory, [crop.id]: (prev.inventory[crop.id] || 0) + amount };
+                            return newState;
+                        });
                         playSFX('success');
                     } else {
                         playSFX('wrong');
@@ -420,17 +502,19 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                     }
                 }}
                 onBuyDecor={(decor) => {
-                    if (decor.currency === 'STAR' ? true : userState.coins >= decor.cost) { // Basic check, real check in ShopModal or logic below
+                    const currency = decor.currency || 'COIN';
+                    if (canAfford(decor.cost, currency)) { 
                          onUpdateState(prev => {
                              let newState = { ...prev };
-                             if (decor.currency === 'COIN') {
-                                 newState.coins -= decor.cost;
-                             }
-                             // If star currency, assuming we don't deduct stars, just check level/stars req.
+                             if (currency === 'STAR') newState.stars = (prev.stars || 0) - decor.cost;
+                             else newState.coins = prev.coins - decor.cost;
                              newState.decorations = [...(prev.decorations || []), decor.id];
                              return newState;
                          });
                          playSFX('success');
+                    } else {
+                        playSFX('wrong');
+                        alert("Không đủ tiền!");
                     }
                 }}
                 onClose={() => { setActiveModal('NONE'); setSelectedId(null); }} 
@@ -487,6 +571,22 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                 onSell={() => {}}
             />
         )}
+
+        {activeModal === 'QUIZ' && quizContext && (
+            <LearningQuizModal 
+                words={allWords} 
+                type={quizContext.type} 
+                onSuccess={onQuizSuccess} 
+                onClose={() => { setActiveModal('NONE'); setQuizContext(null); }} 
+            />
+        )}
+
+        <ConfirmModal 
+            isOpen={!!confirmConfig}
+            message={confirmConfig?.message || ''}
+            onConfirm={confirmConfig?.onConfirm || (() => {})}
+            onCancel={() => setConfirmConfig(null)}
+        />
     </div>
   );
 };

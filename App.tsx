@@ -20,7 +20,8 @@ import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
   textbook: null,
-  coins: 100, 
+  coins: 200, 
+  stars: 5, // Start with some stars
   currentAvatarId: 'bunny',
   completedLevels: [],
   levelStars: {},
@@ -37,7 +38,7 @@ const DEFAULT_USER_STATE: UserState = {
   ],
   livestockSlots: [],
   machineSlots: [],
-  inventory: { 'carrot': 3 }, 
+  inventory: { 'carrot': 2, 'wheat': 2 }, 
   harvestedCrops: {},
   fertilizers: 3,
   waterDrops: 10,
@@ -55,7 +56,7 @@ const DEFAULT_USER_STATE: UserState = {
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state_v6'); // Bump version
+        const saved = localStorage.getItem('turtle_english_state_v7'); // Bump version
         return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
       } catch (e) {
         return DEFAULT_USER_STATE;
@@ -71,7 +72,7 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state_v6', JSON.stringify(userState));
+      localStorage.setItem('turtle_english_state_v7', JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
@@ -296,7 +297,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem('turtle_english_state_v6');
+                      localStorage.removeItem('turtle_english_state_v7');
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
