@@ -238,8 +238,17 @@ export const DECORATIONS: Decor[] = [
 export const FARM_ACHIEVEMENTS_DATA: Mission[] = [
     // Achievements (One time)
     { id: 'ach_hv_50', desc: 'Thu hoạch 50 lần', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
+    { id: 'ach_hv_200', desc: 'Tay gặt siêu đẳng', type: 'HARVEST', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 15 }, completed: false, claimed: false },
+    { id: 'ach_hv_1000', desc: 'Thần Nông tái thế', type: 'HARVEST', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
+    
     { id: 'ach_earn_1k', desc: 'Kiếm 1000 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
+    { id: 'ach_earn_10k', desc: 'Đại gia phố huyện', type: 'EARN', category: 'ACHIEVEMENT', target: 10000, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
+    
     { id: 'ach_feed_20', desc: 'Cho ăn 20 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'FERTILIZER', amount: 5 }, completed: false, claimed: false },
+    { id: 'ach_feed_100', desc: 'Bạn của muôn loài', type: 'FEED', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
+
+    { id: 'ach_bake_20', desc: 'Thợ làm bánh', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false }, // Logic for this specific type needs implementation in useFarmGame
+    { id: 'ach_water_100', desc: 'Thần Mưa', type: 'WATER', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
 ];
 
 export const DAILY_MISSION_POOL: Mission[] = [
@@ -247,4 +256,6 @@ export const DAILY_MISSION_POOL: Mission[] = [
     { id: 'd_harvest_10', desc: 'Thu hoạch 10 nông sản', type: 'HARVEST', category: 'DAILY', target: 10, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
     { id: 'd_quiz_3', desc: 'Trả lời đúng 3 câu đố', type: 'QUIZ', category: 'DAILY', target: 3, current: 0, reward: { type: 'STAR', amount: 1 }, completed: false, claimed: false },
     { id: 'd_feed_5', desc: 'Cho vật nuôi ăn 5 lần', type: 'FEED', category: 'DAILY', target: 5, current: 0, reward: { type: 'COIN', amount: 80 }, completed: false, claimed: false },
+    { id: 'd_fertilize_2', desc: 'Bón phân 2 lần', type: 'FERTILIZE', category: 'DAILY', target: 2, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
+    { id: 'd_earn_500', desc: 'Kiếm 500 xu từ đơn hàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
 ];

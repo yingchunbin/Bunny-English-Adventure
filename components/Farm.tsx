@@ -33,17 +33,27 @@ interface FlyingItem {
     targetY: number;
 }
 
+interface FloatingText {
+    id: number;
+    text: string;
+    x: number;
+    y: number;
+    color: string;
+}
+
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ'>('NONE');
   const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST', plotId?: number } | null>(null);
-  const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED'>('VIEW');
+  const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'>('VIEW');
+  const [initialInvTab, setInitialInvTab] = useState<'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR'>('SEEDS');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   
   // FX States
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
+  const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; message: string; onConfirm: () => void } | null>(null);
 
@@ -63,25 +73,36 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   }, [userState.farmLevel]);
 
   // --- HARVEST FX LOGIC ---
-  const triggerHarvestFX = (rect: DOMRect, emoji: string) => {
-      if (!barnBtnRef.current) return;
-      const targetRect = barnBtnRef.current.getBoundingClientRect();
-      
-      const newItem: FlyingItem = {
-          id: Date.now() + Math.random(),
-          emoji,
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2,
-          targetX: targetRect.left + targetRect.width / 2,
-          targetY: targetRect.top + targetRect.height / 2
-      };
+  const triggerHarvestFX = (rect: DOMRect, emoji: string, amount: number, exp: number) => {
+      // 1. Flying Items
+      if (barnBtnRef.current) {
+          const targetRect = barnBtnRef.current.getBoundingClientRect();
+          const newItem: FlyingItem = {
+              id: Date.now() + Math.random(),
+              emoji,
+              x: rect.left + rect.width / 2,
+              y: rect.top + rect.height / 2,
+              targetX: targetRect.left + targetRect.width / 2,
+              targetY: targetRect.top + targetRect.height / 2
+          };
+          setFlyingItems(prev => [...prev, newItem]);
+          setTimeout(() => setFlyingItems(prev => prev.filter(i => i.id !== newItem.id)), 800);
+      }
 
-      setFlyingItems(prev => [...prev, newItem]);
+      // 2. Floating Text
+      const texts: FloatingText[] = [
+          { id: Date.now(), text: `+${exp} XP`, x: rect.left, y: rect.top - 20, color: 'text-blue-600' }
+      ];
+      if (amount > 1) texts.push({ id: Date.now()+1, text: `x${amount}`, x: rect.left + 40, y: rect.top - 10, color: 'text-green-600' });
       
-      // Clean up after animation
-      setTimeout(() => {
-          setFlyingItems(prev => prev.filter(i => i.id !== newItem.id));
-      }, 800);
+      setFloatingTexts(prev => [...prev, ...texts]);
+      setTimeout(() => setFloatingTexts(prev => prev.filter(t => !texts.includes(t))), 1500);
+  };
+
+  const addFloatingText = (x: number, y: number, text: string, color: string = 'text-yellow-500') => {
+      const newText: FloatingText = { id: Date.now() + Math.random(), text, x, y, color };
+      setFloatingTexts(prev => [...prev, newText]);
+      setTimeout(() => setFloatingTexts(prev => prev.filter(t => t.id !== newText.id)), 1500);
   };
 
   const handleHarvestWithFX = (plot: FarmPlot, e: React.MouseEvent) => {
@@ -89,7 +110,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const crop = CROPS.find(c => c.id === plot.cropId);
       if (crop) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          triggerHarvestFX(rect, crop.emoji);
+          triggerHarvestFX(rect, crop.emoji, 1, crop.exp);
           harvestPlot(plot.id, crop);
       }
   };
@@ -130,7 +151,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   // --- INTERACTION LOGIC ---
   const handlePlotClick = (plot: any, e: React.MouseEvent) => {
-      if (!plot.isUnlocked) return;
+      if (!plot.isUnlocked) {
+          playSFX('wrong'); // Feedback for locked
+          return;
+      }
       const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
       
       if (crop && (plot.hasBug || plot.hasWeed)) {
@@ -142,6 +166,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (!crop) {
           setSelectedId(plot.id);
           setInventoryMode('SELECT_SEED');
+          setInitialInvTab('SEEDS');
           setActiveModal('INVENTORY');
       } else {
           const elapsed = (now - plot.plantedAt) / 1000;
@@ -154,7 +179,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
-  const handleWellClick = () => {
+  const handleWellClick = (e: React.MouseEvent) => {
       const status = checkWellUsage();
       if (!status.allowed) {
           playSFX('wrong');
@@ -168,11 +193,37 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const onQuizSuccess = () => {
       if (quizContext?.type === 'WATER') {
           useWell();
+          // Add FX
+          const rect = document.getElementById('well-btn')?.getBoundingClientRect();
+          if(rect) addFloatingText(rect.left, rect.top, "+Nước", "text-blue-500");
       } else if (quizContext?.type === 'PEST' && quizContext.plotId) {
           resolvePest(quizContext.plotId);
+          // Add FX
+          const plot = userState.farmPlots.find(p => p.id === quizContext.plotId);
+          if (plot) addFloatingText(window.innerWidth/2, window.innerHeight/2, "Sạch sẽ!", "text-green-500");
       }
       setActiveModal('NONE');
       setQuizContext(null);
+  };
+
+  const handleCollectProduct = (slot: any, e: React.MouseEvent) => {
+      const animal = ANIMALS.find(a => a.id === slot.animalId);
+      if(animal) {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const prod = PRODUCTS.find(p => p.id === animal.produceId);
+          triggerHarvestFX(rect, prod?.emoji || '📦', 1, animal.exp);
+          collectProduct(slot.id);
+      }
+  };
+
+  const handleCollectMachine = (slot: any, e: React.MouseEvent) => {
+      const recipe = RECIPES.find(r => r.id === slot.activeRecipeId);
+      if(recipe) {
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          const prod = PRODUCTS.find(p => p.id === recipe.outputId);
+          triggerHarvestFX(rect, prod?.emoji || '📦', 1, recipe.exp);
+          collectMachine(slot.id);
+      }
   };
 
   // --- RENDERERS ---
@@ -190,6 +241,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   onClick={() => {
                       if (tab.id === 'SHOP') setActiveModal('SHOP');
                       else setActiveSection(tab.id as FarmSection);
+                      playSFX('click');
                   }}
                   className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
                       (activeSection as string) === tab.id && tab.id !== 'SHOP'
@@ -222,7 +274,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           </button>
           
           {/* WELL ICON */}
-          <button onClick={handleWellClick} className="w-12 h-12 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
+          <button id="well-btn" onClick={handleWellClick} className="w-12 h-12 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
               <Droplets size={22} />
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 rounded-full border border-white font-bold">
                   {5 - (userState.wellUsageCount || 0)}
@@ -326,9 +378,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   return (
                       <button 
                         key={slot.id}
-                        onClick={() => {
-                            if (!animal) { setSelectedId(slot.id); setActiveModal('SHOP'); }
-                            else if (isReady) collectProduct(slot.id);
+                        onClick={(e) => {
+                            // Empty slot logic: Open Inventory instead of Shop
+                            if (!animal) { 
+                                setSelectedId(slot.id); 
+                                setInventoryMode('PLACE_ANIMAL');
+                                setInitialInvTab('ANIMALS');
+                                setActiveModal('INVENTORY'); 
+                            }
+                            else if (isReady) handleCollectProduct(slot, e);
                             else if (!isFed) feedAnimal(slot.id);
                         }}
                         className={`
@@ -379,9 +437,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   return (
                       <button 
                         key={slot.id}
-                        onClick={() => {
-                            if (!machine) { setSelectedId(slot.id); setActiveModal('SHOP'); }
-                            else if (isReady) collectMachine(slot.id);
+                        onClick={(e) => {
+                            // Empty slot logic: Open Inventory instead of Shop
+                            if (!machine) { 
+                                setSelectedId(slot.id); 
+                                setInventoryMode('PLACE_MACHINE');
+                                setInitialInvTab('MACHINES');
+                                setActiveModal('INVENTORY'); 
+                            }
+                            else if (isReady) handleCollectMachine(slot, e);
                             else if (!recipe) { 
                                 const firstRecipe = RECIPES.find(r => r.machineId === machine.id);
                                 if(firstRecipe) startProcessing(slot.id, firstRecipe.id);
@@ -483,7 +547,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 <button 
                     onClick={() => {
                         const res = harvestAll();
-                        if (res.success) playSFX('success');
+                        if (res.success) {
+                            playSFX('success');
+                            // Visual feedback for bulk harvest could be complex, simple generic text for now
+                            if(barnBtnRef.current) {
+                                const rect = barnBtnRef.current.getBoundingClientRect();
+                                addFloatingText(rect.left, rect.top, `+${res.count} Sản phẩm`, "text-orange-500");
+                            }
+                        }
                     }}
                     className="bg-amber-500 text-white p-4 rounded-full shadow-2xl border-4 border-white flex items-center justify-center gap-2 font-black text-xs uppercase hover:bg-amber-600 transition-all active:scale-90"
                 >
@@ -494,6 +565,24 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
         {/* --- FX LAYERS --- */}
         
+        {/* Floating Text */}
+        {floatingTexts.map(item => (
+            <div
+                key={item.id}
+                className={`fixed z-[100] font-black text-lg pointer-events-none drop-shadow-md animate-floatUp ${item.color}`}
+                style={{ left: item.x, top: item.y }}
+            >
+                {item.text}
+                <style>{`
+                    @keyframes floatUp {
+                        0% { opacity: 1; transform: translateY(0) scale(1); }
+                        100% { opacity: 0; transform: translateY(-50px) scale(1.2); }
+                    }
+                    .animate-floatUp { animation: floatUp 1.5s ease-out forwards; }
+                `}</style>
+            </div>
+        ))}
+
         {/* Flying Items */}
         {flyingItems.map(item => (
             <div
@@ -553,7 +642,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     }
                     if (action === 'WATER') {
                         const res = waterPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
-                        if (res.success) setActiveModal('NONE');
+                        if (res.success) {
+                            setActiveModal('NONE');
+                            // FX
+                            const rect = document.getElementById('well-btn')?.getBoundingClientRect();
+                            if(rect) addFloatingText(rect.left, rect.top, "-1 Nước", "text-blue-400");
+                        }
                     }
                     if (action === 'FERTILIZER') {
                         // Simple fertilizer logic: Reduce time by half
@@ -568,6 +662,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         }
                     }
                     if (action === 'HARVEST') {
+                        // Normally handled via direct click, but keep for modal
                         harvestPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
                         setActiveModal('NONE');
                     }
@@ -623,51 +718,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 decorations={DECORATIONS} 
                 userState={userState} 
                 onBuySeed={(crop, amount) => {
-                    const currency = crop.currency || 'COIN';
-                    const cost = crop.cost * amount;
-                    if (canAfford(cost, currency)) {
-                        onUpdateState(prev => {
-                            const newState = { ...prev };
-                            if (currency === 'STAR') newState.stars = (prev.stars || 0) - cost;
-                            else newState.coins = prev.coins - cost;
-                            newState.inventory = { ...prev.inventory, [crop.id]: (prev.inventory[crop.id] || 0) + amount };
-                            return newState;
-                        });
-                        playSFX('success');
-                    } else {
-                        playSFX('wrong');
-                        alert("Không đủ tiền!");
-                    }
+                    const res = buyItem(crop, amount);
+                    if (!res.success) alert(res.msg);
                 }}
                 onBuyAnimal={(animal) => {
-                    if (selectedId) {
-                        const res = buyAnimal(selectedId, animal.id);
-                        if (res.success) { setActiveModal('NONE'); setSelectedId(null); }
-                        else alert(res.msg);
-                    }
+                    const res = buyItem(animal, 1);
+                    if (!res.success) alert(res.msg);
                 }}
                 onBuyMachine={(machine) => {
-                    if (selectedId) {
-                        const res = buyMachine(selectedId, machine.id);
-                        if (res.success) { setActiveModal('NONE'); setSelectedId(null); }
-                        else alert(res.msg);
-                    }
+                    const res = buyItem(machine, 1);
+                    if (!res.success) alert(res.msg);
                 }}
                 onBuyDecor={(decor) => {
-                    const currency = decor.currency || 'COIN';
-                    if (canAfford(decor.cost, currency)) { 
-                         onUpdateState(prev => {
-                             let newState = { ...prev };
-                             if (currency === 'STAR') newState.stars = (prev.stars || 0) - decor.cost;
-                             else newState.coins = prev.coins - decor.cost;
-                             newState.decorations = [...(prev.decorations || []), decor.id];
-                             return newState;
-                         });
-                         playSFX('success');
-                    } else {
-                        playSFX('wrong');
-                        alert("Không đủ tiền!");
-                    }
+                    const res = buyItem(decor, 1);
+                    if (!res.success) alert(res.msg);
                 }}
                 onClose={() => { setActiveModal('NONE'); setSelectedId(null); }} 
             />
@@ -705,11 +769,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
         {activeModal === 'INVENTORY' && (
             <InventoryModal 
+                initialTab={initialInvTab}
                 inventory={userState.inventory} 
-                harvested={userState.harvestedCrops || {}} 
                 seeds={CROPS} 
-                products={[...CROPS, ...PRODUCTS]} 
                 animals={ANIMALS}
+                machines={MACHINES}
+                decorations={DECORATIONS}
+                ownedAnimals={userState.livestockSlots || []}
+                ownedMachines={userState.machineSlots || []}
+                ownedDecorations={userState.decorations || []}
+                allItems={[...CROPS, ...PRODUCTS]}
                 mode={inventoryMode}
                 onSelectSeed={(seedId) => {
                     if (selectedId) {
@@ -718,9 +787,22 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         else { playSFX('wrong'); alert(res.msg); }
                     }
                 }}
+                onSelectAnimal={(animalId) => {
+                    if (selectedId) {
+                        const res = placeAnimal(selectedId, animalId);
+                        if(res.success) { playSFX('success'); setActiveModal('NONE'); }
+                        else { playSFX('wrong'); alert(res.msg); }
+                    }
+                }}
+                onSelectMachine={(machineId) => {
+                    if (selectedId) {
+                        const res = placeMachine(selectedId, machineId);
+                        if(res.success) { playSFX('success'); setActiveModal('NONE'); }
+                        else { playSFX('wrong'); alert(res.msg); }
+                    }
+                }}
                 onGoToShop={() => { setActiveModal('SHOP'); }}
                 onClose={() => setActiveModal('NONE')}
-                onSell={() => {}}
             />
         )}
 

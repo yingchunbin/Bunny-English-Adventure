@@ -1,76 +1,131 @@
 
 import React, { useState } from 'react';
-import { Crop, Product, FarmItem, AnimalItem, MachineItem } from '../../types';
-import { Package, X, Sprout, Egg, Hammer, Coins, Sparkles, ArrowRight, ShoppingBasket } from 'lucide-react';
+import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
+import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 
 interface InventoryModalProps {
+  initialTab?: 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
   inventory: Record<string, number>; // Seeds
-  harvested: Record<string, number>; // Crops/Products
   seeds: Crop[];
-  animals: AnimalItem[]; 
-  products: (Crop | Product)[];
+  animals: AnimalItem[];
+  machines: MachineItem[];
+  decorations: Decor[];
+  allItems: (Crop | Product)[]; // For looking up product icons
   
-  mode: 'VIEW' | 'SELECT_SEED'; 
+  ownedAnimals: LivestockSlot[];
+  ownedMachines: MachineSlot[];
+  ownedDecorations: string[]; // List of IDs
+
+  mode: 'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'; 
   onSelectSeed?: (seedId: string) => void;
-  onSell?: (itemId: string, amount: number) => void;
+  onSelectAnimal?: (animalId: string) => void;
+  onSelectMachine?: (machineId: string) => void;
+  onGoToShop?: () => void;
   onClose: () => void;
-  onGoToShop?: () => void; 
 }
 
-type Tab = 'SEEDS' | 'PRODUCE';
+type Tab = 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
 export const InventoryModal: React.FC<InventoryModalProps> = ({ 
-    inventory, harvested, seeds, products, mode, onSelectSeed, onSell, onClose, onGoToShop 
+    initialTab = 'SEEDS',
+    inventory, seeds, animals, machines, decorations, allItems,
+    ownedAnimals, ownedMachines, ownedDecorations,
+    mode, onSelectSeed, onSelectAnimal, onSelectMachine, onClose, onGoToShop 
 }) => {
-  const [activeTab, setActiveTab] = useState<Tab>(mode === 'SELECT_SEED' ? 'SEEDS' : 'PRODUCE');
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
-  // Helper to render an item row
-  const renderItemRow = (item: FarmItem, count: number, isSeed: boolean) => {
-      // In select mode (planting), show seeds even if 0 count to prompt buying
-      if (mode === 'SELECT_SEED' && !isSeed) return null;
+  const getOwnedCount = (type: Tab, id: string) => {
+      // In inventory modal, we now care about "Available to place" count which is stored in inventory for all types
+      // The old logic for ANIMALS/MACHINES/DECOR counted *placed* items, but here we want *unplaced* inventory items.
+      return inventory[id] || 0;
+  };
+
+  const renderItemRow = (item: FarmItem, count: number) => {
+      // STRICT FILTER: Always hide if count <= 0
+      if (count <= 0) return null;
+
+      // In SELECT/PLACE modes, ensure we are on the right tab to avoid confusion, 
+      // though user might want to browse. But for actions, we only render buttons if tab matches mode intent.
       
-      // In VIEW mode, ONLY show items with count > 0
-      if (mode === 'VIEW' && count <= 0) return null; 
+      let extraInfo = null;
+      if (activeTab === 'ANIMALS') {
+          const animal = animals.find(a => a.id === item.id);
+          const produce = allItems.find(p => p.id === animal?.produceId);
+          if (produce) {
+              extraInfo = (
+                  <div className="flex items-center gap-1 text-[10px] text-slate-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">
+                      <span>Sản phẩm:</span>
+                      <span className="text-lg leading-none">{produce.emoji}</span>
+                  </div>
+              );
+          }
+      }
+      
+      if (activeTab === 'MACHINES') {
+           const machine = machines.find(m => m.id === item.id);
+           if (machine) {
+                extraInfo = <div className="text-[10px] text-slate-400 italic truncate max-w-[120px]">{machine.description}</div>;
+           }
+      }
 
       return (
-          <div key={item.id} className="bg-white border-4 border-slate-100 rounded-3xl p-3 flex items-center justify-between shadow-sm">
+          <div key={item.id} className="bg-white border-4 border-slate-100 rounded-3xl p-3 flex items-center justify-between shadow-sm animate-fadeIn">
               <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-3xl border border-slate-200">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border ${activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : activeTab === 'MACHINES' ? 'bg-blue-50 border-blue-100' : 'bg-purple-50 border-purple-100'}`}>
                       {item.emoji}
                   </div>
                   <div>
                       <div className="font-black text-slate-700 text-sm uppercase">{item.name}</div>
-                      <div className="text-xs font-bold text-slate-400">Số lượng: <span className={count > 0 ? "text-blue-600" : "text-red-500"}>{count}</span></div>
+                      <div className="text-xs font-bold text-slate-400 mb-1">Số lượng: <span className="text-blue-600">{count}</span></div>
+                      {extraInfo}
                   </div>
               </div>
 
-              {/* Actions based on Mode */}
-              {mode === 'SELECT_SEED' && isSeed ? (
-                  count > 0 ? (
-                      <button 
-                          onClick={() => onSelectSeed && onSelectSeed(item.id)}
-                          className="bg-green-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
-                      >
-                          Gieo hạt
-                      </button>
-                  ) : (
-                      <button 
-                          onClick={onGoToShop}
-                          className="bg-amber-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all flex items-center gap-1"
-                      >
-                          Mua thêm
-                      </button>
-                  )
-              ) : mode === 'VIEW' && count > 0 ? (
-                  <div className="flex gap-1 items-center bg-slate-100 px-3 py-1 rounded-xl">
-                      <span className="text-[10px] font-black text-slate-400">Giá bán: { (item as any).sellPrice }</span>
-                      <Coins size={10} className="text-amber-500"/>
-                  </div>
-              ) : null}
+              {/* Action Buttons */}
+              {mode === 'SELECT_SEED' && activeTab === 'SEEDS' && (
+                  <button 
+                      onClick={() => onSelectSeed && onSelectSeed(item.id)}
+                      className="bg-green-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                  >
+                      Gieo hạt
+                  </button>
+              )}
+
+              {mode === 'PLACE_ANIMAL' && activeTab === 'ANIMALS' && (
+                  <button 
+                      onClick={() => onSelectAnimal && onSelectAnimal(item.id)}
+                      className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                  >
+                      Thả chuồng
+                  </button>
+              )}
+
+              {mode === 'PLACE_MACHINE' && activeTab === 'MACHINES' && (
+                  <button 
+                      onClick={() => onSelectMachine && onSelectMachine(item.id)}
+                      className="bg-blue-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                  >
+                      Lắp đặt
+                  </button>
+              )}
           </div>
       );
   };
+
+  const getListForTab = () => {
+      switch(activeTab) {
+          case 'SEEDS': return seeds.filter(s => !s.isMagic);
+          case 'ANIMALS': return animals;
+          case 'MACHINES': return machines;
+          case 'DECOR': return decorations;
+          default: return [];
+      }
+  };
+
+  const currentList = getListForTab();
+  // Check if current tab is empty
+  const isEmpty = currentList.every(item => getOwnedCount(activeTab, item.id) <= 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
@@ -93,46 +148,44 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
             </div>
 
             {/* Tabs */}
-            <div className="flex p-2 gap-2 bg-slate-50">
-                <button onClick={() => setActiveTab('SEEDS')} className={`flex-1 py-2 rounded-xl font-black text-xs flex flex-col items-center gap-1 transition-all ${activeTab === 'SEEDS' ? 'bg-green-500 text-white shadow-md' : 'bg-white text-slate-400'}`}>
-                    <Sprout size={16}/> Hạt Giống
-                </button>
-                <button onClick={() => setActiveTab('PRODUCE')} className={`flex-1 py-2 rounded-xl font-black text-xs flex flex-col items-center gap-1 transition-all ${activeTab === 'PRODUCE' ? 'bg-orange-500 text-white shadow-md' : 'bg-white text-slate-400'}`}>
-                    <Egg size={16}/> Nông Sản
-                </button>
+            <div className="flex p-2 gap-1 bg-slate-50 overflow-x-auto no-scrollbar">
+                {[
+                    { id: 'SEEDS', label: 'Hạt Giống', icon: Sprout, color: 'text-green-600', activeBg: 'bg-green-500' },
+                    { id: 'ANIMALS', label: 'Vật Nuôi', icon: Bird, color: 'text-orange-600', activeBg: 'bg-orange-500' },
+                    { id: 'MACHINES', label: 'Máy Móc', icon: Factory, color: 'text-blue-600', activeBg: 'bg-blue-500' },
+                    { id: 'DECOR', label: 'Trang Trí', icon: Armchair, color: 'text-purple-600', activeBg: 'bg-purple-500' },
+                ].map(tab => (
+                    <button 
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as Tab)}
+                        className={`flex-1 py-2 px-1 rounded-xl font-black text-[10px] flex flex-col items-center gap-1 transition-all whitespace-nowrap ${activeTab === tab.id ? `${tab.activeBg} text-white shadow-md` : `bg-white ${tab.color}`}`}
+                    >
+                        <tab.icon size={16}/> {tab.label}
+                    </button>
+                ))}
             </div>
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
                 
-                {activeTab === 'SEEDS' && (
-                    <>
-                        {seeds.filter(s => !s.isMagic).map(seed => renderItemRow(seed, inventory[seed.id] || 0, true))}
-                        
-                        {mode === 'SELECT_SEED' && (
-                            <button onClick={onGoToShop} className="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 mt-4">
-                                Đến Cửa Hàng mua thêm hạt giống <ArrowRight size={16}/>
-                            </button>
-                        )}
-                        
-                        {/* Check if empty in VIEW mode */}
-                        {mode === 'VIEW' && seeds.filter(s => inventory[s.id] > 0).length === 0 && (
-                             <div className="text-center py-10 text-slate-400 font-bold text-sm opacity-60">Chưa có hạt giống nào!</div>
-                        )}
-                    </>
+                {currentList.map(item => renderItemRow(item, getOwnedCount(activeTab, item.id)))}
+
+                {isEmpty && (
+                    <div className="text-center py-12 opacity-50 flex flex-col items-center">
+                        <div className="text-5xl mb-2 grayscale">📦</div>
+                        <p className="text-slate-400 font-bold text-xs uppercase tracking-wider">
+                            {activeTab === 'SEEDS' ? "Hết hạt giống rồi!" : 
+                             activeTab === 'ANIMALS' ? "Chưa có con vật nào!" :
+                             activeTab === 'MACHINES' ? "Chưa có máy móc nào!" : "Chưa có đồ trang trí!"}
+                        </p>
+                    </div>
                 )}
 
-                {activeTab === 'PRODUCE' && (
-                    <>
-                        {products.map(p => {
-                            const count = harvested[p.id] || 0;
-                            return renderItemRow(p, count, false);
-                        })}
-                        
-                        {Object.values(harvested).reduce((a,b)=>a+(b as number), 0) === 0 && (
-                            <div className="text-center py-10 text-slate-400 font-bold text-sm opacity-60">Chưa có nông sản nào!</div>
-                        )}
-                    </>
+                {/* Show shortcut to shop if empty */}
+                {onGoToShop && (
+                    <button onClick={onGoToShop} className="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 mt-4 text-xs uppercase">
+                        Đến Cửa Hàng mua thêm <ArrowRightCircle size={16}/>
+                    </button>
                 )}
             </div>
         </div>

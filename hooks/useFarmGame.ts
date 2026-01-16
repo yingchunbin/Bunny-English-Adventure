@@ -10,34 +10,45 @@ export const useFarmGame = (
 ) => {
   const [now, setNow] = useState(Date.now());
   
-  // Helper: Create a single order (Updated for new ecosystem)
+  // Helper: Create a single order (Updated for smarter logic)
   const createSingleOrder = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
       const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa", "Chị Ong Vàng", "Anh Kiến", "Cụ Voi"];
-      
-      // Filter unlocked items
       const level = userState.farmLevel || 1;
+
+      // 1. CROPS: Filter unlocked by level
       const unlockedCrops = CROPS.filter(c => !c.isMagic && level >= (c.unlockReq || 0));
       
-      // Products available from machines or animals that user MIGHT have access to based on level
+      // 2. ANIMAL PRODUCTS: Filter based on level (keeping it simple for animals to encourage buying)
       const unlockedAnimals = ANIMALS.filter(a => level >= (a.minLevel || 0));
-      const unlockedMachines = MACHINES.filter(m => level >= (m.minLevel || 0));
-      
       const availableRawProducts = PRODUCTS.filter(p => 
           p.type === 'PRODUCT' && unlockedAnimals.some(a => a.produceId === p.id)
       );
+
+      // 3. MACHINE PRODUCTS: CRITICAL - Only ask for things if user HAS the machine
+      const ownedMachineIds = userState.machineSlots?.filter(s => s.isUnlocked && s.machineId).map(s => s.machineId) || [];
       const availableProcessed = PRODUCTS.filter(p =>
-          p.type === 'PROCESSED' && unlockedMachines.some(m => RECIPES.some(r => r.machineId === m.id && r.outputId === p.id))
+          p.type === 'PROCESSED' && unlockedMachinesCheck(p.id, ownedMachineIds)
       );
 
+      // Combine Pools
       const pool = [...unlockedCrops, ...availableRawProducts, ...availableProcessed];
       const safePool = pool.length > 0 ? pool : [CROPS[0]]; // Fallback
 
-      const count = Math.floor(Math.random() * 2) + 1; // 1 or 2 items per order
+      // 4. Quantity Scaling based on Level
+      // Level 1-5: 1-2 items, qty 1-3
+      // Level 6-10: 2-3 items, qty 2-5
+      // Level 10+: 2-4 items, qty 3-8
+      let maxItems = 1;
+      let maxQty = 3;
+      if (level > 5) { maxItems = 2; maxQty = 5; }
+      if (level > 10) { maxItems = 3; maxQty = 8; }
+
+      const count = Math.floor(Math.random() * maxItems) + 1; 
       const tempReqs: Record<string, number> = {};
 
       for(let i=0; i<count; i++) {
           const randomItem = safePool[Math.floor(Math.random() * safePool.length)];
-          const amount = Math.floor(Math.random() * 3) + 1; 
+          const amount = Math.floor(Math.random() * maxQty) + 1; 
           tempReqs[randomItem.id] = (tempReqs[randomItem.id] || 0) + amount;
       }
 
@@ -63,6 +74,13 @@ export const useFarmGame = (
           rewardExp: Math.ceil(totalExp / 5) * 5,
           expiresAt: Date.now() + (Math.random() * 10 + 5) * 60 * 1000 // 5-15 minutes
       };
+  };
+
+  // Helper to check if a product can be made with owned machines
+  const unlockedMachinesCheck = (productId: string, ownedMachineIds: string[]) => {
+      const recipe = RECIPES.find(r => r.outputId === productId);
+      if (!recipe) return false; // Should not happen if data integrity is good
+      return ownedMachineIds.includes(recipe.machineId);
   };
 
   // --- INIT LOGIC (Effect) ---
@@ -228,6 +246,37 @@ export const useFarmGame = (
       return true; // Used successfully
   };
 
+  // Generic Buy Function
+  const buyItem = (item: any, amount: number) => {
+      const currency = item.currency || 'COIN';
+      const totalCost = item.cost * amount;
+
+      if (!canAfford(totalCost, currency)) {
+          return { success: false, msg: `Bé không đủ ${currency === 'STAR' ? 'Sao' : 'Xu'} rồi!` };
+      }
+
+      playSFX('success');
+      onUpdateState(prev => {
+          const newState = { ...prev };
+          if (currency === 'STAR') newState.stars = (prev.stars || 0) - totalCost;
+          else newState.coins = prev.coins - totalCost;
+          
+          // Add to inventory
+          newState.inventory = { ...prev.inventory, [item.id]: (prev.inventory[item.id] || 0) + amount };
+          
+          // If Decor, also add to decorations list if unique (optional, logic depends on game)
+          if (item.type === 'DECOR') {
+              // For decor we might just use inventory count, or specific list. 
+              // The original code used a list of IDs. Let's keep consistency.
+              if (!newState.decorations?.includes(item.id)) {
+                  newState.decorations = [...(newState.decorations || []), item.id];
+              }
+          }
+          return newState;
+      });
+      return { success: true };
+  };
+
   const plantSeed = (plotId: number, seedId: string) => {
       const currentInventory = userState.inventory || {};
       const count = currentInventory[seedId] || 0;
@@ -247,6 +296,32 @@ export const useFarmGame = (
               hasBug: false, 
               hasMysteryBox: false 
           } : p)
+      }));
+      return { success: true };
+  };
+
+  const placeAnimal = (slotId: number, animalId: string) => {
+      const count = userState.inventory[animalId] || 0;
+      if (count <= 0) return { success: false, msg: "Bé chưa có con vật này trong túi đồ!" };
+
+      playSFX('click');
+      onUpdateState(prev => ({
+          ...prev,
+          inventory: { ...prev.inventory, [animalId]: count - 1 },
+          livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, animalId, fedAt: null } : s)
+      }));
+      return { success: true };
+  };
+
+  const placeMachine = (slotId: number, machineId: string) => {
+      const count = userState.inventory[machineId] || 0;
+      if (count <= 0) return { success: false, msg: "Bé chưa có máy này trong túi đồ!" };
+
+      playSFX('click');
+      onUpdateState(prev => ({
+          ...prev,
+          inventory: { ...prev.inventory, [machineId]: count - 1 },
+          machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId, activeRecipeId: null, startedAt: null } : s)
       }));
       return { success: true };
   };
@@ -368,27 +443,6 @@ export const useFarmGame = (
       return { success: false, count: 0 };
   };
 
-  const buyAnimal = (slotId: number, animalId: string) => {
-      const animal = ANIMALS.find(a => a.id === animalId);
-      if (!animal) return { success: false, msg: "Lỗi dữ liệu vật nuôi" };
-      
-      const currency = animal.currency || 'COIN';
-      if (!canAfford(animal.cost, currency)) return { success: false, msg: `Bé không đủ ${currency === 'STAR' ? 'Sao' : 'Xu'} rồi!` };
-
-      playSFX('success');
-      onUpdateState(prev => {
-          const currentSlots = prev.livestockSlots || Array(4).fill(null).map((_,i) => ({ id: i+1, isUnlocked: true, animalId: null, fedAt: null }));
-          const newState = {
-              ...prev,
-              livestockSlots: currentSlots.map(s => s.id === slotId ? { ...s, animalId: animal.id, fedAt: null } : s)
-          };
-          if (currency === 'STAR') newState.stars = (prev.stars || 0) - animal.cost;
-          else newState.coins = prev.coins - animal.cost;
-          return newState;
-      });
-      return { success: true };
-  };
-
   const feedAnimal = (slotId: number) => {
       const slot = userState.livestockSlots?.find(s => s.id === slotId);
       if (!slot || !slot.animalId) return;
@@ -402,7 +456,7 @@ export const useFarmGame = (
           return { success: false, msg: `Bé thiếu ${animal.feedAmount - userFeedAmount} ${feedName} để cho ${animal.name} ăn!` };
       }
 
-      playSFX('click'); 
+      playSFX('eat'); // Changed sound
       onUpdateState(prev => ({
           ...prev,
           harvestedCrops: {
@@ -439,26 +493,6 @@ export const useFarmGame = (
               farmLevel: newLevel,
               livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, fedAt: null } : s)
           };
-      });
-      return { success: true };
-  };
-
-  const buyMachine = (slotId: number, machineId: string) => {
-      const machine = MACHINES.find(m => m.id === machineId);
-      if (!machine) return { success: false, msg: "Lỗi dữ liệu máy móc" };
-      const currency = machine.currency || 'COIN';
-      if (!canAfford(machine.cost, currency)) return { success: false, msg: `Bé không đủ ${currency === 'STAR' ? 'Sao' : 'Xu'} rồi!` };
-
-      playSFX('success');
-      onUpdateState(prev => {
-          const currentSlots = prev.machineSlots || []; 
-          const newState = {
-              ...prev,
-              machineSlots: currentSlots.map(s => s.id === slotId ? { ...s, machineId: machine.id, activeRecipeId: null, startedAt: null } : s)
-          };
-          if (currency === 'STAR') newState.stars = (prev.stars || 0) - machine.cost;
-          else newState.coins = prev.coins - machine.cost;
-          return newState;
       });
       return { success: true };
   };
@@ -520,6 +554,10 @@ export const useFarmGame = (
               machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, activeRecipeId: null, startedAt: null } : s)
           };
       });
+      // Special logic: If collecting baked goods, check 'ach_bake' achievement if exists? 
+      // Actually updateMissionProgress is generic by type. 
+      // We can overload 'HARVEST' for this or just assume all collection is HARVEST.
+      updateMissionProgress('HARVEST', 1); 
       return { success: true };
   };
 
@@ -565,5 +603,26 @@ export const useFarmGame = (
       }));
   };
 
-  return { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, deliverOrder, generateOrders, addReward, canAfford, updateMissionProgress, checkWellUsage, useWell };
+  return { 
+      now, 
+      plantSeed, 
+      placeAnimal, 
+      placeMachine, 
+      waterPlot, 
+      resolvePest, 
+      harvestPlot, 
+      harvestAll, 
+      buyItem, 
+      feedAnimal, 
+      collectProduct, 
+      startProcessing, 
+      collectMachine, 
+      deliverOrder, 
+      generateOrders, 
+      addReward, 
+      canAfford, 
+      updateMissionProgress, 
+      checkWellUsage, 
+      useWell 
+  };
 };
