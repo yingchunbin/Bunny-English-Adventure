@@ -6,50 +6,141 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Bunny English - Tiếng Anh Tiểu Học</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-sky: #87CEEB;
+        --grass-light: #8edc6e;
+        --grass-dark: #63b346;
+        --wood-light: #e6b063;
+        --wood-dark: #8f5e2d;
+        --btn-depth: 6px;
+      }
       body {
         font-family: 'Nunito', sans-serif;
-        overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
-        user-select: none; /* Prevent text selection */
+        background-color: var(--bg-sky);
+        color: #4A5568;
+        overscroll-behavior: none;
+        user-select: none;
         -webkit-tap-highlight-color: transparent;
+        overflow: hidden; /* Game-like fixed viewport */
       }
-      /* Custom utility for 3D flip card */
-      .perspective-1000 {
-        perspective: 1000px;
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Baloo 2', cursive;
+        letter-spacing: 0.02em;
       }
-      .transform-style-3d {
+      
+      /* --- GAME UI TEXTURES --- */
+      
+      .wood-texture {
+        background-color: #dcb368;
+        background-image: repeating-linear-gradient(45deg, rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 2px, transparent 2px, transparent 8px),
+                          linear-gradient(to bottom, #eccc87, #c49646);
+        border: 2px solid #5c3a1e;
+        box-shadow: inset 0 2px 0 rgba(255,255,255,0.4), 0 4px 0 #5c3a1e, 0 6px 6px rgba(0,0,0,0.4);
+      }
+
+      .stone-texture {
+        background-color: #a8a8a8;
+        background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.1) 10%, transparent 10%),
+                          linear-gradient(to bottom, #dcdcdc, #8f8f8f);
+        border: 2px solid #555;
+        box-shadow: inset 0 2px 0 rgba(255,255,255,0.6), 0 4px 0 #444, 0 6px 6px rgba(0,0,0,0.3);
+      }
+
+      /* --- 3D "JUICY" BUTTONS --- */
+      
+      .btn-3d {
+        position: relative;
+        border: none;
+        outline: none;
+        transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        transform: translateY(0);
+      }
+      .btn-3d:active {
+        transform: translateY(var(--btn-depth));
+        box-shadow: 0 0 0 transparent !important; /* Hide depth shadow on press */
+      }
+      
+      /* Color Variants */
+      .btn-green {
+        background: linear-gradient(to bottom, #88ea57, #53bd26);
+        border-radius: 20px;
+        box-shadow: 0 var(--btn-depth) 0 #3a8a16, 0 calc(var(--btn-depth) + 4px) 6px rgba(0,0,0,0.3);
+        color: white;
+        text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        border: 2px solid #fff;
+      }
+      .btn-green:active { box-shadow: inset 0 4px 8px rgba(0,0,0,0.3) !important; border-color: #3a8a16; }
+
+      .btn-orange {
+        background: linear-gradient(to bottom, #ffbd2e, #ff9100);
+        border-radius: 20px;
+        box-shadow: 0 var(--btn-depth) 0 #cc6600, 0 calc(var(--btn-depth) + 4px) 6px rgba(0,0,0,0.3);
+        color: white;
+        text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        border: 2px solid #fff;
+      }
+      
+      .btn-blue {
+        background: linear-gradient(to bottom, #4FC3F7, #0288D1);
+        border-radius: 20px;
+        box-shadow: 0 var(--btn-depth) 0 #01579B, 0 calc(var(--btn-depth) + 4px) 6px rgba(0,0,0,0.3);
+        color: white;
+        text-shadow: 0 2px 0 rgba(0,0,0,0.2);
+        border: 2px solid #fff;
+      }
+
+      /* --- ANIMATIONS --- */
+      
+      @keyframes popIn {
+        0% { transform: scale(0); opacity: 0; }
+        70% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(1); }
+      }
+      .animate-pop { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+      @keyframes float-y {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      .animate-float { animation: float-y 3s ease-in-out infinite; }
+
+      @keyframes shine {
+        0% { left: -100%; }
+        100% { left: 100%; }
+      }
+      .shimmer {
+        position: relative;
+        overflow: hidden;
+      }
+      .shimmer::after {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 50%; height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.4), transparent);
+        transform: skewX(-20deg);
+        animation: shine 3s infinite;
+      }
+
+      /* --- ISOMETRIC UTILS --- */
+      .iso-container {
+        transform: perspective(800px) rotateX(25deg);
         transform-style: preserve-3d;
       }
-      .backface-hidden {
-        backface-visibility: hidden;
+      .iso-item {
+        transform: rotateX(-25deg); /* Counter-rotate content to face user */
+        transform-style: preserve-3d;
       }
-      .rotate-y-180 {
-        transform: rotateY(180deg);
+
+      .text-stroke {
+        -webkit-text-stroke: 4px white;
+        paint-order: stroke fill;
       }
-      @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-      .animate-fadeIn {
-        animation: fadeIn 0.5s ease-out forwards;
-      }
-      /* Hide scrollbar but keep functionality */
-      .no-scrollbar::-webkit-scrollbar {
-          display: none;
-      }
-      .no-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
-      }
-      /* Bounce X animation for arrows */
-      @keyframes bounce-x {
-        0%, 100% { transform: translateX(0); }
-        50% { transform: translateX(5px); }
-      }
-      .animate-bounce-x {
-        animation: bounce-x 1s infinite;
-      }
+      
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
   <script type="importmap">
 {

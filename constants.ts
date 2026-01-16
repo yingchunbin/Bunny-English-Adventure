@@ -45,9 +45,19 @@ export const AVATARS: AvatarItem[] = [
 ];
 
 const WORD_ICONS: Record<string, string> = {
+  // --- FIXING SEMANTIC CONFLICTS ---
+  "ancient": "📜", // Old scroll/history
+  "civilization": "🏛️", // Architecture/Society
+  "statue": "🗿", // Moai/Statue
+  "carve": "⛏️", // Action of carving
+  "temple": "🛕", // Distinct temple
+  "pyramid": "🐫", // Pyramid context (Camel/Pyramid) - Emoji 🔺 is vague, let's use Camel or Pyramid if supported. Using Triangle for shape, but for history 🐫 works or 🏜️.
+  "tomb": "⚰️", // Coffin
+  "mummy": "🤕", // Head bandage (closest to mummy)
+  
   // --- GREETINGS, NAMES & BASICS ---
-  "hello": "👋", "hi": "👋", "goodbye": "👋", "bye": "👋", "name": "📛", "friend": "👫", "pupil": "👦", "student": "🎓",
-  "yes": "✅", "no": "❌", "fine": "👍", "thank": "🙏", "please": "🙏", "nice": "😊", "meet": "🤝", "you": "🫵", "my": "🙋",
+  "hello": "👋", "hi": "👋", "goodbye": "👋", "bye": "👋", "name": "📛", "friend": "👫", "pupil": "🎒", "student": "🎓",
+  "yes": "✅", "no": "❌", "fine": "👍", "thank": "🙏", "please": "🥺", "nice": "😊", "meet": "🤝", "you": "🫵", "my": "🙋",
   "good morning": "🌅", "good afternoon": "☀️", "good evening": "🌆", "good night": "🌙", "how": "❓", "what": "❓", "who": "❓", "where": "📍", "when": "⏰", "why": "🤔",
   "annie": "👧", "bill": "👦", "rosy": "👧", "tim": "👦", "ben": "👦", "mai": "👧", "nam": "👦", "quan": "👦", "phong": "👦", "mary": "👧", "linda": "👧", "peter": "👦", "tony": "👦", "tom": "👦", "hoa": "👧", "mr": "👨", "ms": "👩", "miss": "👩",
 
@@ -159,7 +169,7 @@ const WORD_ICONS: Record<string, string> = {
   "big": "🐘", "small": "🐜", "little": "🐜", "long": "📏", "short": "🤏", "tall": "🦒", "fat": "🐷", "thin": "🥢", "fast": "🐆", "slow": "🐢",
   "old": "👴", "new": "✨", "young": "👶", "beautiful": "👸", "pretty": "👸", "ugly": "👹", "cute": "🥺", "dirty": "💩",
   "easy": "✅", "difficult": "🤯", "hard": "🧱", "soft": "☁️", "strong": "💪", "weak": "🥀", "rich": "💰", "poor": "💸", 
-  "expensive": "💎", "cheap": "🏷️", "loud": "🔊", "quiet": "🤫", "busy": "🐝", "free": "🆓", "kind": "😇", "naughty": "😈", "smart": "🧠", "clever": "🧠", "crowded": "👨‍👩‍👧‍👦", "peaceful": "🕊️", "noisy": "📢", "ancient": "🏛️", "modern": "🏙️", "comfortable": "🛋️", "safe": "🦺", "dangerous": "⚠️", "famous": "🌟", "successful": "🏆",
+  "expensive": "💎", "cheap": "🏷️", "loud": "🔊", "quiet": "🤫", "busy": "🐝", "free": "🆓", "kind": "😇", "naughty": "😈", "smart": "🧠", "clever": "🧠", "crowded": "👨‍👩‍👧‍👦", "peaceful": "🕊️", "noisy": "📢", "modern": "🏙️", "comfortable": "🛋️", "safe": "🦺", "dangerous": "⚠️", "famous": "🌟", "successful": "🏆",
 
   // --- COUNTRIES & FLAGS ---
   "vietnam": "🇻🇳", "england": "🇬🇧", "uk": "🇬🇧", "america": "🇺🇸", "usa": "🇺🇸", "australia": "🇦🇺", "japan": "🇯🇵", "korea": "🇰🇷", 
@@ -172,10 +182,10 @@ const WORD_ICONS: Record<string, string> = {
   "fire": "🔥", "ice": "🧊", "flag": "🚩", "trophy": "🏆", "medal": "🥇", "certificate": "📜",
   "festival": "🎉", "party": "🥳", "wedding": "💒", "concert": "🎤", "fair": "🎡", "parade": "👯", "fireworks": "🎆", "graduation": "🎓", "speech": "🗣️",
   "future": "🔮", "past": "⏪", "world": "🌍", "earth": "🌍", "space": "🌌", "alien": "👽", "ghost": "👻", 
-  "monster": "👹", "robot": "🤖", "treasure": "💎", "king": "👑", "queen": "👸", "prince": "🤴", "princess": "👸", "pyramid": "🔺", "tomb": "⚰️", "mummy": "🧟", "statue": "🗿", "column": "🏛️",
+  "monster": "👹", "robot": "🤖", "treasure": "💎", "king": "👑", "queen": "👸", "prince": "🤴", "princess": "👸", 
   "light bulb": "💡", "wheel": "⚙️", "engine": "🚂", "machine": "🤖", "hologram": "👻", "internet": "🌐", "wifi": "📶", "laptop": "💻", "tablet": "📱", "headphones": "🎧", "speaker": "🔊", "charger": "🔌", "battery": "🔋", "rubbish": "🗑️", "bin": "🗑️", "plastic": "🥤", "glass": "🥃", "metal": "🔩", "wood": "🪵", "fabric": "🧵",
   "remote control": "📱", "dictionary": "📕", "comic book": "🦸", "sticker": "🏷️", "magnet": "🧲", "rope": "➰", "torch": "🔦", "compass": "🧭",
-  "civilization": "🏛️", "temple": "🛕", "carve": "🗿", "suitcase": "🧳", "sunscreen": "🧴", "towel": "🧖", "soap": "🧼", "orchestra": "🎻", "stage": "🎭",
+  "suitcase": "🧳", "sunscreen": "🧴", "towel": "🧖", "soap": "🧼", "orchestra": "🎻", "stage": "🎭",
   "dinosaur": "🦖", "model": "🏗️", "roundabout": "🔄", "traffic light": "🚦", "price": "🏷️", "footprint": "👣", "mystery": "🕵️", "gravity": "🌑", "float": "🎈",
 };
 

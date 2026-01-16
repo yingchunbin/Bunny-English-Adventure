@@ -13,12 +13,12 @@ import { TranslationGame } from './components/TranslationGame';
 import { SpeakingGame } from './components/SpeakingGame';
 import { getLevels, LEVELS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes } from './utils/sound';
-import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout } from 'lucide-react';
+import { Settings as SettingsIcon, MessageCircle, Gamepad2, ArrowLeft, Coins, Zap } from 'lucide-react';
 
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
   textbook: null,
-  coins: 0,
+  coins: 100,
   currentAvatarId: 'bunny',
   completedLevels: [],
   levelStars: {},
@@ -63,7 +63,8 @@ export default function App() {
       }
   });
   
-  const [screen, setScreen] = useState<Screen>(userState.grade ? Screen.HOME : Screen.ONBOARDING);
+  // The FARM is now the HOME screen.
+  const [screen, setScreen] = useState<Screen>(userState.grade ? Screen.FARM : Screen.ONBOARDING);
   const [activeLevel, setActiveLevel] = useState<LessonLevel | null>(null);
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
@@ -105,7 +106,7 @@ export default function App() {
             missions: initialMissions
         };
     });
-    setScreen(Screen.HOME);
+    setScreen(Screen.FARM); // Go straight to Farm
     playSFX('success');
   };
 
@@ -161,67 +162,72 @@ export default function App() {
               missions
           };
       });
-      setScreen(Screen.HOME);
+      setScreen(Screen.MAP); // Return to Map
       setActiveLevel(null);
       playSFX('success');
   };
 
+  const GlobalHeader = () => (
+      <div className="absolute top-0 left-0 right-0 p-3 z-50 flex justify-between items-start pointer-events-none">
+          <div className="pointer-events-auto">
+             {screen !== Screen.FARM && (
+                 <button onClick={() => setScreen(Screen.FARM)} className="btn-3d btn-green w-12 h-12 flex items-center justify-center rounded-2xl">
+                     <ArrowLeft size={24} strokeWidth={3} />
+                 </button>
+             )}
+          </div>
+
+          <div className="flex gap-2 pointer-events-auto">
+              <div className="wood-texture px-4 py-2 rounded-2xl flex items-center gap-2 border-b-4 border-amber-900 shadow-lg">
+                  <Coins size={20} className="text-yellow-400 drop-shadow-sm" fill="currentColor"/>
+                  <span className="font-black text-white text-lg text-stroke shadow-black drop-shadow-md">{userState.coins}</span>
+              </div>
+              <div className="bg-blue-500 px-4 py-2 rounded-2xl flex items-center gap-2 border-2 border-white border-b-4 border-b-blue-700 shadow-lg">
+                  <Zap size={20} className="text-yellow-300 drop-shadow-sm" fill="currentColor"/>
+                  <span className="font-black text-white text-lg">{userState.fertilizers}</span>
+              </div>
+              <button onClick={() => setShowSettings(true)} className="btn-3d bg-slate-100 p-2 rounded-2xl border-b-4 border-slate-300">
+                  <SettingsIcon size={24} className="text-slate-600"/>
+              </button>
+          </div>
+      </div>
+  );
+
   return (
-      <div className="h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800" onClick={initAudio}>
+      <div className="h-screen w-full bg-[#87CEEB] overflow-hidden font-sans text-slate-800 flex flex-col relative" onClick={initAudio}>
           {screen === Screen.ONBOARDING && <Onboarding onComplete={handleOnboardingComplete} />}
           
-          {screen === Screen.HOME && (
-              <div className="h-full flex flex-col">
-                  <div className="flex justify-between items-center p-4 bg-white shadow-sm z-10 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                          <span className="text-2xl">🐢</span>
-                          <span className="font-black text-blue-600 text-lg">Turtle English</span>
-                      </div>
-                      <div className="flex gap-3">
-                          <div className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full font-black text-sm flex items-center gap-1 border-2 border-yellow-200">
-                              <span className="text-yellow-500 text-lg">🪙</span> {userState.coins}
-                          </div>
-                          <button onClick={() => setShowSettings(true)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><SettingsIcon size={20} className="text-slate-500" /></button>
-                      </div>
-                  </div>
-
-                  <div className="flex-1 overflow-y-auto relative bg-slate-50">
-                      <MapScreen 
-                          levels={getLevels(userState.grade, userState.textbook)} 
-                          unlockedLevels={userState.unlockedLevels}
-                          completedLevels={userState.completedLevels}
-                          levelStars={userState.levelStars}
-                          onStartLevel={handleStartLevel}
-                      />
-                  </div>
-
-                  <div className="bg-white border-t border-slate-200 p-2 flex justify-around items-center pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                      <NavButton icon={<MapIcon />} label="Bản đồ" active onClick={() => {}} />
-                      <NavButton icon={<Sprout />} label="Nông trại" onClick={() => setScreen(Screen.FARM)} />
-                      <NavButton icon={<Gamepad2 />} label="Trò chơi" onClick={() => setScreen(Screen.TIME_ATTACK)} />
-                      <NavButton icon={<MessageCircle />} label="Hỏi Thầy" onClick={() => setScreen(Screen.CHAT)} />
-                      <NavButton icon={<Trophy />} label="Thành tích" onClick={() => setShowAchievements(true)} />
-                  </div>
-              </div>
-          )}
+          {screen !== Screen.ONBOARDING && <GlobalHeader />}
 
           {screen === Screen.FARM && (
               <Farm 
                   userState={userState} 
                   onUpdateState={setUserState} 
-                  onExit={() => setScreen(Screen.HOME)} 
+                  onExit={() => {}} // Farm is root
                   allWords={LEVELS.flatMap(l => l.words)}
                   levels={getLevels(userState.grade, userState.textbook)}
+                  onNavigate={(target) => setScreen(target)}
+                  onShowAchievements={() => setShowAchievements(true)}
               />
           )}
 
+          {screen === Screen.MAP && (
+              <div className="h-full w-full bg-gradient-to-b from-[#87CEEB] to-[#e0f7fa] overflow-hidden relative">
+                  <MapScreen 
+                      levels={getLevels(userState.grade, userState.textbook)} 
+                      unlockedLevels={userState.unlockedLevels}
+                      completedLevels={userState.completedLevels}
+                      levelStars={userState.levelStars}
+                      onStartLevel={handleStartLevel}
+                  />
+                  {/* Decorative Foreground Cloud */}
+                  <div className="absolute bottom-0 left-0 w-full h-24 bg-white/30 backdrop-blur-sm rounded-t-[50%] pointer-events-none" />
+              </div>
+          )}
+
           {screen === Screen.CHAT && (
-              <div className="h-full flex flex-col bg-white">
-                  <div className="p-4 bg-white shadow-sm flex items-center gap-2 border-b border-slate-100">
-                      <button onClick={() => setScreen(Screen.HOME)} className="text-slate-500 font-bold hover:bg-slate-100 px-3 py-1 rounded-lg">Quay lại</button>
-                      <h2 className="font-bold text-lg">Hỏi đáp cùng Thầy Rùa</h2>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
+              <div className="h-full flex flex-col bg-white pt-20">
+                  <div className="flex-1 overflow-hidden mx-4 mb-4 rounded-3xl border-4 border-slate-200 shadow-xl">
                       <AIChat grade={userState.grade || 1} />
                   </div>
               </div>
@@ -232,20 +238,18 @@ export default function App() {
                   words={LEVELS.flatMap(l => l.words)}
                   onComplete={(score) => {
                       setUserState(prev => ({ ...prev, coins: prev.coins + score }));
-                      setScreen(Screen.HOME);
+                      setScreen(Screen.FARM);
                   }}
-                  onExit={() => setScreen(Screen.HOME)}
+                  onExit={() => setScreen(Screen.FARM)}
               />
           )}
 
           {screen === Screen.GAME && activeLevel && (
-              <div className="h-full flex flex-col bg-white">
-                  <div className="p-4 flex items-center justify-between border-b border-slate-100 shadow-sm z-10">
-                      <button onClick={() => setScreen(Screen.HOME)} className="text-slate-400 font-bold">Thoát</button>
-                      <h2 className="font-bold text-blue-600 truncate max-w-[200px]">{activeLevel.title}</h2>
-                      <div className="w-8"></div>
+              <div className="h-full flex flex-col bg-amber-50 pt-20 relative bg-[url('https://www.transparenttextures.com/patterns/wood-pattern.png')]">
+                  <div className="absolute top-4 left-1/2 -translate-x-1/2 wood-texture px-6 py-2 rounded-xl text-white font-black text-lg border-2 border-white shadow-xl z-10 text-center min-w-[200px]">
+                      {activeLevel.title}
                   </div>
-                  <div className="flex-1 overflow-hidden relative">
+                  <div className="flex-1 overflow-hidden relative m-4 rounded-[2rem] bg-white/50 backdrop-blur-sm border-4 border-white shadow-2xl">
                       {gameStep === 'FLASHCARD' && (
                           <FlashcardGame 
                               words={activeLevel.words} 
@@ -299,17 +303,10 @@ export default function App() {
           )}
 
           {showAchievements && (
-              <div className="fixed inset-0 z-50">
+              <div className="fixed inset-0 z-[100]">
                   <Achievements userState={userState} onClose={() => setShowAchievements(false)} />
               </div>
           )}
       </div>
   );
 }
-
-const NavButton = ({ icon, label, active, onClick }: any) => (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-        {React.cloneElement(icon, { size: 24 })}
-        <span className="text-[10px] font-bold">{label}</span>
-    </button>
-);
