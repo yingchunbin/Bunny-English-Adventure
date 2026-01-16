@@ -1,15 +1,14 @@
 
 import React, { useState } from 'react';
 import { UserState } from '../types';
-import { CROPS, ANIMALS, MACHINES, PRODUCTS, RECIPES } from '../data/farmData';
+import { CROPS, ANIMALS, MACHINES, PRODUCTS, RECIPES, DECORATIONS } from '../data/farmData';
 import { PlotModal } from './farm/PlotModal';
-import { AnimalShopModal } from './farm/AnimalShopModal';
-import { MachineShopModal } from './farm/MachineShopModal';
+import { ShopModal } from './farm/ShopModal';
 import { MissionModal } from './farm/MissionModal';
 import { OrderBoard } from './farm/OrderBoard';
 import { Achievements } from './Achievements';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, Shovel, CloudRain, Clock, Plus, Zap, Heart, Tractor, Factory, Smile, Bird, Scroll, Truck, Trophy } from 'lucide-react';
+import { Lock, Droplets, CloudRain, Clock, Zap, Tractor, Factory, Smile, Bird, Scroll, Truck, Trophy, Hammer } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 
 interface FarmProps {
@@ -24,7 +23,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
   const { now, plantSeed, waterPlot, harvestPlot, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, feedPet, canAfford, deliverOrder, addReward } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'ANIMAL_SHOP' | 'MACHINE_SHOP' | 'MISSIONS' | 'ORDERS' | 'ACHIEVEMENTS'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'ACHIEVEMENTS'>('NONE');
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // --- EXPANSION LOGIC ---
@@ -67,7 +66,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
       { id: 'm3', desc: 'Tưới nước', type: 'WATER', category: 'DAILY', target: 10, current: 0, reward: { type: 'FERTILIZER', amount: 1 }, completed: false, claimed: false },
   ];
 
-  // Ensure missions exist
   if (!userState.missions || userState.missions.length === 0) {
       onUpdateState(prev => ({ ...prev, missions: DUMMY_MISSIONS as any }));
   }
@@ -75,20 +73,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
   // --- RENDERERS ---
 
   const renderSectionTabs = () => (
-      <div className="flex bg-white/80 backdrop-blur-sm p-1 rounded-2xl mx-4 mb-4 shadow-sm border border-white sticky top-0 z-20">
+      <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-sm border-2 border-white sticky top-0 z-20 gap-1">
           {[
-              { id: 'CROPS', label: 'Ruộng', icon: <Tractor size={18}/>, color: 'text-green-600 bg-green-100' },
-              { id: 'ANIMALS', label: 'Chuồng', icon: <Bird size={18}/>, color: 'text-orange-600 bg-orange-100' },
-              { id: 'MACHINES', label: 'Nhà Máy', icon: <Factory size={18}/>, color: 'text-blue-600 bg-blue-100' },
-              { id: 'PET', label: 'Thú Cưng', icon: <Smile size={18}/>, color: 'text-pink-600 bg-pink-100' },
+              { id: 'CROPS', label: 'Trồng Trọt', icon: <Tractor size={18}/>, color: 'text-green-600 bg-green-50' },
+              { id: 'ANIMALS', label: 'Chăn Nuôi', icon: <Bird size={18}/>, color: 'text-orange-600 bg-orange-50' },
+              { id: 'MACHINES', label: 'Chế Biến', icon: <Factory size={18}/>, color: 'text-blue-600 bg-blue-50' },
+              { id: 'PET', label: 'Thú Cưng', icon: <Smile size={18}/>, color: 'text-pink-600 bg-pink-50' },
           ].map(tab => (
               <button
                   key={tab.id}
                   onClick={() => setActiveSection(tab.id as FarmSection)}
-                  className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 ${
+                  className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
                       activeSection === tab.id 
-                      ? `${tab.color.replace('text', 'bg').replace('bg', 'text-white')} shadow-md scale-105` 
-                      : 'text-slate-400 hover:bg-white/50'
+                      ? `${tab.color.replace('text', 'bg').replace('bg', 'text-white').replace('50', '500')} shadow-md scale-105 border-b-4 border-black/10` 
+                      : 'text-slate-400 hover:bg-slate-100'
                   }`}
               >
                   {tab.icon}
@@ -99,17 +97,37 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
   );
 
   const renderHUD = () => (
-      <div className="px-4 mb-4 flex gap-3 justify-center">
-          <button onClick={() => setActiveModal('MISSIONS')} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-indigo-100 text-indigo-600 font-bold text-xs hover:scale-105 transition-transform">
+      <div className="px-4 mb-4 flex gap-2 justify-center">
+          <button onClick={() => setActiveModal('MISSIONS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-indigo-100 text-indigo-600 font-black text-xs active:scale-95 transition-all">
               <Scroll size={16} /> Nhiệm Vụ
           </button>
-          <button onClick={() => setActiveModal('ORDERS')} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-orange-100 text-orange-600 font-bold text-xs hover:scale-105 transition-transform">
+          <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all">
               <Truck size={16} /> Đơn Hàng
           </button>
-          <button onClick={() => setActiveModal('ACHIEVEMENTS')} className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-yellow-100 text-yellow-600 font-bold text-xs hover:scale-105 transition-transform">
+          <button onClick={() => setActiveModal('ACHIEVEMENTS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-yellow-100 text-yellow-600 font-black text-xs active:scale-95 transition-all">
               <Trophy size={16} /> Thành Tựu
           </button>
       </div>
+  );
+
+  const renderHarvestButton = () => (
+      <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-yellow-400 text-yellow-900 font-black text-xs px-4 py-2 rounded-full shadow-[0_4px_0_rgba(180,83,9,0.3)] border-2 border-white animate-bounce flex items-center gap-1 backdrop-blur-sm">
+             <Trophy size={14} /> THU HOẠCH!
+          </div>
+      </div>
+  );
+
+  const renderEmptySlot = (label: string, onClick: () => void) => (
+      <button 
+        onClick={onClick}
+        className="relative aspect-square rounded-[2rem] bg-[#e2e8f0] border-4 border-[#cbd5e1] border-dashed flex flex-col items-center justify-center text-slate-400 group hover:bg-[#f1f5f9] transition-all active:scale-95"
+      >
+          <div className="bg-white p-3 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform">
+             <Hammer size={24} className="text-slate-300" />
+          </div>
+          <span className="text-[10px] font-black uppercase">{label}</span>
+      </button>
   );
 
   const renderCrops = () => (
@@ -126,7 +144,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                     key={plot.id}
                     onClick={() => { setSelectedId(plot.id); setActiveModal('PLOT'); }}
                     className={`
-                        relative aspect-square rounded-[2rem] transition-all duration-200 active:scale-95 border-b-[6px] group overflow-hidden
+                        relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] group overflow-hidden
                         ${!plot.isUnlocked ? 'bg-slate-200 border-slate-300' : isWatered ? 'bg-[#795548] border-[#5D4037]' : 'bg-[#A1887F] border-[#8D6E63]'}
                         shadow-lg flex flex-col items-center justify-center
                     `}
@@ -138,31 +156,26 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                           </div>
                       ) : crop ? (
                           <>
-                              <div className={`text-6xl transition-all duration-500 z-10 ${isReady ? 'animate-bounce drop-shadow-lg' : 'scale-75 opacity-90 grayscale-[0.3]'}`}>
+                              <div className={`text-7xl transition-all duration-500 z-10 ${isReady ? 'scale-110 drop-shadow-2xl' : 'scale-75 opacity-90 grayscale-[0.3]'}`}>
                                   {crop.emoji}
                               </div>
                               {!isReady && (
-                                  <div className="absolute bottom-4 w-16 h-2 bg-black/20 rounded-full mt-2 overflow-hidden border border-white/20 backdrop-blur-sm z-10">
+                                  <div className="absolute bottom-6 w-16 h-2 bg-black/20 rounded-full overflow-hidden border border-white/20 backdrop-blur-sm z-10">
                                       <div className="h-full bg-green-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                   </div>
                               )}
-                              {isReady && (
-                                  <div className="absolute -top-3 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-1 rounded-full shadow-md animate-pulse border-2 border-white z-20">Thu Hoạch!</div>
-                              )}
+                              {isReady && renderHarvestButton()}
                               {isWatered && !isReady && (
-                                  <div className="absolute top-2 right-2 text-blue-300 opacity-80"><Droplets size={16} fill="currentColor" /></div>
+                                  <div className="absolute top-3 right-3 text-blue-300 opacity-90 bg-blue-500/20 p-1 rounded-full"><Droplets size={16} fill="currentColor" /></div>
                               )}
                           </>
                       ) : (
-                          <div className="text-white/20 text-4xl group-hover:scale-110 transition-transform"><Plus size={40} strokeWidth={4}/></div>
+                          <div className="text-white/30 text-xs font-black uppercase border-2 border-white/30 px-3 py-1 rounded-full">Đất Trống</div>
                       )}
                   </button>
               );
           })}
-          <button onClick={() => handleExpand('PLOT')} className="aspect-square rounded-[2rem] border-4 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2 hover:bg-white/50 transition-colors bg-white/20">
-              <Plus size={32} />
-              <span className="text-[10px] font-black uppercase">Mở đất</span>
-          </button>
+          {renderEmptySlot("Mở Đất Mới", () => handleExpand('PLOT'))}
       </div>
   );
 
@@ -181,31 +194,31 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                       <button 
                         key={slot.id}
                         onClick={() => {
-                            if (!animal) { setSelectedId(slot.id); setActiveModal('ANIMAL_SHOP'); }
+                            if (!animal) { setSelectedId(slot.id); setActiveModal('SHOP'); }
                             else if (isReady) collectProduct(slot.id);
                             else if (!isFed) feedAnimal(slot.id);
                         }}
                         className={`
-                            relative aspect-square rounded-[2rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-md overflow-hidden flex flex-col items-center justify-center
-                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !animal ? 'bg-white border-slate-200 border-dashed' : 'bg-[#FFF3E0] border-[#FFE0B2]'}
+                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-md overflow-hidden flex flex-col items-center justify-center
+                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !animal ? 'bg-amber-50 border-amber-200 border-dashed' : 'bg-[#FFF3E0] border-[#FFE0B2]'}
                         `}
                       >
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !animal ? (
-                              <div className="flex flex-col items-center text-slate-300">
-                                  <Plus size={32} />
-                                  <span className="text-[10px] font-black uppercase mt-1">Mua vật nuôi</span>
-                              </div>
+                              <>
+                                <div className="text-3xl opacity-30 mb-2">🛖</div>
+                                <span className="text-[10px] font-black text-amber-400 uppercase">Chuồng Trống</span>
+                              </>
                           ) : (
                               <>
-                                  <div className={`text-6xl z-10 transition-all ${!isFed ? 'grayscale opacity-60 scale-90' : isReady ? 'animate-bounce' : 'animate-walk'}`}>
+                                  <div className={`text-7xl z-10 transition-all ${!isFed ? 'grayscale opacity-60 scale-90' : isReady ? 'scale-110 drop-shadow-xl' : 'animate-walk'}`}>
                                       {animal.emoji}
                                   </div>
-                                  {isReady && <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-[10px] font-black shadow-md z-20">THU HOẠCH</div>}
-                                  {!isFed && <div className="absolute bottom-4 bg-orange-500 text-white px-2 py-1 rounded-full text-[10px] font-black shadow-md z-20 flex items-center gap-1"><Zap size={10}/> ĐÓI</div>}
+                                  {isReady && renderHarvestButton()}
+                                  {!isFed && <div className="absolute bottom-6 bg-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg z-20 flex items-center gap-1 border-2 border-white"><Zap size={10} fill="currentColor"/> ĐÓI BỤNG</div>}
                                   {isFed && !isReady && (
-                                      <div className="absolute bottom-4 w-16 h-2 bg-black/10 rounded-full overflow-hidden border border-white z-10">
+                                      <div className="absolute bottom-6 w-16 h-2 bg-black/10 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-orange-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
                                   )}
@@ -214,10 +227,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                       </button>
                   )
               })}
-              <button onClick={() => handleExpand('PEN')} className="aspect-square rounded-[2rem] border-4 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2 hover:bg-white/50 transition-colors bg-white/20">
-                  <Plus size={32} />
-                  <span className="text-[10px] font-black uppercase">Xây chuồng</span>
-              </button>
+              {renderEmptySlot("Xây Chuồng", () => handleExpand('PEN'))}
           </div>
       );
   };
@@ -238,7 +248,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                       <button 
                         key={slot.id}
                         onClick={() => {
-                            if (!machine) { setSelectedId(slot.id); setActiveModal('MACHINE_SHOP'); }
+                            if (!machine) { setSelectedId(slot.id); setActiveModal('SHOP'); }
                             else if (isReady) collectMachine(slot.id);
                             else if (!recipe) { 
                                 const firstRecipe = RECIPES.find(r => r.machineId === machine.id);
@@ -246,28 +256,28 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                             }
                         }}
                         className={`
-                            relative aspect-square rounded-[2rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-lg overflow-hidden flex flex-col items-center justify-center
-                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !machine ? 'bg-white border-slate-200 border-dashed' : 'bg-slate-50 border-slate-200'}
+                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-lg overflow-hidden flex flex-col items-center justify-center
+                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !machine ? 'bg-blue-50 border-blue-200 border-dashed' : 'bg-slate-100 border-slate-300'}
                         `}
                       >
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !machine ? (
-                              <div className="flex flex-col items-center text-slate-300">
-                                  <Plus size={32} />
-                                  <span className="text-[10px] font-black uppercase mt-1">Mua máy</span>
-                              </div>
+                              <>
+                                <div className="text-3xl opacity-30 mb-2">🏗️</div>
+                                <span className="text-[10px] font-black text-blue-400 uppercase">Nền Móng</span>
+                              </>
                           ) : (
                               <>
-                                  <div className={`text-6xl z-10 relative drop-shadow-md ${recipe && !isReady ? 'animate-pulse' : ''}`}>{machine.emoji}</div>
+                                  <div className={`text-7xl z-10 relative drop-shadow-md ${recipe && !isReady ? 'animate-pulse' : ''}`}>{machine.emoji}</div>
                                   {recipe && isReady && (
-                                      <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20 backdrop-blur-sm">
-                                          <div className="text-5xl animate-bounce mb-1">{product?.emoji}</div>
-                                          <span className="text-[10px] font-black text-green-600 bg-green-100 px-2 py-1 rounded-full">XONG!</span>
+                                      <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-20 backdrop-blur-sm">
+                                          <div className="text-6xl animate-bounce mb-2 drop-shadow-lg">{product?.emoji}</div>
+                                          {renderHarvestButton()}
                                       </div>
                                   )}
                                   {recipe && !isReady && (
-                                      <div className="absolute bottom-4 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
+                                      <div className="absolute bottom-6 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
                                   )}
@@ -276,10 +286,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                       </button>
                   )
               })}
-              <button onClick={() => handleExpand('MACHINE')} className="aspect-square rounded-[2rem] border-4 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 gap-2 hover:bg-white/50 transition-colors bg-white/20">
-                  <Plus size={32} />
-                  <span className="text-[10px] font-black uppercase">Thêm máy</span>
-              </button>
+              {renderEmptySlot("Thêm Máy", () => handleExpand('MACHINE'))}
           </div>
       );
   };
@@ -288,7 +295,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
       <div className="w-full h-full pb-32 px-4 animate-fadeIn flex flex-col items-center">
           {/* Main Habitat */}
           <div className="w-full max-w-md aspect-[4/3] rounded-[3rem] border-8 border-[#8D6E63] relative overflow-hidden shadow-2xl bg-[#A5D6A7]">
-              {/* Environment Layer */}
               <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute top-10 left-10 text-4xl opacity-80">🌳</div>
                   <div className="absolute top-20 right-10 text-3xl opacity-70">🌲</div>
@@ -297,7 +303,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                   <div className="absolute top-5 left-1/4 text-5xl opacity-40 animate-pulse">☁️</div>
               </div>
 
-              {/* The Pet */}
               <div 
                 className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 text-[8rem] cursor-pointer z-10 transition-transform active:scale-110 drop-shadow-2xl"
                 style={{ animation: 'sway 3s infinite ease-in-out' }}
@@ -306,7 +311,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
                   🐶
               </div>
               
-              {/* Pet Stats */}
               <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border-2 border-white shadow-sm flex items-center gap-3 z-20">
                   <div className="flex flex-col items-center">
                       <span className="text-[10px] font-bold text-slate-400 uppercase">Level {userState.petLevel || 1}</span>
@@ -322,15 +326,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
           {/* Action Bar */}
           <div className="mt-6 bg-white p-4 rounded-[2rem] w-full max-w-md shadow-lg flex justify-around items-center border border-slate-100">
               <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-pink-500 transition-colors" onClick={() => feedPet('carrot')}>
-                  <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-pink-100">🥕</div>
+                  <div className="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-pink-100">🥕</div>
                   <span className="text-[10px] font-bold uppercase">Cho ăn</span>
               </button>
               <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-500 transition-colors">
-                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-blue-100">🎾</div>
+                  <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-blue-100">🎾</div>
                   <span className="text-[10px] font-bold uppercase">Chơi đùa</span>
               </button>
               <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-purple-500 transition-colors">
-                  <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-purple-100">🛁</div>
+                  <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-purple-100">🛁</div>
                   <span className="text-[10px] font-bold uppercase">Tắm rửa</span>
               </button>
           </div>
@@ -376,27 +380,41 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState }) => {
             />
         )}
 
-        {activeModal === 'ANIMAL_SHOP' && selectedId && (
-            <AnimalShopModal 
-                animals={ANIMALS}
-                crops={[...CROPS, ...PRODUCTS]}
-                products={PRODUCTS}
-                userLevel={userState.petLevel || 1}
-                userCoins={userState.coins}
-                onBuy={(animal) => { buyAnimal(selectedId, animal.id); setActiveModal('NONE'); }}
-                onClose={() => setActiveModal('NONE')}
-            />
-        )}
-
-        {activeModal === 'MACHINE_SHOP' && selectedId && (
-            <MachineShopModal 
-                machines={MACHINES}
-                recipes={RECIPES}
-                allItems={[...CROPS, ...PRODUCTS]}
-                userLevel={userState.petLevel || 1}
-                userCoins={userState.coins}
-                onBuy={(machine) => { buyMachine(selectedId, machine.id); setActiveModal('NONE'); }}
-                onClose={() => setActiveModal('NONE')}
+        {/* UNIFIED SHOP: Opened contextually or globally */}
+        {(activeModal === 'SHOP') && (
+            <ShopModal 
+                crops={CROPS} 
+                animals={ANIMALS} 
+                machines={MACHINES} 
+                decorations={DECORATIONS} 
+                userState={userState} 
+                onBuyItem={(item, amount) => {
+                    // Logic to buy based on type and context
+                    if (item.type === 'ANIMAL' && selectedId) {
+                       const res = buyAnimal(selectedId, item.id);
+                       if (res.success) { setActiveModal('NONE'); setSelectedId(null); }
+                       else alert(res.msg);
+                    } else if (item.type === 'MACHINE' && selectedId) {
+                       const res = buyMachine(selectedId, item.id);
+                       if (res.success) { setActiveModal('NONE'); setSelectedId(null); }
+                       else alert(res.msg);
+                    } else {
+                       const cost = item.cost * amount;
+                       if (userState.coins >= cost) {
+                           onUpdateState(prev => {
+                                const ns = { ...prev, coins: prev.coins - cost };
+                                if (item.type === 'CROP') ns.inventory = { ...prev.inventory, [item.id]: (prev.inventory[item.id] || 0) + amount };
+                                else if (item.type === 'DECOR') ns.decorations = [...(prev.decorations || []), item.id];
+                                return ns;
+                           });
+                           playSFX('success');
+                       } else {
+                           playSFX('wrong');
+                           alert("Không đủ tiền!");
+                       }
+                    }
+                }} 
+                onClose={() => { setActiveModal('NONE'); setSelectedId(null); }} 
             />
         )}
 
