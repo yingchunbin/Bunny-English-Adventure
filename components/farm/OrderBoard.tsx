@@ -12,9 +12,10 @@ interface OrderBoardProps {
   onDeliver: (order: FarmOrder) => void;
   onRefresh: () => void;
   onClose: () => void;
+  onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void; // New prop
 }
 
-export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory, onDeliver, onRefresh, onClose }) => {
+export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory, onDeliver, onRefresh, onClose, onShowAlert }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
         <div className="bg-white rounded-[2.5rem] w-full max-w-md relative border-8 border-orange-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -77,7 +78,7 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                                 onDeliver(order);
                                             } else {
                                                 playSFX('wrong');
-                                                alert("Bé chưa đủ hàng trong Kho nông sản để giao nhé!");
+                                                onShowAlert("Bé chưa đủ hàng trong Kho nông sản để giao nhé! Hãy kiểm tra lại kho.", "DANGER");
                                             }
                                         }}
                                         className={`ml-2 h-12 px-5 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center ${canDeliver ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}

@@ -55,7 +55,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
   const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
   const [showLevelUp, setShowLevelUp] = useState(false);
+  
+  // Modal Configurations
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; message: string; onConfirm: () => void } | null>(null);
+  const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'INFO' | 'DANGER' } | null>(null);
 
   // Refs
   const prevLevelRef = useRef(userState.farmLevel || 1);
@@ -71,6 +74,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
+
+  // --- HELPER FOR ALERTS ---
+  const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
+      playSFX('wrong');
+      setAlertConfig({ isOpen: true, message: msg, type });
+  };
 
   // --- HARVEST FX LOGIC ---
   const triggerHarvestFX = (rect: DOMRect, emoji: string, amount: number, exp: number) => {
@@ -120,8 +129,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const baseCost = 500;
       let currentCount = 0;
       if (type === 'PLOT') {
-          // Count only unlocked plots for pricing scaling, or all? Usually all to keep consistent indexing.
-          // Let's count unlocked only for fairness, or total. Let's use total.
           currentCount = userState.farmPlots.length; 
       }
       if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
@@ -140,7 +147,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       const newState = { ...prev, coins: prev.coins - finalCost };
                       
                       if (type === 'PLOT') {
-                          // Check if there is a locked plot to unlock first
                           const lockedPlotIndex = prev.farmPlots.findIndex(p => !p.isUnlocked);
                           if (lockedPlotIndex !== -1) {
                               const newPlots = [...prev.farmPlots];
@@ -162,8 +168,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       return newState;
                   });
               } else {
-                  playSFX('wrong');
-                  alert("Bạn không đủ tiền!");
+                  handleShowAlert("Bé không đủ tiền để mở rộng rồi!");
               }
               setConfirmConfig(null);
           }
@@ -206,8 +211,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const handleWellClick = (e: React.MouseEvent) => {
       const status = checkWellUsage();
       if (!status.allowed) {
-          playSFX('wrong');
-          alert(status.msg);
+          handleShowAlert(status.msg || "Giếng thần đã cạn nước hôm nay!", 'INFO');
           return;
       }
       setQuizContext({ type: 'WATER' });
@@ -243,8 +247,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const handleFeedAnimal = (slot: any) => {
       const res = feedAnimal(slot.id);
       if (res && !res.success) {
-          playSFX('wrong');
-          alert(res.msg); // Show explicit error message
+          handleShowAlert(res.msg); // Show custom modal
       }
   };
 
@@ -482,7 +485,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 const firstRecipe = RECIPES.find(r => r.machineId === machine.id);
                                 if(firstRecipe) {
                                     const res = startProcessing(slot.id, firstRecipe.id);
-                                    if(res && !res.success) { playSFX('wrong'); alert(res.msg); }
+                                    if(res && !res.success) { 
+                                        handleShowAlert(res.msg);
+                                    }
                                 }
                             }
                         }}
@@ -673,7 +678,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     if (action === 'PLANT') {
                         const res = plantSeed(selectedId, data);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
-                        else { playSFX('wrong'); alert(res.msg); }
+                        else { handleShowAlert(res.msg); }
                     }
                     if (action === 'WATER') {
                         const res = waterPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
@@ -754,19 +759,19 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 userState={userState} 
                 onBuySeed={(crop, amount) => {
                     const res = buyItem(crop, amount);
-                    if (!res.success) alert(res.msg);
+                    if (!res.success) handleShowAlert(res.msg);
                 }}
                 onBuyAnimal={(animal) => {
                     const res = buyItem(animal, 1);
-                    if (!res.success) alert(res.msg);
+                    if (!res.success) handleShowAlert(res.msg);
                 }}
                 onBuyMachine={(machine) => {
                     const res = buyItem(machine, 1);
-                    if (!res.success) alert(res.msg);
+                    if (!res.success) handleShowAlert(res.msg);
                 }}
                 onBuyDecor={(decor) => {
                     const res = buyItem(decor, 1);
-                    if (!res.success) alert(res.msg);
+                    if (!res.success) handleShowAlert(res.msg);
                 }}
                 onClose={() => { setActiveModal('NONE'); setSelectedId(null); }} 
             />
@@ -790,7 +795,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
         {activeModal === 'ORDERS' && (
             <OrderBoard 
                 orders={userState.activeOrders || []} 
-                items={[...CROPS, ...PRODUCTS]} // Pass full list including products
+                items={[...CROPS, ...PRODUCTS]} 
                 inventory={userState.harvestedCrops || {}}
                 onDeliver={(o) => deliverOrder(o)}
                 onRefresh={() => {
@@ -799,6 +804,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     onUpdateState(prev => ({ ...prev, activeOrders: newOrders }));
                 }}
                 onClose={() => setActiveModal('NONE')}
+                onShowAlert={handleShowAlert}
             />
         )}
 
@@ -819,21 +825,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     if (selectedId) {
                         const res = plantSeed(selectedId, seedId);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
-                        else { playSFX('wrong'); alert(res.msg); }
+                        else { handleShowAlert(res.msg); }
                     }
                 }}
                 onSelectAnimal={(animalId) => {
                     if (selectedId) {
                         const res = placeAnimal(selectedId, animalId);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
-                        else { playSFX('wrong'); alert(res.msg); }
+                        else { handleShowAlert(res.msg); }
                     }
                 }}
                 onSelectMachine={(machineId) => {
                     if (selectedId) {
                         const res = placeMachine(selectedId, machineId);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
-                        else { playSFX('wrong'); alert(res.msg); }
+                        else { handleShowAlert(res.msg); }
                     }
                 }}
                 onGoToShop={() => { setActiveModal('SHOP'); }}
@@ -850,11 +856,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             />
         )}
 
+        {/* Standard Confirmation Modal */}
         <ConfirmModal 
             isOpen={!!confirmConfig}
             message={confirmConfig?.message || ''}
             onConfirm={confirmConfig?.onConfirm || (() => {})}
             onCancel={() => setConfirmConfig(null)}
+        />
+
+        {/* Alert Modal (using same component) */}
+        <ConfirmModal 
+            isOpen={!!alertConfig}
+            message={alertConfig?.message || ''}
+            onConfirm={() => setAlertConfig(null)}
+            type={alertConfig?.type || 'INFO'}
+            singleButton={true}
         />
     </div>
   );
