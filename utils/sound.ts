@@ -146,7 +146,7 @@ const playTone = (freq: number, type: OscillatorType, duration: number, startTim
   osc.stop(ctx.currentTime + startTime + duration);
 };
 
-export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer' | 'eat') => {
+export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer' | 'eat' | 'powerup' | 'coins') => {
   try {
     switch (type) {
       case 'correct':
@@ -197,6 +197,17 @@ export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip'
           playTone(300, 'sawtooth', 0.1, 0);
           playTone(450, 'sawtooth', 0.1, 0.1);
           playTone(250, 'sawtooth', 0.15, 0.2);
+          break;
+      case 'powerup':
+          // Ascending fast sweep
+          playTone(400, 'sine', 0.1, 0);
+          playTone(600, 'sine', 0.1, 0.1);
+          playTone(800, 'sine', 0.2, 0.2);
+          break;
+      case 'coins':
+          // High pitch ding
+          playTone(1000, 'sine', 0.1, 0);
+          playTone(1500, 'sine', 0.2, 0.05);
           break;
     }
   } catch (e) {
