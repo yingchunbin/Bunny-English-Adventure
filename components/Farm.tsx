@@ -525,7 +525,18 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  <div className={`text-7xl z-10 relative drop-shadow-md ${recipe && !isReady ? 'animate-pulse' : ''}`}>{machine.emoji}</div>
+                                  <div className={`text-7xl z-10 relative drop-shadow-md transition-all ${recipe && !isReady ? 'animate-bounce-slight' : ''}`}>
+                                      {machine.emoji}
+                                  </div>
+                                  
+                                  {/* Working Effects */}
+                                  {recipe && !isReady && (
+                                      <>
+                                          <div className="absolute -top-4 right-0 text-xl animate-float-smoke opacity-70 pointer-events-none">💨</div>
+                                          <div className="absolute bottom-2 right-2 text-slate-400 animate-spin-slow pointer-events-none"><Settings size={18} /></div>
+                                      </>
+                                  )}
+
                                   {recipe && isReady && (
                                       <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-20 backdrop-blur-sm">
                                           <div className="text-6xl animate-bounce mb-2 drop-shadow-lg">{product?.emoji}</div>
@@ -563,6 +574,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   return (
     <div className="w-full h-full bg-[#E0F7FA] relative overflow-y-auto no-scrollbar flex flex-col">
+        <style>{`
+            @keyframes float-smoke {
+                0% { transform: translateY(0) scale(0.5); opacity: 0; }
+                50% { opacity: 0.8; }
+                100% { transform: translateY(-20px) scale(1.5); opacity: 0; }
+            }
+            .animate-float-smoke { animation: float-smoke 2s infinite; }
+            @keyframes bounce-slight {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-3px); }
+            }
+            .animate-bounce-slight { animation: bounce-slight 1s infinite; }
+        `}</style>
+
         {/* HEADER WITH LV AND XP */}
         <div className="bg-white/90 backdrop-blur-md px-4 py-3 shadow-lg flex justify-between items-center z-40 sticky top-0 border-b-4 border-green-100/50">
             <button onClick={onExit} className="p-2 text-slate-600 hover:bg-slate-100 rounded-2xl active:scale-90 transition-all bg-white border border-slate-200 shadow-sm z-50 relative"><Home size={24}/></button>
@@ -784,6 +809,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 animals={ANIMALS} 
                 machines={MACHINES} 
                 decorations={DECORATIONS} 
+                recipes={RECIPES}
+                products={PRODUCTS}
                 userState={userState} 
                 onBuySeed={(crop, amount) => {
                     const res = buyItem(crop, amount);

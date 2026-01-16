@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { Crop, Decor, AnimalItem, MachineItem } from '../../types';
-import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair } from 'lucide-react';
+import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
+import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 
 interface ShopModalProps {
@@ -9,6 +9,8 @@ interface ShopModalProps {
   animals?: AnimalItem[];
   machines?: MachineItem[];
   decorations: Decor[];
+  recipes?: ProcessingRecipe[];
+  products?: Product[];
   userState: any;
   onBuySeed: (crop: Crop, amount: number) => void;
   onBuyAnimal?: (animal: AnimalItem) => void;
@@ -19,7 +21,7 @@ interface ShopModalProps {
 }
 
 export const ShopModal: React.FC<ShopModalProps> = ({ 
-    crops, animals = [], machines = [], decorations, 
+    crops, animals = [], machines = [], decorations, recipes = [], products = [],
     userState, onBuySeed, onBuyAnimal, onBuyMachine, onBuyDecor, onClose, initialTab = 'SEEDS' 
 }) => {
   const [tab, setTab] = useState(initialTab);
@@ -67,6 +69,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const sortedMachines = sortItems(machines);
   const sortedDecor = sortItems(decorations);
 
+  const allItems = [...crops, ...products];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
         <div className="bg-white rounded-[3rem] w-full max-w-lg h-[90vh] flex flex-col overflow-hidden border-8 border-pink-200 shadow-2xl relative">
@@ -97,7 +101,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     <button 
                         key={t.id}
                         onClick={() => setTab(t.id as any)}
-                        className={`flex items-center gap-1 px-4 py-2 rounded-xl font-black text-xs whitespace-nowrap transition-all ${tab === t.id ? 'bg-pink-500 text-white shadow-lg' : 'bg-white text-pink-400 border border-pink-100'}`}
+                        className={`flex-1 py-2 px-4 rounded-xl font-black text-xs whitespace-nowrap transition-all ${tab === t.id ? 'bg-pink-500 text-white shadow-lg' : 'bg-white text-pink-400 border border-pink-100'}`}
                     >
                         <t.icon size={14}/> {t.label}
                     </button>
@@ -147,24 +151,31 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                         {sortedAnimals.map(animal => {
                             const isLocked = farmLevel < (animal.minLevel || 0);
                             const currency = animal.currency || 'COIN';
-                            // Find feed and produce items to show details
-                            const feedItem = crops.find(c => c.id === animal.feedCropId);
-                            // Produce item could be in PRODUCTS array which isn't passed here directly, 
-                            // but we can infer or rely on text if item not found, 
-                            // however to keep it simple, we just show name.
+                            
+                            const feedItem = allItems.find(c => c.id === animal.feedCropId);
+                            const produceItem = allItems.find(p => p.id === animal.produceId);
                             
                             return (
-                                <div key={animal.id} className="bg-white p-3 rounded-2xl border-4 border-orange-100 flex items-center gap-3">
+                                <div key={animal.id} className={`bg-white p-3 rounded-2xl border-4 flex items-center gap-3 ${isLocked ? 'grayscale opacity-60 border-slate-200' : 'border-orange-100'}`}>
                                     <div className="text-5xl">{animal.emoji}</div>
                                     <div className="flex-1">
                                         <div className="font-black text-slate-700 text-sm">{animal.name}</div>
                                         
-                                        <div className="flex flex-wrap gap-2 mt-1">
-                                            <div className="text-[10px] bg-orange-50 px-2 py-1 rounded text-orange-600 font-bold flex items-center gap-1">
-                                                Ăn: {feedItem ? feedItem.emoji : '???'}
+                                        {/* DETAIL BOX */}
+                                        <div className="bg-orange-50 rounded-xl p-2 border border-orange-100 flex flex-col gap-1 my-2">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                                <span className="text-[10px] uppercase text-slate-400 w-6">Ăn:</span>
+                                                <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm">
+                                                    <span>{feedItem?.emoji}</span>
+                                                    <span className="text-blue-600 text-[10px]">x{animal.feedAmount}</span>
+                                                </div>
                                             </div>
-                                            <div className="text-[10px] bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold">
-                                                SX: {Math.ceil(animal.produceTime/60)}p
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                                <span className="text-[10px] uppercase text-slate-400 w-6">Đẻ:</span>
+                                                <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm">
+                                                    <span>{produceItem?.emoji}</span>
+                                                </div>
+                                                <span className="flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md"><Clock size={8}/> {Math.ceil(animal.produceTime / 60)}p</span>
                                             </div>
                                         </div>
 
@@ -182,14 +193,42 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                         {sortedMachines.map(machine => {
                             const isLocked = farmLevel < (machine.minLevel || 0);
                             const currency = machine.currency || 'COIN';
+                            const machineRecipes = recipes.filter(r => r.machineId === machine.id);
+
                             return (
-                                <div key={machine.id} className="bg-white p-3 rounded-2xl border-4 border-blue-100 flex items-center gap-3">
-                                    <div className="text-5xl">{machine.emoji}</div>
-                                    <div className="flex-1">
-                                        <div className="font-black text-slate-700 text-sm">{machine.name}</div>
-                                        <div className="text-[10px] text-slate-500 font-bold leading-tight">{machine.description}</div>
-                                        {isLocked ? <div className="text-[10px] text-slate-400 mt-2 font-bold"><Lock size={10} className="inline"/> Cấp {machine.minLevel}</div> : renderBuyButton(machine.cost, currency, () => onBuyMachine && onBuyMachine(machine), false)}
+                                <div key={machine.id} className={`bg-white p-3 rounded-2xl border-4 flex flex-col gap-2 ${isLocked ? 'grayscale opacity-60 border-slate-200' : 'border-blue-100'}`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-5xl">{machine.emoji}</div>
+                                        <div className="flex-1">
+                                            <div className="font-black text-slate-700 text-sm">{machine.name}</div>
+                                            <div className="text-[10px] text-slate-500 font-bold leading-tight">{machine.description}</div>
+                                        </div>
                                     </div>
+
+                                    {/* RECIPES PREVIEW */}
+                                    <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
+                                        <div className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-wider">Chế tạo:</div>
+                                        <div className="space-y-1.5">
+                                            {machineRecipes.slice(0, 3).map(r => { // Show max 3 examples
+                                                const out = allItems.find(i => i.id === r.outputId);
+                                                return (
+                                                    <div key={r.id} className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white p-1 rounded-lg shadow-sm border border-slate-100">
+                                                        <div className="flex items-center -space-x-1">
+                                                            {r.input.map(input => {
+                                                                const item = allItems.find(i => i.id === input.id);
+                                                                return <span key={input.id} className="bg-slate-100 rounded-full w-5 h-5 flex items-center justify-center text-xs border border-white">{item?.emoji}</span>
+                                                            })}
+                                                        </div>
+                                                        <ArrowRight size={10} className="text-blue-300"/>
+                                                        <span className="text-lg">{out?.emoji}</span>
+                                                    </div>
+                                                )
+                                            })}
+                                            {machineRecipes.length > 3 && <div className="text-[9px] text-center text-slate-400 italic">+ {machineRecipes.length - 3} món khác</div>}
+                                        </div>
+                                    </div>
+
+                                    {isLocked ? <div className="text-[10px] text-slate-400 mt-1 font-bold text-center"><Lock size={10} className="inline"/> Cấp {machine.minLevel}</div> : renderBuyButton(machine.cost, currency, () => onBuyMachine && onBuyMachine(machine), false)}
                                 </div>
                             )
                         })}
