@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot } from '../types';
-import { CROPS, ANIMALS, PRODUCTS, MYSTERY_BOX_REWARDS } from '../data/farmData';
+import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA } from '../data/farmData';
 import { playSFX } from '../utils/sound';
 
 export const useFarmGame = (
@@ -10,7 +10,7 @@ export const useFarmGame = (
 ) => {
   const [now, setNow] = useState(Date.now());
   
-  // Helper: Tạo 1 đơn hàng duy nhất (để trám vào chỗ trống)
+  // Helper: Create a single order
   const createSingleOrder = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
       const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa", "Chị Ong Vàng", "Anh Kiến", "Cụ Voi"];
       const unlockedCrops = CROPS.filter(c => !c.isMagic && (completedCount || 0) >= (c.unlockReq || 0));
@@ -43,26 +43,37 @@ export const useFarmGame = (
           if (itemData) {
               totalValue += itemData.sellPrice * amount;
               const expBase = itemData.type === 'PRODUCT' ? 20 : (itemData as Crop).exp || 10;
-              // BOOSTED XP: Increased multiplier from 2.5 to 6.0 to make orders the best way to level up
               totalExp += expBase * amount * 6.0; 
           }
       }
-
-      // Round reward to look nice
-      const finalCoins = Math.ceil((totalValue * 1.5) / 10) * 10;
-      const finalExp = Math.ceil(totalExp / 5) * 5;
-
-      const duration = (Math.random() * 5 + 2) * 60 * 1000; // 2-7 minutes
 
       return {
           id: Math.random().toString(36).substr(2, 9),
           npcName: npcs[Math.floor(Math.random() * npcs.length)],
           requirements,
-          rewardCoins: finalCoins,
-          rewardExp: finalExp,
-          expiresAt: Date.now() + duration
+          rewardCoins: Math.ceil((totalValue * 1.5) / 10) * 10,
+          rewardExp: Math.ceil(totalExp / 5) * 5,
+          expiresAt: Date.now() + (Math.random() * 5 + 5) * 60 * 1000 // 5-10 minutes
       };
   };
+
+  // --- INIT LOGIC (Effect) ---
+  useEffect(() => {
+      // Ensure Missions are initialized
+      if (!userState.missions || userState.missions.length === 0) {
+          onUpdateState(prev => ({ ...prev, missions: FARM_ACHIEVEMENTS_DATA }));
+      }
+      
+      // Ensure Orders are initialized
+      if (!userState.activeOrders || userState.activeOrders.length === 0) {
+          const initialOrders = [
+              createSingleOrder(1, 0, userState.livestockSlots || []),
+              createSingleOrder(1, 0, userState.livestockSlots || []),
+              createSingleOrder(1, 0, userState.livestockSlots || [])
+          ];
+          onUpdateState(prev => ({ ...prev, activeOrders: initialOrders }));
+      }
+  }, []); // Run once on mount
 
   // --- MAIN GAME LOOP ---
   useEffect(() => {
@@ -74,13 +85,11 @@ export const useFarmGame = (
             let newState = { ...prev };
             let hasChanges = false;
 
-            // 1. Weather Logic (Mưa ngẫu nhiên - 0.2% mỗi giây)
+            // 1. Weather Logic
             if (Math.random() < 0.002) { 
                 const newWeather = prev.weather === 'SUNNY' ? 'RAINY' : 'SUNNY';
                 newState.weather = newWeather;
                 hasChanges = true;
-                
-                // Mưa thì tự động tưới cây
                 if (newWeather === 'RAINY') {
                     newState.farmPlots = prev.farmPlots.map(p => 
                         p.cropId && !p.isWatered ? { ...p, isWatered: true } : p
@@ -88,7 +97,7 @@ export const useFarmGame = (
                 }
             }
 
-            // 2. Sâu bệnh (0.5% mỗi giây)
+            // 2. Bugs
             if (Math.random() < 0.005) {
                 const eligiblePlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
                 if (eligiblePlots.length > 0) {
@@ -100,34 +109,23 @@ export const useFarmGame = (
                 }
             }
 
-            // 3. Quản lý Đơn hàng (Hết hạn & Tự bù)
+            // 3. Orders Management
             let currentOrders = prev.activeOrders || [];
             const validOrders = currentOrders.filter(o => o.expiresAt > currentTime);
             
-            // Nếu có đơn hết hạn, cập nhật danh sách
             if (validOrders.length !== currentOrders.length) {
                 currentOrders = validOrders;
                 hasChanges = true;
             }
 
-            // Nếu thiếu đơn (dưới 3), 10% cơ hội mỗi giây sẽ có thương buôn mới đến
             if (currentOrders.length < 3 && Math.random() < 0.1) {
-                const newOrder = createSingleOrder(prev.grade || 1, prev.completedLevels?.length || 0, prev.livestockSlots);
+                const newOrder = createSingleOrder(prev.grade || 1, prev.completedLevels?.length || 0, prev.livestockSlots || []);
                 currentOrders = [...currentOrders, newOrder];
                 hasChanges = true;
             }
             
             if (hasChanges) {
                 newState.activeOrders = currentOrders;
-            }
-
-            // 4. Cứu trợ khẩn cấp (Tránh game over)
-            const totalSeeds = Object.values(prev.inventory || {}).reduce((a, b) => a + b, 0);
-            const activeCrops = prev.farmPlots.filter(p => p.cropId).length;
-            if (prev.coins < 10 && totalSeeds === 0 && activeCrops === 0) {
-                newState.inventory = { ...prev.inventory, 'carrot': (prev.inventory['carrot'] || 0) + 3 };
-                newState.waterDrops = Math.max(prev.waterDrops, 5);
-                hasChanges = true;
             }
 
             return hasChanges ? newState : prev;
@@ -144,8 +142,10 @@ export const useFarmGame = (
           const newMissions = prev.missions.map(m => {
               if (m.type === type && !m.completed) {
                   const newCurrent = m.current + amount;
-                  changed = true;
-                  return { ...m, current: newCurrent, completed: newCurrent >= m.target };
+                  if (newCurrent !== m.current) {
+                      changed = true;
+                      return { ...m, current: newCurrent, completed: newCurrent >= m.target };
+                  }
               }
               return m;
           });
@@ -153,7 +153,6 @@ export const useFarmGame = (
       });
   }, [onUpdateState]);
 
-  // Tạo mới toàn bộ danh sách (Dùng cho nút Refresh thủ công)
   const generateOrders = useCallback((grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
       const newOrders: FarmOrder[] = [];
       while (newOrders.length < 3) {
@@ -164,13 +163,18 @@ export const useFarmGame = (
 
   const canAfford = (amount: number) => userState.coins >= amount;
 
+  // --- ACTIONS ---
+
   const plantSeed = (plotId: number, seedId: string) => {
-      const count = userState.inventory[seedId] || 0;
+      const currentInventory = userState.inventory || {};
+      const count = currentInventory[seedId] || 0;
+      
       if (count <= 0) return { success: false, msg: "Hết hạt giống rồi bé ơi!" };
       
       playSFX('click');
       onUpdateState(prev => ({
           ...prev,
+          // CRITICAL FIX: Ensure we reduce inventory count
           inventory: { ...prev.inventory, [seedId]: count - 1 },
           farmPlots: prev.farmPlots.map(p => p.id === plotId ? { 
               ...p, 
@@ -200,8 +204,6 @@ export const useFarmGame = (
   };
 
   const catchBug = (plotId: number) => {
-      // LOGIC MỚI: Bắt sâu xong cây sẽ bị "khát nước" (isWatered = false)
-      // Điều này tạo ra chuỗi gameplay: Bắt Sâu -> Tưới Nước -> Thu Hoạch
       onUpdateState(prev => ({
           ...prev,
           farmPlots: prev.farmPlots.map(p => p.id === plotId ? { ...p, hasBug: false, isWatered: false } : p)
@@ -212,26 +214,19 @@ export const useFarmGame = (
   const harvestPlot = (plotId: number, crop: Crop) => {
       playSFX('harvest');
       onUpdateState(prev => {
-          const currentCrops = prev.harvestedCrops || {};
-          const newHarvest = { ...currentCrops };
+          // CRITICAL FIX: Add to HARVESTED CROPS, NOT INVENTORY
+          const currentHarvest = prev.harvestedCrops || {};
+          const newHarvest = { ...currentHarvest };
           newHarvest[crop.id] = (newHarvest[crop.id] || 0) + 1;
           
           let newExp = (prev.petExp || 0) + crop.exp;
           let newLevel = prev.petLevel || 1;
-          
-          // DYNAMIC XP CURVE: Level * 100
-          // Lv1 -> Lv2: 100 XP
-          // Lv2 -> Lv3: 200 XP
           const XP_NEEDED = newLevel * 100;
-          
-          if (newExp >= XP_NEEDED) { 
-              newLevel += 1; 
-              newExp -= XP_NEEDED; 
-          }
+          if (newExp >= XP_NEEDED) { newLevel += 1; newExp -= XP_NEEDED; }
 
           return {
               ...prev,
-              harvestedCrops: newHarvest,
+              harvestedCrops: newHarvest, // Only update this
               petExp: newExp,
               petLevel: newLevel,
               farmPlots: prev.farmPlots.map(p => p.id === plotId ? { 
@@ -314,6 +309,84 @@ export const useFarmGame = (
       return { success: true };
   };
 
+  const buyMachine = (slotId: number, machineId: string) => {
+      const machine = MACHINES.find(m => m.id === machineId);
+      if (!machine) return { success: false, msg: "Lỗi dữ liệu máy móc" };
+      if (!canAfford(machine.cost)) return { success: false, msg: "Bé không đủ tiền rồi!" };
+
+      playSFX('success');
+      onUpdateState(prev => {
+          const currentSlots = prev.machineSlots || []; 
+          return {
+              ...prev,
+              coins: prev.coins - machine.cost,
+              machineSlots: currentSlots.map(s => s.id === slotId ? { ...s, machineId: machine.id, activeRecipeId: null, startedAt: null } : s)
+          };
+      });
+      return { success: true };
+  };
+
+  const startProcessing = (slotId: number, recipeId: string) => {
+      const slot = userState.machineSlots?.find(s => s.id === slotId);
+      if (!slot || !slot.machineId) return { success: false, msg: "Lỗi máy móc" };
+      
+      const recipe = RECIPES.find(r => r.id === recipeId);
+      if (!recipe) return { success: false, msg: "Lỗi công thức" };
+
+      const currentHarvest = userState.harvestedCrops || {};
+      // Check inputs
+      for (const input of recipe.input) {
+          if ((currentHarvest[input.id] || 0) < input.amount) {
+              // const item = [...CROPS, ...PRODUCTS].find(i => i.id === input.id);
+              return { success: false, msg: `Thiếu nguyên liệu!` };
+          }
+      }
+
+      playSFX('click');
+      onUpdateState(prev => {
+          const newHarvest = { ...(prev.harvestedCrops || {}) };
+          recipe.input.forEach(input => {
+              newHarvest[input.id] = (newHarvest[input.id] || 0) - input.amount;
+          });
+
+          return {
+              ...prev,
+              harvestedCrops: newHarvest,
+              machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, activeRecipeId: recipe.id, startedAt: Date.now() } : s)
+          };
+      });
+      return { success: true };
+  };
+
+  const collectMachine = (slotId: number) => {
+      const slot = userState.machineSlots?.find(s => s.id === slotId);
+      if (!slot || !slot.activeRecipeId) return { success: false, msg: "Không có gì để thu hoạch" };
+      
+      const recipe = RECIPES.find(r => r.id === slot.activeRecipeId);
+      if (!recipe) return { success: false, msg: "Lỗi công thức" };
+
+      playSFX('harvest');
+      onUpdateState(prev => {
+          const currentHarvest = prev.harvestedCrops || {};
+          const newHarvest = { ...currentHarvest };
+          newHarvest[recipe.outputId] = (newHarvest[recipe.outputId] || 0) + 1;
+
+          let newExp = (prev.petExp || 0) + recipe.exp;
+          let newLevel = prev.petLevel || 1;
+          const XP_NEEDED = newLevel * 100;
+          if (newExp >= XP_NEEDED) { newLevel += 1; newExp -= XP_NEEDED; }
+
+          return {
+              ...prev,
+              harvestedCrops: newHarvest,
+              petExp: newExp,
+              petLevel: newLevel,
+              machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, activeRecipeId: null, startedAt: null } : s)
+          };
+      });
+      return { success: true };
+  };
+
   const feedPet = (cropId: string) => {
       const count = userState.harvestedCrops?.[cropId] || 0;
       if (count <= 0) return { success: false, msg: "Bé chưa có nông sản này để cho ăn!" };
@@ -387,5 +460,5 @@ export const useFarmGame = (
       }));
   };
 
-  return { now, plantSeed, waterPlot, catchBug, harvestPlot, buyAnimal, feedAnimal, collectProduct, deliverOrder, generateOrders, addReward, canAfford, feedPet, updateMissionProgress };
+  return { now, plantSeed, waterPlot, catchBug, harvestPlot, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, deliverOrder, generateOrders, addReward, canAfford, feedPet, updateMissionProgress };
 };

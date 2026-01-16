@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Screen, UserState, Mission, LessonLevel } from './types';
 import { Onboarding } from './components/Onboarding';
@@ -6,19 +7,20 @@ import { Farm } from './components/Farm';
 import { Settings } from './components/Settings';
 import { AIChat } from './components/AIChat';
 import { TimeAttackGame } from './components/TimeAttackGame';
-import { Achievements } from './components/Achievements';
+import { GeneralAchievements } from './components/GeneralAchievements';
 import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
 import { SpeakingGame } from './components/SpeakingGame';
-import { getLevels, LEVELS } from './constants';
-import { playSFX, initAudio, playBGM, setVolumes } from './utils/sound';
-import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout } from 'lucide-react';
+import { getLevels, LEVELS, TEXTBOOKS } from './constants';
+import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
+import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
+import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
   textbook: null,
-  coins: 0,
+  coins: 100, // Give some starting coins
   currentAvatarId: 'bunny',
   completedLevels: [],
   levelStars: {},
@@ -29,18 +31,21 @@ const DEFAULT_USER_STATE: UserState = {
   lessonGuides: {},
   farmPlots: [
       { id: 1, isUnlocked: true, cropId: null, plantedAt: null },
-      { id: 2, isUnlocked: false, cropId: null, plantedAt: null },
+      { id: 2, isUnlocked: true, cropId: null, plantedAt: null }, // Unlock 2 plots by default
       { id: 3, isUnlocked: false, cropId: null, plantedAt: null },
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
-      { id: 5, isUnlocked: false, cropId: null, plantedAt: null },
-      { id: 6, isUnlocked: false, cropId: null, plantedAt: null },
   ],
   livestockSlots: [],
   machineSlots: [],
-  inventory: {},
+  inventory: { 'carrot': 3 }, // Start with 3 carrot seeds
   harvestedCrops: {},
   fertilizers: 3,
   waterDrops: 10,
+  petLevel: 1,
+  petExp: 0,
+  petHappiness: 50,
+  missions: FARM_ACHIEVEMENTS_DATA, // Initialize achievements/missions
+  activeOrders: [], 
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
@@ -48,15 +53,10 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
-const FARM_ACHIEVEMENTS: Mission[] = [
-    { id: 'ach_harvest_100', desc: 'Thu hoạch 100 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
-    { id: 'ach_earn_10000', desc: 'Kiếm 10.000 vàng', type: 'EARN', category: 'ACHIEVEMENT', target: 10000, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
-];
-
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state');
+        const saved = localStorage.getItem('turtle_english_state_v5'); // Bump version
         return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
       } catch (e) {
         return DEFAULT_USER_STATE;
@@ -69,28 +69,22 @@ export default function App() {
   
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state', JSON.stringify(userState));
+      localStorage.setItem('turtle_english_state_v5', JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
       setVolumes(userState.settings.sfxVolume, userState.settings.bgmVolume);
-      const shouldPlayBGM = [Screen.HOME, Screen.FARM, Screen.MAP, Screen.SHOP].includes(screen);
-      playBGM(shouldPlayBGM);
-  }, [userState.settings, screen]);
+      const shouldPlayBGM = [Screen.HOME, Screen.FARM, Screen.MAP].includes(screen);
+      playBGM(shouldPlayBGM && !isMuted);
+  }, [userState.settings, screen, isMuted]);
 
   const handleOnboardingComplete = (grade: number, textbookId: string) => {
     const levels = getLevels(grade, textbookId);
     const startId = levels[0]?.id; 
     
-    const initialMissions: Mission[] = userState.missions && userState.missions.length > 0 ? userState.missions : [
-        { id: 'm0', desc: 'Hoàn thành bài học mới', type: 'LEARN', category: 'DAILY', target: 1, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
-        { id: 'm1', desc: 'Thu hoạch 5 nông sản', type: 'HARVEST', category: 'DAILY', target: 5, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
-        { id: 'm2', desc: 'Kiếm được 500 vàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, reward: { type: 'WATER', amount: 10 }, completed: false, claimed: false },
-        ...FARM_ACHIEVEMENTS
-    ];
-
     setUserState(prev => {
         const currentUnlocked = prev.unlockedLevels || [];
         const newUnlockedLevels = startId && !currentUnlocked.includes(startId) 
@@ -102,18 +96,27 @@ export default function App() {
             grade,
             textbook: textbookId,
             unlockedLevels: newUnlockedLevels.length === 0 && startId ? [startId] : newUnlockedLevels,
-            missions: initialMissions
         };
     });
     setScreen(Screen.HOME);
     playSFX('success');
   };
 
+  const handleChangeBook = () => {
+      if (window.confirm("Bé có chắc muốn chọn lại Lớp và Sách không?")) {
+          setScreen(Screen.ONBOARDING);
+      }
+  };
+
+  const handleToggleMute = () => {
+      const muted = toggleBgmMute();
+      setIsMuted(muted);
+  };
+
   const handleStartLevel = (levelId: number) => {
       const level = LEVELS.find(l => l.id === levelId);
       if (level) {
           setActiveLevel(level);
-          // Flow: Flashcard -> Translation -> Speaking -> Guide
           if (level.words.length > 0) setGameStep('FLASHCARD');
           else if (level.sentences.length > 0) setGameStep('TRANSLATION');
           else setGameStep('GUIDE');
@@ -125,7 +128,6 @@ export default function App() {
 
   const handleLevelComplete = (bonusCoins: number) => {
       if (!activeLevel) return;
-      
       const stars = 3; 
       
       setUserState(prev => {
@@ -140,25 +142,13 @@ export default function App() {
               newUnlocked = [...newUnlocked, nextLevel.id];
           }
 
-          // Update missions
-          let missions = prev.missions;
-          if (missions) {
-             missions = missions.map(m => {
-                 if (m.type === 'LEARN' && !m.completed) {
-                     return { ...m, current: m.current + 1, completed: m.current + 1 >= m.target };
-                 }
-                 return m;
-             });
-          }
-
           return {
               ...prev,
-              coins: prev.coins + bonusCoins + 50, // Base reward 50
+              coins: prev.coins + bonusCoins + 50,
               completedLevels: newCompleted,
               levelStars: { ...prev.levelStars, [activeLevel.id]: newStars },
               unlockedLevels: newUnlocked,
               streak: prev.streak + 1,
-              missions
           };
       });
       setScreen(Screen.HOME);
@@ -166,22 +156,38 @@ export default function App() {
       playSFX('success');
   };
 
+  const currentBookName = TEXTBOOKS.find(b => b.id === userState.textbook)?.name || "Chưa chọn sách";
+
   return (
       <div className="h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800" onClick={initAudio}>
           {screen === Screen.ONBOARDING && <Onboarding onComplete={handleOnboardingComplete} />}
           
           {screen === Screen.HOME && (
               <div className="h-full flex flex-col">
-                  <div className="flex justify-between items-center p-4 bg-white shadow-sm z-10 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                          <span className="text-2xl">🐢</span>
-                          <span className="font-black text-blue-600 text-lg">Turtle English</span>
-                      </div>
-                      <div className="flex gap-3">
-                          <div className="bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full font-black text-sm flex items-center gap-1 border-2 border-yellow-200">
-                              <span className="text-yellow-500 text-lg">🪙</span> {userState.coins}
+                  {/* HEADER */}
+                  <div className="flex justify-between items-center p-3 bg-white shadow-sm z-10 border-b border-slate-100">
+                      <div className="flex flex-col">
+                          <div className="flex items-center gap-1">
+                              <span className="text-xl">🐢</span>
+                              <span className="font-black text-blue-600 text-lg">Turtle English</span>
                           </div>
-                          <button onClick={() => setShowSettings(true)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors"><SettingsIcon size={20} className="text-slate-500" /></button>
+                          {userState.grade && (
+                              <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                  <BookOpen size={10} /> Lớp {userState.grade} - {currentBookName.split(' ')[0]}...
+                              </div>
+                          )}
+                      </div>
+                      
+                      <div className="flex gap-2">
+                          <button onClick={handleToggleMute} className={`p-2 rounded-full transition-colors border ${isMuted ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
+                              {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                          </button>
+                          <button onClick={handleChangeBook} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors border border-blue-200" title="Chọn lại sách">
+                              <PenLine size={18} />
+                          </button>
+                          <button onClick={() => setShowSettings(true)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors border border-slate-200">
+                              <SettingsIcon size={18} className="text-slate-500" />
+                          </button>
                       </div>
                   </div>
 
@@ -291,7 +297,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem('turtle_english_state');
+                      localStorage.removeItem('turtle_english_state_v5');
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
@@ -300,7 +306,7 @@ export default function App() {
 
           {showAchievements && (
               <div className="fixed inset-0 z-50">
-                  <Achievements userState={userState} onClose={() => setShowAchievements(false)} />
+                  <GeneralAchievements userState={userState} onClose={() => setShowAchievements(false)} />
               </div>
           )}
       </div>

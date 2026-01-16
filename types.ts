@@ -4,12 +4,10 @@ export enum Screen {
   HOME = 'HOME',
   MAP = 'MAP',
   GAME = 'GAME',
-  SHOP = 'SHOP',
   CHAT = 'CHAT',
-  ACHIEVEMENTS = 'ACHIEVEMENTS',
-  TIME_ATTACK = 'TIME_ATTACK',
   FARM = 'FARM',
   SETTINGS = 'SETTINGS', 
+  TIME_ATTACK = 'TIME_ATTACK',
 }
 
 export enum GameType {
@@ -56,6 +54,7 @@ export interface Achievement {
   icon: string;
   condition: (state: UserState) => boolean;
   isUnlocked: boolean; 
+  reward?: { type: 'COIN' | 'WATER' | 'FERTILIZER', amount: number }; // Added reward to achievement
 }
 
 export type ItemType = 'CROP' | 'DECOR' | 'TOOL' | 'ANIMAL' | 'PRODUCT' | 'PROCESSED' | 'MACHINE';
@@ -192,9 +191,11 @@ export interface UserState {
   weather?: 'SUNNY' | 'RAINY'; 
   lastWeatherUpdate?: number; 
   decorations?: string[]; 
-  petLevel?: number; 
-  petExp?: number; 
-  petHappiness?: number; 
+  
+  petLevel?: number;
+  petExp?: number;
+  petHappiness?: number;
+
   missions?: Mission[];
   activeOrders?: FarmOrder[]; 
   settings: UserSettings; 
