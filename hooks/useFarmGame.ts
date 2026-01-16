@@ -266,8 +266,6 @@ export const useFarmGame = (
           
           // If Decor, also add to decorations list if unique (optional, logic depends on game)
           if (item.type === 'DECOR') {
-              // For decor we might just use inventory count, or specific list. 
-              // The original code used a list of IDs. Let's keep consistency.
               if (!newState.decorations?.includes(item.id)) {
                   newState.decorations = [...(newState.decorations || []), item.id];
               }
@@ -323,6 +321,47 @@ export const useFarmGame = (
           inventory: { ...prev.inventory, [machineId]: count - 1 },
           machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId, activeRecipeId: null, startedAt: null } : s)
       }));
+      return { success: true };
+  };
+
+  const reclaimItem = (slotId: number, type: 'ANIMAL' | 'MACHINE', action: 'STORE' | 'SELL') => {
+      onUpdateState(prev => {
+          const newState = { ...prev };
+          let itemId: string | null = null;
+          let sellPrice = 0;
+
+          if (type === 'ANIMAL') {
+              const slot = prev.livestockSlots?.find(s => s.id === slotId);
+              if (slot && slot.animalId) {
+                  itemId = slot.animalId;
+                  const item = ANIMALS.find(a => a.id === itemId);
+                  if (item) sellPrice = Math.floor(item.cost / 2);
+                  
+                  // Clear slot
+                  newState.livestockSlots = prev.livestockSlots?.map(s => s.id === slotId ? { ...s, animalId: null, fedAt: null } : s);
+              }
+          } else {
+              const slot = prev.machineSlots?.find(s => s.id === slotId);
+              if (slot && slot.machineId) {
+                  itemId = slot.machineId;
+                  const item = MACHINES.find(m => m.id === itemId);
+                  if (item) sellPrice = Math.floor(item.cost / 2);
+
+                  // Clear slot
+                  newState.machineSlots = prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId: null, activeRecipeId: null, startedAt: null } : s);
+              }
+          }
+
+          if (itemId) {
+              if (action === 'STORE') {
+                  newState.inventory = { ...prev.inventory, [itemId]: (prev.inventory[itemId] || 0) + 1 };
+              } else if (action === 'SELL') {
+                  newState.coins = prev.coins + sellPrice;
+              }
+          }
+
+          return newState;
+      });
       return { success: true };
   };
 
@@ -608,7 +647,8 @@ export const useFarmGame = (
       now, 
       plantSeed, 
       placeAnimal, 
-      placeMachine, 
+      placeMachine,
+      reclaimItem, // Export new function
       waterPlot, 
       resolvePest, 
       harvestPlot, 

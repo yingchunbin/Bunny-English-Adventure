@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { UserState } from '../types';
 import { Volume2, VolumeX, Battery, BatteryCharging, Trash2, X, User, Music } from 'lucide-react';
+import { ConfirmModal } from './ui/ConfirmModal';
 
 interface SettingsProps {
   userState: UserState;
@@ -12,6 +13,7 @@ interface SettingsProps {
 
 export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onClose }) => {
   const { settings } = userState;
+  const [showConfirmReset, setShowConfirmReset] = useState(false);
 
   const handleVolumeChange = (type: 'sfx' | 'bgm', val: string) => {
     const value = parseFloat(val);
@@ -93,11 +95,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
           {/* Danger Zone */}
           <div className="pt-4 border-t border-red-100">
              <button 
-                onClick={() => {
-                    if(confirm("Ba mẹ có chắc muốn xóa toàn bộ dữ liệu học tập của bé không? Hành động này không thể hoàn tác.")) {
-                        onResetData();
-                    }
-                }}
+                onClick={() => setShowConfirmReset(true)}
                 className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold border-2 border-red-100 hover:bg-red-100 flex items-center justify-center gap-2 transition-colors active:scale-95"
              >
                 <Trash2 size={18} /> Xóa dữ liệu & Học lại
@@ -106,6 +104,15 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
 
         </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={showConfirmReset}
+        message="Ba mẹ có chắc muốn xóa toàn bộ dữ liệu học tập của bé không? Hành động này không thể hoàn tác."
+        onConfirm={onResetData}
+        onCancel={() => setShowConfirmReset(false)}
+        type="DANGER"
+        confirmText="Xóa luôn"
+      />
     </div>
   );
 };

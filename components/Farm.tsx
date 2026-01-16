@@ -7,11 +7,12 @@ import { ShopModal } from './farm/ShopModal';
 import { MissionModal } from './farm/MissionModal';
 import { OrderBoard } from './farm/OrderBoard';
 import { InventoryModal } from './farm/InventoryModal';
-import { BarnModal } from './farm/BarnModal'; // Import BarnModal for selling
+import { BarnModal } from './farm/BarnModal';
 import { LearningQuizModal } from './farm/LearningQuizModal';
+import { ItemManageModal } from './farm/ItemManageModal'; // Import new modal
 import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, ArrowUpCircle, Sparkles } from 'lucide-react';
+import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, ArrowUpCircle, Sparkles, Settings } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 
 interface FarmProps {
@@ -42,14 +43,15 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM'>('NONE');
   const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST', plotId?: number } | null>(null);
   const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'>('VIEW');
   const [initialInvTab, setInitialInvTab] = useState<'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR'>('SEEDS');
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [manageItemConfig, setManageItemConfig] = useState<{ type: 'ANIMAL' | 'MACHINE', slotId: number, itemId: string } | null>(null); // New state for managing item
   
   // FX States
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
@@ -177,7 +179,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   // --- INTERACTION LOGIC ---
   const handlePlotClick = (plot: any, e: React.MouseEvent) => {
-      // Fix: Allow clicking locked plots to show unlock dialog
       if (!plot.isUnlocked) {
           setSelectedId(plot.id);
           setActiveModal('PLOT');
@@ -221,12 +222,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const onQuizSuccess = () => {
       if (quizContext?.type === 'WATER') {
           useWell();
-          // Add FX
           const rect = document.getElementById('well-btn')?.getBoundingClientRect();
           if(rect) addFloatingText(rect.left, rect.top, "+Nước", "text-blue-500");
       } else if (quizContext?.type === 'PEST' && quizContext.plotId) {
           resolvePest(quizContext.plotId);
-          // Add FX
           const plot = userState.farmPlots.find(p => p.id === quizContext.plotId);
           if (plot) addFloatingText(window.innerWidth/2, window.innerHeight/2, "Sạch sẽ!", "text-green-500");
       }
@@ -238,8 +237,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if(animal) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          const prod = PRODUCTS.find(p => p.id === animal.produceId);
-          triggerHarvestFX(rect, prod?.emoji || '📦', 1, animal.exp);
+          triggerHarvestFX(rect, animal.emoji, 1, animal.exp);
           collectProduct(slot.id);
       }
   };
@@ -247,7 +245,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const handleFeedAnimal = (slot: any) => {
       const res = feedAnimal(slot.id);
       if (res && !res.success) {
-          handleShowAlert(res.msg); // Show custom modal
+          handleShowAlert(res.msg);
       }
   };
 
@@ -293,7 +291,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   const renderHUD = () => (
       <div className="px-4 py-2 flex gap-2 justify-center sticky top-[60px] z-30 pointer-events-auto">
-          {/* Warehouse Button - Replaces generic inventory */}
           <button ref={barnBtnRef} onClick={() => setActiveModal('BARN')} className="w-12 h-12 bg-emerald-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all">
               <Warehouse size={22} />
           </button>
@@ -308,7 +305,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               <Truck size={16} /> Đơn Hàng
           </button>
           
-          {/* WELL ICON */}
           <button id="well-btn" onClick={handleWellClick} className="w-12 h-12 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
               <Droplets size={22} />
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 rounded-full border border-white font-bold">
@@ -414,7 +410,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       <button 
                         key={slot.id}
                         onClick={(e) => {
-                            // Empty slot logic: Open Inventory instead of Shop
                             if (!animal) { 
                                 setSelectedId(slot.id); 
                                 setInventoryMode('PLACE_ANIMAL');
@@ -429,6 +424,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !animal ? 'bg-amber-50 border-amber-200 border-dashed' : 'bg-[#FFF3E0] border-[#FFE0B2]'}
                         `}
                       >
+                          {/* MANAGE BUTTON FOR ANIMAL */}
+                          {animal && (
+                              <div 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setManageItemConfig({ type: 'ANIMAL', slotId: slot.id, itemId: animal.id }); 
+                                    setActiveModal('MANAGE_ITEM'); 
+                                }} 
+                                className="absolute top-2 right-2 z-30 bg-white/80 p-1.5 rounded-full shadow-sm hover:bg-white text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                  <Settings size={14} />
+                              </div>
+                          )}
+
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !animal ? (
@@ -473,7 +482,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       <button 
                         key={slot.id}
                         onClick={(e) => {
-                            // Empty slot logic: Open Inventory instead of Shop
                             if (!machine) { 
                                 setSelectedId(slot.id); 
                                 setInventoryMode('PLACE_MACHINE');
@@ -485,9 +493,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 const firstRecipe = RECIPES.find(r => r.machineId === machine.id);
                                 if(firstRecipe) {
                                     const res = startProcessing(slot.id, firstRecipe.id);
-                                    if(res && !res.success) { 
-                                        handleShowAlert(res.msg);
-                                    }
+                                    if(res && !res.success) { handleShowAlert(res.msg); }
                                 }
                             }
                         }}
@@ -496,6 +502,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !machine ? 'bg-blue-50 border-blue-200 border-dashed' : 'bg-slate-100 border-slate-300'}
                         `}
                       >
+                          {/* MANAGE BUTTON FOR MACHINE */}
+                          {machine && (
+                              <div 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setManageItemConfig({ type: 'MACHINE', slotId: slot.id, itemId: machine.id }); 
+                                    setActiveModal('MANAGE_ITEM'); 
+                                }} 
+                                className="absolute top-2 right-2 z-30 bg-white/80 p-1.5 rounded-full shadow-sm hover:bg-white text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                  <Settings size={14} />
+                              </div>
+                          )}
+
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !machine ? (
@@ -589,7 +609,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         const res = harvestAll();
                         if (res.success) {
                             playSFX('success');
-                            // Visual feedback for bulk harvest could be complex, simple generic text for now
                             if(barnBtnRef.current) {
                                 const rect = barnBtnRef.current.getBoundingClientRect();
                                 addFloatingText(rect.left, rect.top, `+${res.count} Sản phẩm`, "text-orange-500");
@@ -604,8 +623,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
         )}
 
         {/* --- FX LAYERS --- */}
-        
-        {/* Floating Text */}
         {floatingTexts.map(item => (
             <div
                 key={item.id}
@@ -623,7 +640,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             </div>
         ))}
 
-        {/* Flying Items */}
         {flyingItems.map(item => (
             <div
                 key={item.id}
@@ -665,6 +681,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
         )}
 
         {/* Modals */}
+        {activeModal === 'MANAGE_ITEM' && manageItemConfig && (
+            <ItemManageModal 
+                item={[...ANIMALS, ...MACHINES].find(i => i.id === manageItemConfig.itemId)!}
+                onStore={() => {
+                    const res = reclaimItem(manageItemConfig.slotId, manageItemConfig.type, 'STORE');
+                    if(res.success) { playSFX('success'); setActiveModal('NONE'); }
+                }}
+                onSell={() => {
+                    const res = reclaimItem(manageItemConfig.slotId, manageItemConfig.type, 'SELL');
+                    if(res.success) { playSFX('coins'); setActiveModal('NONE'); }
+                }}
+                onClose={() => setActiveModal('NONE')}
+            />
+        )}
+
         {activeModal === 'PLOT' && selectedId && (
             <PlotModal 
                 plot={userState.farmPlots.find(p => p.id === selectedId)!}
@@ -684,13 +715,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         const res = waterPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
                         if (res.success) {
                             setActiveModal('NONE');
-                            // FX
                             const rect = document.getElementById('well-btn')?.getBoundingClientRect();
                             if(rect) addFloatingText(rect.left, rect.top, "-1 Nước", "text-blue-400");
                         }
                     }
                     if (action === 'FERTILIZER') {
-                        // Simple fertilizer logic: Reduce time by half
                         if (userState.fertilizers > 0) {
                             onUpdateState(prev => ({
                                 ...prev,
@@ -702,7 +731,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         }
                     }
                     if (action === 'HARVEST') {
-                        // Normally handled via direct click, but keep for modal
                         harvestPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
                         setActiveModal('NONE');
                     }
@@ -744,7 +772,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         playSFX('coins');
                     }
                 }}
-                onSellEverything={() => {}} // Implemented inside BarnModal with Sell All Tabs
+                onSellEverything={() => {}}
                 onClose={() => setActiveModal('NONE')}
             />
         )}
@@ -853,6 +881,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 type={quizContext.type} 
                 onSuccess={onQuizSuccess} 
                 onClose={() => { setActiveModal('NONE'); setQuizContext(null); }} 
+                onShowAlert={handleShowAlert}
             />
         )}
 

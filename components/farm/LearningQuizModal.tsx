@@ -6,13 +6,14 @@ import { playSFX } from '../../utils/sound';
 import { WordImage } from '../WordImage';
 
 interface LearningQuizModalProps {
-  words: Word[]; // Pool of words from current curriculum
-  type: 'WATER' | 'PEST'; // Context
+  words: Word[];
+  type: 'WATER' | 'PEST';
   onSuccess: () => void;
   onClose: () => void;
+  onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
 }
 
-export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, onSuccess, onClose }) => {
+export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, onSuccess, onClose, onShowAlert }) => {
   const [question, setQuestion] = useState<{ target: Word, options: Word[] } | null>(null);
   
   useEffect(() => {
@@ -33,7 +34,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
           onSuccess();
       } else {
           playSFX('wrong');
-          alert("Sai rồi! Bé thử lại lần sau nhé!");
+          onShowAlert("Sai rồi! Bé thử lại lần sau nhé!", "DANGER");
           onClose();
       }
   };

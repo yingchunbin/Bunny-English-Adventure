@@ -1,12 +1,12 @@
 
 import React from 'react';
-import { AlertTriangle, Check, X, Info } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
   onConfirm: () => void;
-  onCancel?: () => void; // Made optional
+  onCancel?: () => void;
   confirmText?: string;
   cancelText?: string;
   type?: 'DANGER' | 'INFO';
@@ -24,7 +24,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${type === 'DANGER' ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-500'}`}>
                 {type === 'DANGER' ? <AlertTriangle size={32} /> : <Info size={32} />}
             </div>
-            <h3 className="text-lg font-black text-slate-800 mb-2">{singleButton ? "Thông báo" : "Xác nhận"}</h3>
+            <h3 className="text-lg font-black text-slate-800 mb-2">{singleButton ? (type === 'DANGER' ? "Thông báo" : "Thông tin") : "Xác nhận"}</h3>
             <p className="text-slate-500 font-bold mb-6 text-sm leading-relaxed">{message}</p>
             
             <div className="flex gap-3 w-full">

@@ -7,12 +7,12 @@ import { Avatar } from '../Avatar';
 
 interface OrderBoardProps {
   orders: FarmOrder[];
-  items: FarmItem[]; // Includes Crops, Products, etc.
+  items: FarmItem[];
   inventory: any;
   onDeliver: (order: FarmOrder) => void;
   onRefresh: () => void;
   onClose: () => void;
-  onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void; // New prop
+  onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
 }
 
 export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory, onDeliver, onRefresh, onClose, onShowAlert }) => {
@@ -37,7 +37,6 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                     </div>
                 ) : (
                     orders.map(order => {
-                        // Check if sufficient quantity in Harvested Crops (Barn)
                         const canDeliver = order.requirements.every(req => (inventory[req.cropId] || 0) >= req.amount);
                         
                         return (
@@ -78,7 +77,7 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                                 onDeliver(order);
                                             } else {
                                                 playSFX('wrong');
-                                                onShowAlert("Bé chưa đủ hàng trong Kho nông sản để giao nhé! Hãy kiểm tra lại kho.", "DANGER");
+                                                onShowAlert("Bé chưa đủ hàng trong Kho nông sản để giao nhé!", "DANGER");
                                             }
                                         }}
                                         className={`ml-2 h-12 px-5 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center ${canDeliver ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}
