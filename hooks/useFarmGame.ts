@@ -92,7 +92,7 @@ export const useFarmGame = (
               const currentAchievements = newState.missions?.filter(m => m.category === 'ACHIEVEMENT') || [];
               const dailies = [...DAILY_MISSION_POOL]
                   .sort(() => 0.5 - Math.random())
-                  .slice(0, 3)
+                  .slice(0, 5) // Updated to 5 daily missions
                   .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
               
               newState.missions = [...currentAchievements, ...dailies];

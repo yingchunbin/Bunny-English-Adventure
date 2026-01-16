@@ -48,7 +48,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
-  const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST' | 'SPEED_UP', plotId?: number, slotId?: number, entityType?: 'CROP' | 'ANIMAL' | 'MACHINE' } | null>(null);
+  const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER', plotId?: number, slotId?: number, entityType?: 'CROP' | 'ANIMAL' | 'MACHINE' } | null>(null);
   const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'>('VIEW');
   const [initialInvTab, setInitialInvTab] = useState<'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR'>('SEEDS');
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -231,6 +231,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       } else if (quizContext?.type === 'SPEED_UP' && quizContext.slotId && quizContext.entityType) {
           speedUpItem(quizContext.entityType, quizContext.slotId);
           addFloatingText(window.innerWidth/2, window.innerHeight/2, "Tăng tốc!", "text-yellow-500");
+      } else if (quizContext?.type === 'NEW_ORDER') {
+          const newOrders = generateOrders(userState.grade || 1, userState.completedLevels?.length || 0, userState.livestockSlots || []);
+          onUpdateState(prev => ({ ...prev, activeOrders: newOrders }));
+          addFloatingText(window.innerWidth/2, window.innerHeight/2, "Đơn mới!", "text-orange-500");
       }
       setActiveModal('NONE');
       setQuizContext(null);
@@ -959,9 +963,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 inventory={userState.harvestedCrops || {}}
                 onDeliver={(o) => deliverOrder(o)}
                 onRefresh={() => {
+                    // Start QUIZ instead of directly refreshing
                     playSFX('click');
-                    const newOrders = generateOrders(userState.grade || 1, userState.completedLevels?.length || 0, userState.livestockSlots || []);
-                    onUpdateState(prev => ({ ...prev, activeOrders: newOrders }));
+                    setQuizContext({ type: 'NEW_ORDER' });
+                    setActiveModal('QUIZ');
                 }}
                 onClose={() => setActiveModal('NONE')}
                 onShowAlert={handleShowAlert}
