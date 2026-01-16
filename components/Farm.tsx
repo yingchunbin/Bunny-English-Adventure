@@ -6,10 +6,9 @@ import { PlotModal } from './farm/PlotModal';
 import { ShopModal } from './farm/ShopModal';
 import { MissionModal } from './farm/MissionModal';
 import { OrderBoard } from './farm/OrderBoard';
-import { Achievements } from './Achievements';
 import { InventoryModal } from './farm/InventoryModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, CloudRain, Clock, Zap, Tractor, Factory, Smile, Bird, Scroll, Truck, Trophy, Hammer } from 'lucide-react';
+import { Lock, Droplets, CloudRain, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, ArrowUp } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 
 interface FarmProps {
@@ -20,13 +19,13 @@ interface FarmProps {
   levels: any;
 }
 
-type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES' | 'PET';
+type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES';
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) => {
-  const { now, plantSeed, waterPlot, harvestPlot, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, feedPet, canAfford, deliverOrder, addReward, generateOrders } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, waterPlot, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'ACHIEVEMENTS' | 'INVENTORY'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY'>('NONE');
   const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED'>('VIEW');
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -73,13 +72,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
               { id: 'CROPS', label: 'Trồng Trọt', icon: <Tractor size={18}/>, color: 'text-green-600 bg-green-50' },
               { id: 'ANIMALS', label: 'Chăn Nuôi', icon: <Bird size={18}/>, color: 'text-orange-600 bg-orange-50' },
               { id: 'MACHINES', label: 'Chế Biến', icon: <Factory size={18}/>, color: 'text-blue-600 bg-blue-50' },
-              { id: 'PET', label: 'Thú Cưng', icon: <Smile size={18}/>, color: 'text-pink-600 bg-pink-50' },
+              { id: 'SHOP', label: 'Cửa Hàng', icon: <ShoppingBasket size={18}/>, color: 'text-pink-600 bg-pink-50' },
           ].map(tab => (
               <button
                   key={tab.id}
-                  onClick={() => setActiveSection(tab.id as FarmSection)}
+                  onClick={() => {
+                      if (tab.id === 'SHOP') setActiveModal('SHOP');
+                      else setActiveSection(tab.id as FarmSection);
+                  }}
                   className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
-                      activeSection === tab.id 
+                      (activeSection as string) === tab.id && tab.id !== 'SHOP'
                       ? `${tab.color.replace('text', 'bg').replace('bg', 'text-white').replace('50', '500')} shadow-md scale-105 border-b-4 border-black/10` 
                       : 'text-slate-400 hover:bg-slate-100'
                   }`}
@@ -99,16 +101,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
           <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all">
               <Truck size={16} /> Đơn Hàng
           </button>
-          <button onClick={() => setActiveModal('ACHIEVEMENTS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-yellow-100 text-yellow-600 font-black text-xs active:scale-95 transition-all">
-              <Trophy size={16} /> Thành Tựu
-          </button>
       </div>
   );
 
   const renderHarvestButton = () => (
       <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-yellow-400 text-yellow-900 font-black text-xs px-4 py-2 rounded-full shadow-[0_4px_0_rgba(180,83,9,0.3)] border-2 border-white animate-bounce flex items-center gap-1 backdrop-blur-sm">
-             <Trophy size={14} /> THU HOẠCH!
+          <div className="bg-amber-400 text-amber-900 font-black text-xs px-4 py-2 rounded-full shadow-[0_4px_0_rgba(180,83,9,0.3)] border-2 border-white animate-bounce flex items-center gap-1 backdrop-blur-sm">
+             <Hand size={14} /> Thu hoạch
           </div>
       </div>
   );
@@ -143,6 +142,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                             setSelectedId(plot.id);
                             setInventoryMode('SELECT_SEED');
                             setActiveModal('INVENTORY');
+                        } else if (isReady) {
+                            // Immediate Harvest
+                            harvestPlot(plot.id, crop);
                         } else {
                             setSelectedId(plot.id); 
                             setActiveModal('PLOT'); 
@@ -296,74 +298,64 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
       );
   };
 
-  const renderPetZoo = () => (
-      <div className="w-full h-full pb-32 px-4 animate-fadeIn flex flex-col items-center">
-          {/* Main Habitat */}
-          <div className="w-full max-w-md aspect-[4/3] rounded-[3rem] border-8 border-[#8D6E63] relative overflow-hidden shadow-2xl bg-[#A5D6A7]">
-              <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute top-10 left-10 text-4xl opacity-80">🌳</div>
-                  <div className="absolute top-20 right-10 text-3xl opacity-70">🌲</div>
-                  <div className="absolute bottom-10 left-20 text-2xl opacity-60">🍄</div>
-                  <div className="absolute bottom-5 right-5 text-4xl opacity-50">🪨</div>
-                  <div className="absolute top-5 left-1/4 text-5xl opacity-40 animate-pulse">☁️</div>
-              </div>
+  const getReadyCount = () => {
+      let count = 0;
+      userState.farmPlots.forEach(p => {
+          if (p.cropId && p.plantedAt) {
+              const c = CROPS.find(crop => crop.id === p.cropId);
+              if (c && (now - p.plantedAt)/1000 >= c.growthTime) count++;
+          }
+      });
+      return count;
+  };
 
-              <div 
-                className="absolute bottom-1/3 left-1/2 transform -translate-x-1/2 text-[8rem] cursor-pointer z-10 transition-transform active:scale-110 drop-shadow-2xl"
-                style={{ animation: 'sway 3s infinite ease-in-out' }}
-                onClick={() => { playSFX('eat'); feedPet('carrot'); }} 
-              >
-                  🐶
-              </div>
-              
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border-2 border-white shadow-sm flex items-center gap-3 z-20">
-                  <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Level {userState.petLevel || 1}</span>
-                      <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-blue-500" style={{width: '40%'}}></div></div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Vui vẻ</span>
-                      <div className="w-20 h-2 bg-slate-200 rounded-full overflow-hidden"><div className="h-full bg-pink-500" style={{width: `${userState.petHappiness || 50}%`}}></div></div>
-                  </div>
-              </div>
-          </div>
-
-          {/* Action Bar */}
-          <div className="mt-6 bg-white p-4 rounded-[2rem] w-full max-w-md shadow-lg flex justify-around items-center border border-slate-100">
-              <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-pink-500 transition-colors" onClick={() => feedPet('carrot')}>
-                  <div className="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-pink-100">🥕</div>
-                  <span className="text-[10px] font-bold uppercase">Cho ăn</span>
-              </button>
-              <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-blue-500 transition-colors">
-                  <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-blue-100">🎾</div>
-                  <span className="text-[10px] font-bold uppercase">Chơi đùa</span>
-              </button>
-              <button className="flex flex-col items-center gap-1 text-slate-500 hover:text-purple-500 transition-colors">
-                  <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-purple-100">🛁</div>
-                  <span className="text-[10px] font-bold uppercase">Tắm rửa</span>
-              </button>
-          </div>
-          
-          <style>{`
-            @keyframes sway {
-                0%, 100% { transform: translateX(-50%) rotate(-5deg); }
-                50% { transform: translateX(-50%) rotate(5deg); }
-            }
-          `}</style>
-      </div>
-  );
+  const readyCount = getReadyCount();
 
   return (
-    <div className="w-full h-full bg-[#E0F7FA] relative overflow-y-auto no-scrollbar">
-        {renderSectionTabs()}
-        {renderHUD()}
-
-        <div className="relative z-10 min-h-full">
-            {activeSection === 'CROPS' && renderCrops()}
-            {activeSection === 'ANIMALS' && renderAnimals()}
-            {activeSection === 'MACHINES' && renderMachines()}
-            {activeSection === 'PET' && renderPetZoo()}
+    <div className="w-full h-full bg-[#E0F7FA] relative overflow-y-auto no-scrollbar flex flex-col">
+        {/* HEADER WITH LV AND XP */}
+        <div className="bg-white/90 backdrop-blur-md px-4 py-3 shadow-lg flex justify-between items-center z-40 sticky top-0 border-b-4 border-green-100/50">
+            <button onClick={onExit} className="p-2 text-slate-600 hover:bg-slate-100 rounded-2xl active:scale-90 transition-all bg-white border border-slate-200 shadow-sm z-50 relative"><Home size={24}/></button>
+            
+            <div className="flex flex-1 mx-4 items-center gap-3">
+                <div className="flex-1 bg-slate-100 h-8 rounded-full border-2 border-slate-200 relative overflow-hidden flex items-center px-3">
+                    <div className="absolute left-0 top-0 h-full bg-blue-400 transition-all duration-500" style={{ width: `${Math.min(100, ((userState.farmExp || 0) / ((userState.farmLevel || 1) * 100)) * 100)}%` }} />
+                    <span className="relative z-10 text-[10px] font-black text-slate-600 w-full text-center">
+                        LV {userState.farmLevel || 1}
+                    </span>
+                </div>
+                <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-xl border border-amber-200">
+                    <Coins size={14} className="text-amber-500" fill="currentColor"/>
+                    <span className="text-xs font-black text-amber-700">{userState.coins}</span>
+                </div>
+            </div>
         </div>
+
+        <div className="flex-1 relative">
+            {renderSectionTabs()}
+            {renderHUD()}
+
+            <div className="relative z-10 pb-32">
+                {activeSection === 'CROPS' && renderCrops()}
+                {activeSection === 'ANIMALS' && renderAnimals()}
+                {activeSection === 'MACHINES' && renderMachines()}
+            </div>
+        </div>
+
+        {/* Harvest All Button - Floating */}
+        {readyCount >= 2 && (
+            <div className="absolute bottom-24 right-4 z-40 animate-bounce">
+                <button 
+                    onClick={() => {
+                        const res = harvestAll();
+                        if (res.success) playSFX('success');
+                    }}
+                    className="bg-amber-500 text-white p-4 rounded-full shadow-2xl border-4 border-white flex items-center justify-center gap-2 font-black text-xs uppercase hover:bg-amber-600 transition-all active:scale-90"
+                >
+                    <Hand size={24} /> Thu hoạch tất cả ({readyCount})
+                </button>
+            </div>
+        )}
 
         {/* Modals */}
         {activeModal === 'PLOT' && selectedId && (
@@ -494,14 +486,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit }) 
                 onClose={() => setActiveModal('NONE')}
                 onSell={() => {}}
             />
-        )}
-
-        {activeModal === 'ACHIEVEMENTS' && (
-            <div className="fixed inset-0 z-50 p-4 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                <div className="w-full max-w-md h-[80vh] bg-white rounded-3xl overflow-hidden relative">
-                    <Achievements userState={userState} onClose={() => setActiveModal('NONE')} />
-                </div>
-            </div>
         )}
     </div>
   );

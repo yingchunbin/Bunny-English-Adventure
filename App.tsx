@@ -20,7 +20,7 @@ import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
   textbook: null,
-  coins: 100, // Give some starting coins
+  coins: 100, 
   currentAvatarId: 'bunny',
   completedLevels: [],
   levelStars: {},
@@ -31,20 +31,19 @@ const DEFAULT_USER_STATE: UserState = {
   lessonGuides: {},
   farmPlots: [
       { id: 1, isUnlocked: true, cropId: null, plantedAt: null },
-      { id: 2, isUnlocked: true, cropId: null, plantedAt: null }, // Unlock 2 plots by default
+      { id: 2, isUnlocked: true, cropId: null, plantedAt: null }, 
       { id: 3, isUnlocked: false, cropId: null, plantedAt: null },
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
   ],
   livestockSlots: [],
   machineSlots: [],
-  inventory: { 'carrot': 3 }, // Start with 3 carrot seeds
+  inventory: { 'carrot': 3 }, 
   harvestedCrops: {},
   fertilizers: 3,
   waterDrops: 10,
-  petLevel: 1,
-  petExp: 0,
-  petHappiness: 50,
-  missions: FARM_ACHIEVEMENTS_DATA, // Initialize achievements/missions
+  farmLevel: 1,
+  farmExp: 0,
+  missions: FARM_ACHIEVEMENTS_DATA, 
   activeOrders: [], 
   settings: {
       bgmVolume: 0.3,
@@ -56,7 +55,7 @@ const DEFAULT_USER_STATE: UserState = {
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state_v5'); // Bump version
+        const saved = localStorage.getItem('turtle_english_state_v6'); // Bump version
         return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
       } catch (e) {
         return DEFAULT_USER_STATE;
@@ -72,7 +71,7 @@ export default function App() {
   const [isMuted, setIsMuted] = useState(false);
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state_v5', JSON.stringify(userState));
+      localStorage.setItem('turtle_english_state_v6', JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
@@ -297,7 +296,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem('turtle_english_state_v5');
+                      localStorage.removeItem('turtle_english_state_v6');
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 

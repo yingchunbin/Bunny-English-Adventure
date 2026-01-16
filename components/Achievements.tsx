@@ -178,9 +178,9 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
   {
     id: 'pet_bestie',
     title: 'Sen Của Boss',
-    description: 'Nuôi thú cưng đạt cấp 10.',
+    description: 'Nông trại đạt cấp 10.',
     icon: '🐶',
-    condition: (state) => (state.petLevel || 1) >= 10,
+    condition: (state) => (state.farmLevel || 1) >= 10,
     isUnlocked: false
   },
   {
@@ -235,7 +235,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ userState, onClose }
       if (ach.id === 'zoo_keeper') return Math.min(100, ((userState.livestockSlots?.filter(s => s.isUnlocked).length || 0) / 5) * 100);
 
       if (ach.id === 'order_master') return 0; // Hard to track exact progress without new state
-      if (ach.id === 'pet_bestie') return Math.min(100, ((userState.petLevel || 1) / 10) * 100);
+      if (ach.id === 'pet_bestie') return Math.min(100, ((userState.farmLevel || 1) / 10) * 100);
       if (ach.id === 'sweet_tooth') {
           const total = ((userState.harvestedCrops?.['candy']||0) + (userState.harvestedCrops?.['cake']||0));
           return Math.min(100, (total / 20) * 100);

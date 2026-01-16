@@ -192,9 +192,9 @@ export interface UserState {
   lastWeatherUpdate?: number; 
   decorations?: string[]; 
   
-  petLevel?: number;
-  petExp?: number;
-  petHappiness?: number;
+  // Replaced Pet stats with Farm stats
+  farmLevel?: number;
+  farmExp?: number;
 
   missions?: Mission[];
   activeOrders?: FarmOrder[]; 

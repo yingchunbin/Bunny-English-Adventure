@@ -8,7 +8,7 @@ interface AnimalShopModalProps {
   animals: AnimalItem[];
   crops: (Crop | Product)[];
   products: Product[];
-  userLevel: number;
+  userLevel: number; // This is farmLevel
   userCoins: number;
   onBuy: (animal: AnimalItem) => void;
   onClose: () => void;

@@ -7,7 +7,7 @@ interface MachineShopModalProps {
   machines: MachineItem[];
   recipes: ProcessingRecipe[];
   allItems: (Crop | Product)[];
-  userLevel: number;
+  userLevel: number; // This is farmLevel
   userCoins: number;
   onBuy: (machine: MachineItem) => void;
   onClose: () => void;

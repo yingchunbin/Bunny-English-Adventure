@@ -26,6 +26,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [seedAmounts, setSeedAmounts] = useState<Record<string, number>>({});
   
   const totalStars = Object.values(userState.levelStars || {}).reduce((a: any, b: any) => a + b, 0) as number;
+  const farmLevel = userState.farmLevel || 1; // Use farmLevel
 
   const adjustSeedAmount = (id: string, delta: number) => {
     const current = seedAmounts[id] || 1;
@@ -144,7 +145,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {tab === 'ANIMALS' && (
                     <div className="grid grid-cols-1 gap-3">
                         {animals.map(animal => {
-                            const isLocked = (userState.petLevel || 1) < (animal.minLevel || 0); // Reuse petLevel as Farm Level
+                            const isLocked = farmLevel < (animal.minLevel || 0); // Use Farm Level
                             return (
                                 <div key={animal.id} className="bg-white p-3 rounded-2xl border-4 border-orange-100 flex items-center gap-3">
                                     <div className="text-5xl">{animal.emoji}</div>
@@ -168,7 +169,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {tab === 'MACHINES' && (
                     <div className="grid grid-cols-1 gap-3">
                         {machines.map(machine => {
-                            const isLocked = (userState.petLevel || 1) < (machine.minLevel || 0);
+                            const isLocked = farmLevel < (machine.minLevel || 0); // Use Farm Level
                             return (
                                 <div key={machine.id} className="bg-white p-3 rounded-2xl border-4 border-blue-100 flex items-center gap-3">
                                     <div className="text-5xl">{machine.emoji}</div>
