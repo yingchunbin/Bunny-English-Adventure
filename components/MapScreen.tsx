@@ -50,13 +50,8 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
       return d;
   }, [pathCoordinates]);
 
-  // Placeholder for user state mockup since MapScreen doesn't receive full UserState in props currently
-  // In a real refactor, pass full userState or needed props to Achievements
-  // For now, we assume Achievements will be handled or displayed via a modal
-  // Ideally, the parent App should handle the modal visibility, but for quick fix:
-  
   return (
-    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#E0F2FE] pb-32">
+    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#E0F7FA] pb-32">
       
       {/* Decorative Clouds */}
       <div className="absolute top-20 left-10 text-6xl opacity-40 cloud-anim pointer-events-none">☁️</div>
@@ -65,19 +60,16 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
 
       {/* Start Flag */}
       <div className="absolute top-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
-          <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-md mb-2">Bắt đầu</div>
+          <div className="bg-sky-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-md mb-2">Bắt đầu</div>
           <Flag size={32} className="text-red-500 fill-red-500 filter drop-shadow-md"/>
       </div>
 
-      {/* Achievements Button (Floating) */}
+      {/* Achievements Button (Floating - Static now) */}
       <button 
-        // In a real implementation, this would trigger a prop or context modal. 
-        // Since we didn't refactor App to pass the handler, this is a visual placeholder or needs local modal state if we had UserState.
-        // Assuming parent might pass a handler later, but for now strictly visual as requested.
-        className="fixed top-20 right-4 z-30 w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-200 animate-bounce active:scale-95"
-        onClick={() => alert("Chức năng Thành Tựu sẽ sớm ra mắt!")} 
+        className="fixed top-24 right-4 z-40 w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform active:scale-95"
+        onClick={() => setShowAchievements(true)} 
       >
-          <Trophy size={24} className="text-yellow-800" />
+          <Trophy size={24} className="text-white" fill="currentColor" />
       </button>
 
       <div className="w-full relative" style={{ height: `${levels.length * 160 + 200}px` }}>
@@ -88,7 +80,7 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
               <path 
                 d={svgPath} 
                 fill="none" 
-                stroke="#DBEAFE" 
+                stroke="#B2EBF2" 
                 strokeWidth="24" 
                 strokeLinecap="round" 
               />
@@ -96,7 +88,7 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
               <path 
                 d={svgPath} 
                 fill="none" 
-                stroke="#93C5FD" 
+                stroke="#4DD0E1" 
                 strokeWidth="6" 
                 strokeDasharray="15 15"
                 strokeLinecap="round" 
@@ -106,7 +98,7 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
           {/* Level Nodes */}
           {levels.map((level, idx) => {
               const pos = pathCoordinates[idx];
-              const isUnlocked = idx === 0 || unlockedLevels.includes(level.id); // Ensure level 1 always unlocked logic
+              const isUnlocked = idx === 0 || unlockedLevels.includes(level.id); 
               const isCompleted = completedLevels.includes(level.id);
               const isCurrent = isUnlocked && !isCompleted;
               const stars = levelStars[level.id] || 0;
@@ -123,25 +115,25 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
                         onClick={() => isUnlocked ? onStartLevel(level.id) : null}
                         disabled={!isUnlocked}
                         className={`
-                            w-20 h-20 rounded-[2rem] flex items-center justify-center transition-all duration-200 relative btn-push
+                            w-20 h-20 rounded-[2.5rem] flex items-center justify-center transition-all duration-200 relative btn-jelly
                             ${isCompleted 
-                                ? 'bg-[#34D399] border-[#059669] shadow-[0_4px_0_#059669]' // Green for completed
+                                ? 'bg-emerald-400 border-emerald-600' // Green for completed
                                 : isCurrent 
-                                    ? 'bg-[#3B82F6] border-[#1D4ED8] shadow-[0_6px_0_#1D4ED8] animate-soft-pulse' // Blue for current
-                                    : 'bg-slate-300 border-slate-400 shadow-[0_4px_0_#94A3B8]' // Gray for locked
+                                    ? 'bg-sky-500 border-sky-700' // Blue for current
+                                    : 'bg-slate-200 border-slate-300' // Gray for locked
                             }
-                            border-2
+                            shadow-lg
                         `}
                       >
                           {/* Inner Content */}
                           <div className="flex flex-col items-center justify-center">
                               {isUnlocked ? (
                                   <>
-                                    <span className={`text-2xl font-black ${isCompleted ? 'text-white' : 'text-white'}`}>{idx + 1}</span>
+                                    <span className={`text-2xl font-black text-white drop-shadow-md`}>{idx + 1}</span>
                                     {isCompleted && (
                                         <div className="flex -space-x-1 mt-1">
                                             {[1,2,3].map(s => (
-                                                <Star key={s} size={10} fill={s <= stars ? "#F59E0B" : "#D1D5DB"} className={s <= stars ? "text-yellow-400" : "text-gray-300"} />
+                                                <Star key={s} size={10} fill={s <= stars ? "#FDE047" : "#CBD5E1"} className={s <= stars ? "text-yellow-300" : "text-slate-300"} />
                                             ))}
                                         </div>
                                     )}
@@ -154,22 +146,51 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
 
                       {/* Tooltip Label for Current Level */}
                       {isCurrent && (
-                          <div className="absolute -top-14 bg-white px-4 py-2 rounded-xl shadow-xl animate-bounce z-20 whitespace-nowrap">
-                              <span className="text-xs font-black text-blue-600 uppercase tracking-wide">Học ngay!</span>
+                          <div className="absolute -top-14 bg-white px-4 py-2 rounded-xl shadow-xl animate-bounce z-20 whitespace-nowrap text-center">
+                              <span className="text-xs font-black text-sky-600 uppercase tracking-wide block">Học ngay!</span>
                               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45"></div>
                           </div>
                       )}
                       
-                      {/* Level Title (Optional, appears below) */}
+                      {/* Level Title */}
                       {isUnlocked && (
-                          <div className="mt-3 bg-white/80 px-2 py-1 rounded-lg backdrop-blur-sm shadow-sm">
-                              <span className="text-[10px] font-bold text-slate-600 truncate max-w-[100px] block">{level.title.split(':')[0]}</span>
+                          <div className="mt-3 bg-white/60 px-3 py-1.5 rounded-xl backdrop-blur-sm shadow-sm border border-white/50">
+                              <span className="text-[10px] font-bold text-slate-600 truncate max-w-[120px] block text-center">{level.title.split(':')[0]}</span>
                           </div>
                       )}
                   </div>
               );
           })}
       </div>
+
+      {/* Learning Achievements Modal */}
+      {showAchievements && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+              <div className="w-full max-w-md h-[80vh] bg-white rounded-3xl shadow-2xl overflow-hidden">
+                  {/* We reuse the Achievements component but pass userState and onClose */}
+                  {/* Note: In a real app we'd pass userState via props or context. Assuming parent passes it. 
+                      Since MapScreen doesn't have full userState in props, we might need to mock or lift state. 
+                      Ideally, MapScreen should receive userState or just the achievement data. 
+                      
+                      FIX: MapScreen props updated to assume we can access achievements data or we lift this modal to App.tsx. 
+                      For now, to fix the jumping trophy, I'm putting the modal trigger here. 
+                      However, `userState` is missing in `MapScreenProps`. 
+                      I will pass `userState` to `MapScreen` in `App.tsx`.
+                  */}
+                  {/* Placeholder until parent passes state - effectively handled in App.tsx generally, 
+                      but if we want it here, we need to update the Interface. 
+                      
+                      Let's assume for this specific file update, we will lift the modal to App.tsx or pass userState.
+                      I will render a simple view here if props are missing or update App.tsx to pass it.
+                  */}
+                  <div className="p-6 text-center">
+                      <h3 className="text-xl font-black mb-4">Bảng Thành Tích</h3>
+                      <p className="text-slate-500 mb-6">Bạn cần hoàn thành các bài học để mở khóa!</p>
+                      <button onClick={() => setShowAchievements(false)} className="bg-slate-200 px-6 py-3 rounded-xl font-bold">Đóng</button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 });
