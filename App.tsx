@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Screen, UserState, Mission, LessonLevel } from './types';
+import { UserState, LessonLevel } from './types';
 import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
 import { Farm } from './components/Farm';
 import { Settings } from './components/Settings';
-import { AIChat } from './components/AIChat';
 import { TimeAttackGame } from './components/TimeAttackGame';
-import { Achievements } from './components/Achievements';
 import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
 import { SpeakingGame } from './components/SpeakingGame';
 import { getLevels, LEVELS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes } from './utils/sound';
-import { Settings as SettingsIcon, Coins, Zap, Sprout, BookOpen, Swords, ShoppingBag, Backpack, Map as MapIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Coins, Zap, Map as MapIcon, Sprout, Gamepad2, ShoppingBag, Backpack, ArrowLeft, Plus } from 'lucide-react';
 import { ShopModal } from './components/farm/ShopModal';
 import { BarnModal } from './components/farm/BarnModal';
 import { CROPS, DECORATIONS, PRODUCTS } from './data/farmData';
 
-// Tab Definitions
-type Tab = 'FARM' | 'SCHOOL' | 'ARENA' | 'SHOP' | 'BAG';
+// TABS
+type Tab = 'FARM' | 'LEARN' | 'GAME' | 'SHOP' | 'BARN';
 
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
   textbook: null,
-  coins: 100,
+  coins: 500, // Starting coins
   currentAvatarId: 'bunny',
   completedLevels: [],
   levelStars: {},
@@ -35,7 +33,7 @@ const DEFAULT_USER_STATE: UserState = {
   lessonGuides: {},
   farmPlots: [
       { id: 1, isUnlocked: true, cropId: null, plantedAt: null },
-      { id: 2, isUnlocked: false, cropId: null, plantedAt: null },
+      { id: 2, isUnlocked: true, cropId: null, plantedAt: null }, // Start with 2 plots
       { id: 3, isUnlocked: false, cropId: null, plantedAt: null },
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
       { id: 5, isUnlocked: false, cropId: null, plantedAt: null },
@@ -43,9 +41,12 @@ const DEFAULT_USER_STATE: UserState = {
   ],
   livestockSlots: [],
   machineSlots: [],
-  inventory: {},
+  inventory: {
+      'carrot': 2, // Free seeds
+      'wheat': 2
+  },
   harvestedCrops: {},
-  fertilizers: 3,
+  fertilizers: 1,
   waterDrops: 10,
   settings: {
       bgmVolume: 0.3,
@@ -57,34 +58,33 @@ const DEFAULT_USER_STATE: UserState = {
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state');
+        const saved = localStorage.getItem('turtle_english_state_v2'); // Versioned storage
         return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
       } catch (e) {
         return DEFAULT_USER_STATE;
       }
   });
   
-  // Navigation State
-  const [currentTab, setCurrentTab] = useState<Tab>('FARM');
-  const [isFullScreen, setIsFullScreen] = useState(false); // Controls if tabs are hidden (e.g. inside a game)
+  // Navigation State - Default to LEARN for focus
+  const [currentTab, setCurrentTab] = useState<Tab>('LEARN');
   const [activeLevel, setActiveLevel] = useState<LessonLevel | null>(null);
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state', JSON.stringify(userState));
+      localStorage.setItem('turtle_english_state_v2', JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
       setVolumes(userState.settings.sfxVolume, userState.settings.bgmVolume);
-      playBGM(!isFullScreen); // Stop BGM during intense games if needed, or keep it.
-  }, [userState.settings, isFullScreen]);
+      playBGM(true);
+  }, [userState.settings]);
 
-  // --- HANDLERS ---
+  // --- LOGIC HANDLERS ---
 
   const handleOnboardingComplete = (grade: number, textbookId: string) => {
     setUserState(prev => ({ ...prev, grade, textbook: textbookId }));
-    setCurrentTab('FARM');
+    setCurrentTab('LEARN');
     playSFX('success');
   };
 
@@ -92,22 +92,21 @@ export default function App() {
       const level = LEVELS.find(l => l.id === levelId);
       if (level) {
           setActiveLevel(level);
+          // Determine starting step based on level content
           if (level.words.length > 0) setGameStep('FLASHCARD');
           else if (level.sentences.length > 0) setGameStep('TRANSLATION');
           else setGameStep('GUIDE');
-          
-          setIsFullScreen(true); // Enter Game Mode
           playSFX('click');
       }
   };
 
   const handleLevelComplete = (bonusCoins: number) => {
       if (!activeLevel) return;
-      const stars = 3; 
+      
       setUserState(prev => {
           const newCompleted = prev.completedLevels.includes(activeLevel.id) ? prev.completedLevels : [...prev.completedLevels, activeLevel.id];
-          const newStars = Math.max(prev.levelStars[activeLevel.id] || 0, stars);
           
+          // Logic: Unlock next level
           const levels = getLevels(prev.grade, prev.textbook);
           const idx = levels.findIndex(l => l.id === activeLevel.id);
           const nextLevel = levels[idx + 1];
@@ -116,229 +115,217 @@ export default function App() {
               newUnlocked = [...newUnlocked, nextLevel.id];
           }
 
+          // Rewards: 100 Coins + 5 Water Drops per lesson
           return {
               ...prev,
-              coins: prev.coins + bonusCoins + 50,
+              coins: prev.coins + bonusCoins + 100,
+              waterDrops: prev.waterDrops + 5,
               completedLevels: newCompleted,
-              levelStars: { ...prev.levelStars, [activeLevel.id]: newStars },
               unlockedLevels: newUnlocked,
               streak: prev.streak + 1
           };
       });
-      setIsFullScreen(false); // Return to Tabs
       setActiveLevel(null);
       playSFX('success');
   };
 
   const handleShopBuy = (item: any, amount: number) => {
-      // Mock buy logic, simplified for demo
-      if (item.type === 'CROP') {
-          setUserState(prev => ({ 
-              ...prev, 
-              coins: prev.coins - (item.cost * amount), 
-              inventory: { ...prev.inventory, [item.id]: (prev.inventory[item.id] || 0) + amount } 
-          }));
+      const totalCost = item.cost * amount;
+      if (userState.coins >= totalCost) {
+          if (item.type === 'CROP') {
+              setUserState(prev => ({ 
+                  ...prev, 
+                  coins: prev.coins - totalCost, 
+                  inventory: { ...prev.inventory, [item.id]: (prev.inventory[item.id] || 0) + amount } 
+              }));
+          } else {
+              setUserState(prev => ({ 
+                  ...prev, 
+                  coins: prev.coins - totalCost, 
+                  decorations: [...(prev.decorations || []), item.id] 
+              }));
+          }
+          playSFX('success');
       } else {
-          setUserState(prev => ({ 
-              ...prev, 
-              coins: prev.coins - item.cost, 
-              decorations: [...(prev.decorations || []), item.id] 
-          }));
+          playSFX('wrong');
+          alert("Bé không đủ tiền rồi! Hãy học thêm bài học nhé.");
       }
-      playSFX('success');
+  };
+
+  const handleSell = (itemId: string, amount: number, price: number) => {
+      if ((userState.harvestedCrops?.[itemId] || 0) >= amount) {
+          setUserState(prev => ({
+              ...prev,
+              coins: prev.coins + (price * amount),
+              harvestedCrops: { ...prev.harvestedCrops, [itemId]: (prev.harvestedCrops?.[itemId] || 0) - amount }
+          }));
+          playSFX('success');
+      }
   };
 
   // --- RENDERERS ---
 
-  const renderContent = () => {
-      switch (currentTab) {
-          case 'FARM':
-              return (
-                  <Farm 
-                      userState={userState} 
-                      onUpdateState={setUserState} 
-                      onExit={() => {}} 
-                      allWords={LEVELS.flatMap(l => l.words)}
-                      levels={getLevels(userState.grade, userState.textbook)}
-                      onNavigate={(target) => { 
-                          if(target === 'MAP') setCurrentTab('SCHOOL');
-                          if(target === 'TIME_ATTACK') setCurrentTab('ARENA');
-                      }}
-                      onShowAchievements={() => {}}
-                  />
-              );
-          case 'SCHOOL':
-              return (
-                  <div className="h-full w-full bg-[#FFF9F0] relative">
-                      <div className="absolute top-0 left-0 w-full p-4 z-10 bg-[#FFF9F0]/90 backdrop-blur-sm border-b-2 border-orange-100">
-                          <h2 className="text-xl font-black text-orange-600 text-center uppercase">Bản đồ học tập</h2>
-                      </div>
-                      <div className="pt-16 pb-24 h-full">
-                        <MapScreen 
-                            levels={getLevels(userState.grade, userState.textbook)} 
-                            unlockedLevels={userState.unlockedLevels}
-                            completedLevels={userState.completedLevels}
-                            levelStars={userState.levelStars}
-                            onStartLevel={handleStartLevel}
-                        />
-                      </div>
-                  </div>
-              );
-          case 'ARENA':
-              return (
-                  <div className="h-full flex flex-col bg-slate-100 pb-20">
-                      <div className="bg-white p-4 shadow-sm border-b-2 border-slate-200">
-                          <h2 className="text-xl font-black text-slate-700 text-center uppercase">Khu Vui Chơi</h2>
-                      </div>
-                      <div className="p-4 grid gap-4">
-                          <button onClick={() => setIsFullScreen(true)} className="card-flat p-6 flex items-center gap-4 bg-purple-50 border-purple-100 hover:border-purple-300 transition-all active:scale-95">
-                              <div className="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center text-3xl shadow-md">⏱️</div>
-                              <div className="text-left">
-                                  <h3 className="font-black text-lg text-purple-700">Thử Thách Tốc Độ</h3>
-                                  <p className="text-xs text-purple-500 font-bold">Trả lời nhanh để ghi điểm!</p>
-                              </div>
-                          </button>
-                          <div className="card-flat p-6 flex items-center gap-4 bg-blue-50 border-blue-100 opacity-60">
-                              <div className="w-16 h-16 bg-blue-400 rounded-2xl flex items-center justify-center text-3xl shadow-md grayscale">🤖</div>
-                              <div className="text-left">
-                                  <h3 className="font-black text-lg text-blue-700">Đấu với AI</h3>
-                                  <p className="text-xs text-blue-500 font-bold">Sắp ra mắt...</p>
-                              </div>
-                          </div>
-                      </div>
-                  </div>
-              );
-          case 'SHOP':
-              return (
-                  <div className="h-full bg-[#FFF9F0] pb-24 pt-4 px-4 overflow-hidden flex flex-col">
-                      <h2 className="text-xl font-black text-orange-600 text-center mb-4 uppercase">Cửa Hàng</h2>
-                      <div className="flex-1 bg-white rounded-[2rem] border-2 border-orange-100 overflow-hidden shadow-inner">
-                          {/* Reusing ShopModal content logic but inline */}
-                          <ShopModal 
-                              crops={CROPS} 
-                              decorations={DECORATIONS} 
-                              userState={userState} 
-                              onBuySeed={(c, a) => handleShopBuy(c, a)} 
-                              onBuyDecor={(d) => handleShopBuy(d, 1)} 
-                              onClose={() => {}} 
-                              inline={true} // New prop to handle inline rendering
-                          />
-                      </div>
-                  </div>
-              );
-          case 'BAG':
-              return (
-                  <div className="h-full bg-[#FFF9F0] pb-24 pt-4 px-4 overflow-hidden flex flex-col">
-                      <h2 className="text-xl font-black text-green-600 text-center mb-4 uppercase">Kho Đồ</h2>
-                      <div className="flex-1 bg-white rounded-[2rem] border-2 border-green-100 overflow-hidden shadow-inner">
-                          <BarnModal 
-                              crops={[...CROPS, ...PRODUCTS]} 
-                              harvested={userState.harvestedCrops || {}} 
-                              activeOrders={userState.activeOrders || []}
-                              onSell={(id) => {}} // Simple mock
-                              onSellAll={(id) => {}}
-                              onSellEverything={() => {}}
-                              onClose={() => {}}
-                              inline={true}
-                          />
-                      </div>
-                  </div>
-              );
-      }
-  };
-
-  // --- FULL SCREEN GAME RENDER ---
   if (!userState.grade) {
       return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  if (isFullScreen) {
-      if (activeLevel) {
-          return (
-              <div className="h-screen w-full bg-white flex flex-col">
-                  <div className="p-4 flex items-center justify-between bg-slate-50 border-b-2 border-slate-200">
-                      <button onClick={() => setIsFullScreen(false)} className="btn-flat btn-white px-4 py-2 text-xs rounded-xl">Thoát</button>
-                      <h2 className="font-black text-slate-700">{activeLevel.title}</h2>
-                      <div className="w-12"></div>
+  // --- FULLSCREEN LEARNING MODE (No Tabs) ---
+  if (activeLevel) {
+      return (
+          <div className="h-screen w-full bg-white flex flex-col">
+              <div className="px-4 py-3 flex items-center justify-between bg-white border-b-2 border-slate-100 z-50">
+                  <button onClick={() => setActiveLevel(null)} className="p-2 bg-slate-100 rounded-xl text-slate-500 hover:bg-slate-200 transition-colors">
+                      <ArrowLeft size={24}/>
+                  </button>
+                  <div className="flex flex-col items-center">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Đang học</span>
+                      <h2 className="font-black text-slate-700 text-lg leading-none">{activeLevel.title.split(':')[0]}</h2>
                   </div>
-                  <div className="flex-1 overflow-hidden relative">
-                      {gameStep === 'FLASHCARD' && <FlashcardGame words={activeLevel.words} onComplete={() => setGameStep('TRANSLATION')} />}
-                      {gameStep === 'TRANSLATION' && <TranslationGame sentences={activeLevel.sentences} onComplete={() => setGameStep('SPEAKING')} />}
-                      {gameStep === 'SPEAKING' && <SpeakingGame words={activeLevel.words} onComplete={(coins) => { setUserState(prev => ({...prev, coins: prev.coins + coins})); setGameStep('GUIDE'); }} />}
-                      {gameStep === 'GUIDE' && <LessonGuide level={activeLevel} userState={userState} onUpdateState={setUserState} onComplete={() => handleLevelComplete(0)} />}
-                  </div>
+                  <div className="w-10"></div>
               </div>
-          );
-      }
-      // Time Attack Case
-      if (currentTab === 'ARENA') {
-          return (
-              <TimeAttackGame 
-                  words={LEVELS.flatMap(l => l.words)}
-                  onComplete={(score) => {
-                      setUserState(prev => ({ ...prev, coins: prev.coins + score }));
-                      setIsFullScreen(false);
-                  }}
-                  onExit={() => setIsFullScreen(false)}
-              />
-          );
-      }
+              
+              <div className="flex-1 overflow-hidden relative bg-slate-50">
+                  {gameStep === 'FLASHCARD' && <FlashcardGame words={activeLevel.words} onComplete={() => setGameStep('TRANSLATION')} />}
+                  {gameStep === 'TRANSLATION' && <TranslationGame sentences={activeLevel.sentences} onComplete={() => setGameStep('SPEAKING')} />}
+                  {gameStep === 'SPEAKING' && <SpeakingGame words={activeLevel.words} onComplete={(coins) => { setUserState(prev => ({...prev, coins: prev.coins + coins})); setGameStep('GUIDE'); }} />}
+                  {gameStep === 'GUIDE' && <LessonGuide level={activeLevel} userState={userState} onUpdateState={setUserState} onComplete={() => handleLevelComplete(0)} />}
+              </div>
+          </div>
+      );
   }
 
+  // --- MAIN TAB INTERFACE ---
   return (
-      <div className="h-screen w-full bg-[#FFF9F0] overflow-hidden font-sans text-slate-800 flex flex-col relative" onClick={initAudio}>
+      <div className="h-screen w-full bg-[#E0F7FA] overflow-hidden font-sans text-slate-800 flex flex-col relative" onClick={initAudio}>
           
-          {/* TOP HUD (Pill Style) */}
-          <div className="absolute top-4 left-4 right-4 z-50 flex justify-between pointer-events-none">
-              <div className="flex gap-2 pointer-events-auto">
-                  <div className="flex items-center gap-1 bg-white pl-2 pr-3 py-1 rounded-full border-2 border-slate-100 shadow-sm">
-                      <Coins size={16} className="text-yellow-500 fill-yellow-500"/>
-                      <span className="font-black text-slate-700 text-sm">{userState.coins}</span>
+          {/* TOP HEADER (Global Resources) */}
+          <div className="bg-white/90 backdrop-blur-md px-4 py-3 flex justify-between items-center shadow-md z-30 sticky top-0 rounded-b-3xl mx-2 mt-1">
+              <div className="flex items-center gap-2">
+                  <div 
+                    onClick={() => setCurrentTab('SHOP')}
+                    className="flex items-center gap-1.5 bg-yellow-400 text-white px-3 py-1.5 rounded-full border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1 transition-all cursor-pointer select-none shadow-sm btn-jelly"
+                  >
+                      <Coins size={18} fill="currentColor"/>
+                      <span className="font-black text-sm">{userState.coins}</span>
+                      <div className="bg-white text-yellow-500 rounded-full p-0.5 ml-1"><Plus size={10} strokeWidth={4}/></div>
                   </div>
-                  <div className="flex items-center gap-1 bg-white pl-2 pr-3 py-1 rounded-full border-2 border-slate-100 shadow-sm">
-                      <Zap size={16} className="text-blue-500 fill-blue-500"/>
-                      <span className="font-black text-slate-700 text-sm">{userState.fertilizers}</span>
+                  <div className="flex items-center gap-1.5 bg-blue-400 text-white px-3 py-1.5 rounded-full border-b-4 border-blue-600 select-none shadow-sm btn-jelly">
+                      <Zap size={18} fill="currentColor"/>
+                      <span className="font-black text-sm">{userState.waterDrops}</span>
                   </div>
               </div>
-              <button onClick={() => setShowSettings(true)} className="pointer-events-auto bg-white p-2 rounded-full border-2 border-slate-100 shadow-sm text-slate-400 active:scale-95 transition-transform">
-                  <SettingsIcon size={20}/>
-              </button>
+              
+              <div className="flex items-center gap-2">
+                  <div className="bg-white px-3 py-1.5 rounded-full border-2 border-slate-100 text-slate-500 text-xs font-black shadow-sm">
+                      🔥 {userState.streak}
+                  </div>
+                  <button onClick={() => setShowSettings(true)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
+                      <SettingsIcon size={24}/>
+                  </button>
+              </div>
           </div>
 
           {/* MAIN CONTENT AREA */}
-          <div className="flex-1 w-full h-full overflow-hidden">
-              {renderContent()}
+          <div className="flex-1 w-full h-full overflow-hidden relative">
+              
+              {/* TAB 1: LEARN (Map) - Default */}
+              {currentTab === 'LEARN' && (
+                  <MapScreen 
+                      levels={getLevels(userState.grade, userState.textbook)} 
+                      unlockedLevels={userState.unlockedLevels}
+                      completedLevels={userState.completedLevels}
+                      levelStars={userState.levelStars}
+                      onStartLevel={handleStartLevel}
+                  />
+              )}
+
+              {/* TAB 2: FARM (Simulation) */}
+              {currentTab === 'FARM' && (
+                  <Farm 
+                      userState={userState} 
+                      onUpdateState={setUserState} 
+                      onExit={() => {}} 
+                      allWords={[]} 
+                      levels={[]} 
+                      onNavigate={(target) => {}} 
+                      onShowAchievements={() => {}}
+                  />
+              )}
+
+              {/* TAB 3: GAME (Mini-games) */}
+              {currentTab === 'GAME' && (
+                  <div className="h-full w-full bg-slate-900 relative flex flex-col">
+                      <TimeAttackGame 
+                          words={LEVELS.flatMap(l => l.words)}
+                          onComplete={(score) => {
+                              setUserState(prev => ({ ...prev, coins: prev.coins + score }));
+                              // Optionally stay on game screen or go back
+                          }}
+                          onExit={() => setCurrentTab('LEARN')}
+                      />
+                  </div>
+              )}
+
+              {/* TAB 4: SHOP */}
+              {currentTab === 'SHOP' && (
+                  <div className="h-full bg-[#FFF5F5] flex flex-col p-4"> 
+                      <ShopModal 
+                          crops={CROPS} 
+                          decorations={DECORATIONS} 
+                          userState={userState} 
+                          onBuySeed={(c, a) => handleShopBuy(c, a)} 
+                          onBuyDecor={(d) => handleShopBuy(d, 1)} 
+                          onClose={() => {}} 
+                          inline={true} 
+                      />
+                  </div>
+              )}
+
+              {/* TAB 5: BARN (Inventory) */}
+              {currentTab === 'BARN' && (
+                  <div className="h-full bg-[#F0FDF4] flex flex-col p-4"> 
+                      <BarnModal 
+                          crops={[...CROPS, ...PRODUCTS]} 
+                          harvested={userState.harvestedCrops || {}} 
+                          activeOrders={userState.activeOrders || []}
+                          onSell={(id) => {
+                              const item = [...CROPS, ...PRODUCTS].find(i => i.id === id);
+                              if (item) handleSell(id, 1, item.sellPrice);
+                          }}
+                          onSellAll={(id) => {}}
+                          onSellEverything={() => {}}
+                          onClose={() => {}}
+                          inline={true}
+                      />
+                  </div>
+              )}
           </div>
 
-          {/* BOTTOM NAVIGATION BAR (Sticky Footer) */}
-          <div className="fixed bottom-6 left-4 right-4 h-20 bg-white rounded-[2rem] shadow-xl border border-slate-100 flex items-center justify-around z-40 px-2">
-              <NavButton icon={<Sprout />} label="Nông Trại" active={currentTab === 'FARM'} onClick={() => setCurrentTab('FARM')} color="text-green-500" />
-              <NavButton icon={<MapIcon />} label="Học Tập" active={currentTab === 'SCHOOL'} onClick={() => setCurrentTab('SCHOOL')} color="text-blue-500" />
-              <NavButton icon={<Swords />} label="Đấu Trường" active={currentTab === 'ARENA'} onClick={() => setCurrentTab('ARENA')} color="text-purple-500" />
-              <NavButton icon={<ShoppingBag />} label="Cửa Hàng" active={currentTab === 'SHOP'} onClick={() => setCurrentTab('SHOP')} color="text-orange-500" />
-              <NavButton icon={<Backpack />} label="Kho Đồ" active={currentTab === 'BAG'} onClick={() => setCurrentTab('BAG')} color="text-amber-500" />
+          {/* FLOATING NAVIGATION BAR */}
+          <div className="absolute bottom-6 left-4 right-4 bg-white rounded-[2rem] px-2 py-3 shadow-2xl border-2 border-white z-40 flex justify-around items-center ring-4 ring-black/5">
+                  <NavButton active={currentTab === 'LEARN'} icon={MapIcon} label="Học Tập" onClick={() => setCurrentTab('LEARN')} color="text-blue-500" bgColor="bg-blue-100" />
+                  <NavButton active={currentTab === 'FARM'} icon={Sprout} label="Nông Trại" onClick={() => setCurrentTab('FARM')} color="text-green-500" bgColor="bg-green-100" />
+                  <NavButton active={currentTab === 'GAME'} icon={Gamepad2} label="Trò Chơi" onClick={() => setCurrentTab('GAME')} color="text-purple-500" bgColor="bg-purple-100" />
+                  <NavButton active={currentTab === 'SHOP'} icon={ShoppingBag} label="Cửa Hàng" onClick={() => setCurrentTab('SHOP')} color="text-pink-500" bgColor="bg-pink-100" />
+                  <NavButton active={currentTab === 'BARN'} icon={Backpack} label="Kho Đồ" onClick={() => setCurrentTab('BARN')} color="text-amber-500" bgColor="bg-amber-100" />
           </div>
 
-          {showSettings && <Settings userState={userState} onUpdateSettings={(s) => setUserState(prev => ({...prev, settings: s}))} onResetData={() => {}} onClose={() => setShowSettings(false)} />}
+          {showSettings && <Settings userState={userState} onUpdateSettings={(s) => setUserState(prev => ({...prev, settings: s}))} onResetData={() => { localStorage.removeItem('turtle_english_state_v2'); window.location.reload(); }} onClose={() => setShowSettings(false)} />}
       </div>
   );
 }
 
-// Sub-component for Nav Button
-const NavButton = ({ icon, label, active, onClick, color }: any) => (
+const NavButton = ({ active, icon: Icon, label, onClick, color, bgColor }: any) => (
     <button 
         onClick={onClick}
-        className={`flex flex-col items-center justify-center w-16 h-full transition-all duration-300 relative ${active ? '-translate-y-6' : 'hover:-translate-y-1'}`}
+        className={`flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ${active ? `${bgColor} ${color} -translate-y-4 scale-110 shadow-lg` : 'text-slate-300 hover:text-slate-400'}`}
     >
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-300 ${active ? `bg-white border-4 border-${color.split('-')[1]}-100 scale-125 shadow-lg` : 'bg-transparent'}`}>
-            {React.cloneElement(icon, { 
-                size: active ? 24 : 24, 
-                className: active ? color : 'text-slate-300',
-                strokeWidth: 2.5
-            })}
-        </div>
-        {active && (
-            <span className={`text-[10px] font-black uppercase tracking-wide mt-1 animate-fadeIn ${color}`}>{label}</span>
-        )}
+        <Icon 
+            size={24} 
+            strokeWidth={active ? 3 : 2.5}
+            fill={active ? "currentColor" : "none"} 
+            fillOpacity={0.2}
+        />
+        {active && <span className="text-[9px] font-black mt-1">{label}</span>}
     </button>
 );

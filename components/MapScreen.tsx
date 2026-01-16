@@ -14,18 +14,23 @@ interface MapScreenProps {
 export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevels, completedLevels, levelStars, onStartLevel }) => {
   const currentLevelRef = useRef<HTMLDivElement>(null);
 
+  // Auto-scroll to current level
   useEffect(() => {
     if (currentLevelRef.current) {
         setTimeout(() => {
             currentLevelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 500);
+        }, 300);
     }
-  }, []);
+  }, [levels]);
 
+  // Generate snake path
   const pathCoordinates = useMemo(() => {
       return levels.map((_, index) => {
-          const y = index * 140 + 80;
-          const x = 50 + 35 * Math.sin(index * 0.9); 
+          // Snake pattern: x goes 20% -> 80% -> 20%
+          const y = index * 160 + 100; // Vertical spacing
+          const direction = Math.floor(index / 2) % 2 === 0 ? 1 : -1; // Zigzag direction
+          const offset = (index % 2 === 0) ? 0 : 30 * direction;
+          const x = 50 + offset; 
           return { x, y };
       });
   }, [levels]);
@@ -36,6 +41,7 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
       for (let i = 1; i < pathCoordinates.length; i++) {
           const prev = pathCoordinates[i-1];
           const curr = pathCoordinates[i];
+          // Cubic bezier curve for smooth path
           const cpY = (prev.y + curr.y) / 2;
           d += ` C ${prev.x}% ${cpY}px, ${curr.x}% ${cpY}px, ${curr.x}% ${curr.y}px`;
       }
@@ -43,37 +49,46 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
   }, [pathCoordinates]);
 
   return (
-    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#6AB04C]">
+    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#E0F2FE] pb-24">
       
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#FFF 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
+      {/* Decorative Clouds */}
+      <div className="absolute top-20 left-10 text-6xl opacity-40 cloud-anim pointer-events-none">☁️</div>
+      <div className="absolute top-60 right-5 text-5xl opacity-30 cloud-anim pointer-events-none" style={{ animationDelay: '2s' }}>☁️</div>
+      <div className="absolute top-[500px] left-[-20px] text-6xl opacity-40 cloud-anim pointer-events-none" style={{ animationDelay: '1s' }}>☁️</div>
 
-      <div className="w-full relative" style={{ height: `${levels.length * 140 + 300}px` }}>
+      {/* Start Flag */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
+          <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-md mb-2">Bắt đầu</div>
+          <Flag size={32} className="text-red-500 fill-red-500 filter drop-shadow-md"/>
+      </div>
+
+      <div className="w-full relative" style={{ height: `${levels.length * 160 + 200}px` }}>
           
-          {/* The Path (Stitched style) */}
-          <svg className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
+          {/* Path Line */}
+          <svg className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none overflow-visible">
+              {/* Shadow Path */}
               <path 
                 d={svgPath} 
                 fill="none" 
-                stroke="#558C3D" 
+                stroke="#DBEAFE" 
                 strokeWidth="24" 
                 strokeLinecap="round" 
               />
+              {/* Dotted Line */}
               <path 
                 d={svgPath} 
                 fill="none" 
-                stroke="#FFFFFF" 
-                strokeWidth="4" 
-                strokeDasharray="10 15"
+                stroke="#93C5FD" 
+                strokeWidth="6" 
+                strokeDasharray="15 15"
                 strokeLinecap="round"
-                opacity="0.6"
               />
           </svg>
 
           {/* Level Nodes */}
           {levels.map((level, idx) => {
               const pos = pathCoordinates[idx];
-              const isUnlocked = unlockedLevels.includes(level.id);
+              const isUnlocked = idx === 0 || unlockedLevels.includes(level.id); // Ensure level 1 always unlocked logic
               const isCompleted = completedLevels.includes(level.id);
               const isCurrent = isUnlocked && !isCompleted;
               const stars = levelStars[level.id] || 0;
@@ -85,53 +100,57 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
                     className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
                     style={{ left: `${pos.x}%`, top: `${pos.y}px` }}
                   >
-                      {/* 3D Button Node */}
+                      {/* Button */}
                       <button 
-                        onClick={() => onStartLevel(level.id)}
+                        onClick={() => isUnlocked ? onStartLevel(level.id) : null}
                         disabled={!isUnlocked}
                         className={`
-                            w-20 h-20 rounded-full flex items-center justify-center transition-transform active:translate-y-2 relative
+                            w-20 h-20 rounded-[2rem] flex items-center justify-center transition-all duration-200 relative btn-push
                             ${isCompleted 
-                                ? 'bg-[#2ECC71] shadow-[0_6px_0_#27AE60,0_10px_10px_rgba(0,0,0,0.2)]' 
+                                ? 'bg-[#34D399] border-[#059669] shadow-[0_4px_0_#059669]' // Green for completed
                                 : isCurrent 
-                                    ? 'bg-[#FF9F43] shadow-[0_6px_0_#E67E22,0_10px_10px_rgba(0,0,0,0.2)] animate-float' 
-                                    : 'bg-[#95A5A6] shadow-[0_6px_0_#7F8C8D,0_10px_10px_rgba(0,0,0,0.2)]'
+                                    ? 'bg-[#3B82F6] border-[#1D4ED8] shadow-[0_6px_0_#1D4ED8] animate-soft-pulse' // Blue for current
+                                    : 'bg-slate-300 border-slate-400 shadow-[0_4px_0_#94A3B8]' // Gray for locked
                             }
+                            border-2
                         `}
                       >
-                          {/* Inner Circle Highlight */}
-                          <div className="w-16 h-16 rounded-full border-4 border-white/20 flex items-center justify-center">
+                          {/* Inner Content */}
+                          <div className="flex flex-col items-center justify-center">
                               {isUnlocked ? (
-                                  <span className="text-2xl font-black text-white text-sticker">{idx + 1}</span>
+                                  <>
+                                    <span className={`text-2xl font-black ${isCompleted ? 'text-white' : 'text-white'}`}>{idx + 1}</span>
+                                    {isCompleted && (
+                                        <div className="flex -space-x-1 mt-1">
+                                            {[1,2,3].map(s => (
+                                                <Star key={s} size={10} fill={s <= stars ? "#F59E0B" : "#D1D5DB"} className={s <= stars ? "text-yellow-400" : "text-gray-300"} />
+                                            ))}
+                                        </div>
+                                    )}
+                                  </>
                               ) : (
-                                  <Lock className="text-white/50" />
+                                  <Lock className="text-slate-400" size={24} />
                               )}
                           </div>
-
-                          {/* Stars Ribbon */}
-                          {isCompleted && (
-                              <div className="absolute -bottom-3 bg-white px-2 py-1 rounded-full flex gap-0.5 shadow-sm border border-slate-100">
-                                  {[1,2,3].map(s => (
-                                      <Star key={s} size={10} fill={s <= stars ? "#F1C40F" : "#ECF0F1"} className={s <= stars ? "text-yellow-400" : "text-slate-200"} />
-                                  ))}
-                              </div>
-                          )}
                       </button>
 
-                      {/* Tooltip Label */}
+                      {/* Tooltip Label for Current Level */}
                       {isCurrent && (
-                          <div className="absolute -top-12 bg-white px-4 py-2 rounded-xl shadow-xl animate-bounce">
-                              <span className="text-xs font-black text-slate-800 uppercase">Bắt đầu!</span>
+                          <div className="absolute -top-14 bg-white px-4 py-2 rounded-xl shadow-xl animate-bounce z-20 whitespace-nowrap">
+                              <span className="text-xs font-black text-blue-600 uppercase tracking-wide">Học ngay!</span>
                               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45"></div>
+                          </div>
+                      )}
+                      
+                      {/* Level Title (Optional, appears below) */}
+                      {isUnlocked && (
+                          <div className="mt-3 bg-white/80 px-2 py-1 rounded-lg backdrop-blur-sm shadow-sm">
+                              <span className="text-[10px] font-bold text-slate-600 truncate max-w-[100px] block">{level.title.split(':')[0]}</span>
                           </div>
                       )}
                   </div>
               );
           })}
-          
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center">
-              <Flag size={48} className="text-white fill-red-500 filter drop-shadow-lg"/>
-          </div>
       </div>
     </div>
   );
