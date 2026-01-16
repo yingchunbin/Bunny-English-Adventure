@@ -167,13 +167,12 @@ export default function App() {
   };
 
   return (
-      <div className="h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800 flex flex-col" onClick={initAudio}>
+      <div className="h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800" onClick={initAudio}>
           {screen === Screen.ONBOARDING && <Onboarding onComplete={handleOnboardingComplete} />}
           
           {screen === Screen.HOME && (
               <div className="h-full flex flex-col">
-                  {/* Header */}
-                  <div className="flex justify-between items-center p-4 bg-white shadow-sm z-10 border-b border-slate-100 flex-shrink-0">
+                  <div className="flex justify-between items-center p-4 bg-white shadow-sm z-10 border-b border-slate-100">
                       <div className="flex items-center gap-2">
                           <span className="text-2xl">🐢</span>
                           <span className="font-black text-blue-600 text-lg">Turtle English</span>
@@ -196,9 +195,8 @@ export default function App() {
                       />
                   </div>
 
-                  {/* Improved Bottom Nav */}
-                  <div className="bg-white border-t border-slate-200 px-2 py-3 flex justify-around items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex-shrink-0 pb-safe">
-                      <NavButton icon={<MapIcon />} label="Bản đồ" active={true} onClick={() => {}} />
+                  <div className="bg-white border-t border-slate-200 p-2 flex justify-around items-center pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                      <NavButton icon={<MapIcon />} label="Bản đồ" active onClick={() => {}} />
                       <NavButton icon={<Sprout />} label="Nông trại" onClick={() => setScreen(Screen.FARM)} />
                       <NavButton icon={<Gamepad2 />} label="Trò chơi" onClick={() => setScreen(Screen.TIME_ATTACK)} />
                       <NavButton icon={<MessageCircle />} label="Hỏi Thầy" onClick={() => setScreen(Screen.CHAT)} />
@@ -219,7 +217,7 @@ export default function App() {
 
           {screen === Screen.CHAT && (
               <div className="h-full flex flex-col bg-white">
-                  <div className="p-4 bg-white shadow-sm flex items-center gap-2 border-b border-slate-100 flex-shrink-0">
+                  <div className="p-4 bg-white shadow-sm flex items-center gap-2 border-b border-slate-100">
                       <button onClick={() => setScreen(Screen.HOME)} className="text-slate-500 font-bold hover:bg-slate-100 px-3 py-1 rounded-lg">Quay lại</button>
                       <h2 className="font-bold text-lg">Hỏi đáp cùng Thầy Rùa</h2>
                   </div>
@@ -242,9 +240,9 @@ export default function App() {
 
           {screen === Screen.GAME && activeLevel && (
               <div className="h-full flex flex-col bg-white">
-                  <div className="p-4 flex items-center justify-between border-b border-slate-100 shadow-sm z-10 flex-shrink-0">
-                      <button onClick={() => setScreen(Screen.HOME)} className="text-slate-400 font-bold px-3 py-1 bg-slate-50 rounded-lg">Thoát</button>
-                      <h2 className="font-bold text-blue-600 truncate max-w-[200px] text-lg">{activeLevel.title}</h2>
+                  <div className="p-4 flex items-center justify-between border-b border-slate-100 shadow-sm z-10">
+                      <button onClick={() => setScreen(Screen.HOME)} className="text-slate-400 font-bold">Thoát</button>
+                      <h2 className="font-bold text-blue-600 truncate max-w-[200px]">{activeLevel.title}</h2>
                       <div className="w-8"></div>
                   </div>
                   <div className="flex-1 overflow-hidden relative">
@@ -310,8 +308,8 @@ export default function App() {
 }
 
 const NavButton = ({ icon, label, active, onClick }: any) => (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-colors p-2 min-w-[60px] active:scale-95 ${active ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
-        {React.cloneElement(icon, { size: 28, strokeWidth: active ? 2.5 : 2 })}
-        <span className={`text-[10px] font-bold ${active ? 'text-blue-600' : 'text-slate-400'}`}>{label}</span>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1 transition-colors ${active ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}>
+        {React.cloneElement(icon, { size: 24 })}
+        <span className="text-[10px] font-bold">{label}</span>
     </button>
 );
