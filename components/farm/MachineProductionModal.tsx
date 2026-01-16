@@ -1,26 +1,30 @@
 
 import React from 'react';
 import { MachineItem, ProcessingRecipe, Crop, Product } from '../../types';
-import { X, Clock, Zap, ArrowRight, AlertCircle, ChefHat } from 'lucide-react';
+import { X, Clock, Zap, ArrowRight, AlertCircle, ChefHat, Layers } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 
 interface MachineProductionModalProps {
   machine: MachineItem;
   recipes: ProcessingRecipe[];
-  inventory: Record<string, number>; // User's harvested crops/products
+  inventory: Record<string, number>; 
   allItems: (Crop | Product)[];
   onProduce: (recipeId: string) => void;
   onClose: () => void;
+  queueLength: number; // New prop
 }
 
 export const MachineProductionModal: React.FC<MachineProductionModalProps> = ({ 
-    machine, recipes, inventory, allItems, onProduce, onClose 
+    machine, recipes, inventory, allItems, onProduce, onClose, queueLength
 }) => {
 
   const handleStart = (recipeId: string) => {
       playSFX('click');
       onProduce(recipeId);
   };
+
+  const MAX_QUEUE = 3;
+  const isQueueFull = queueLength >= MAX_QUEUE;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
@@ -34,7 +38,14 @@ export const MachineProductionModal: React.FC<MachineProductionModalProps> = ({
                     </div>
                     <div>
                         <h3 className="text-xl font-black text-blue-800 uppercase tracking-tight">{machine.name}</h3>
-                        <p className="text-xs font-bold text-blue-400 uppercase tracking-widest">Chọn món để làm</p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Hàng chờ:</span>
+                            <div className="flex gap-1">
+                                {[...Array(MAX_QUEUE)].map((_, i) => (
+                                    <div key={i} className={`w-3 h-3 rounded-full border border-blue-300 ${i < queueLength ? 'bg-blue-500' : 'bg-white'}`} />
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <button onClick={onClose} className="p-2 hover:bg-blue-200 rounded-full transition-colors text-blue-600 bg-white shadow-sm"><X size={24} /></button>
@@ -100,10 +111,12 @@ export const MachineProductionModal: React.FC<MachineProductionModalProps> = ({
                                     {/* Action Button */}
                                     <button 
                                         onClick={() => handleStart(recipe.id)}
-                                        disabled={!canCraft}
-                                        className={`ml-2 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-md transition-all active:scale-95 flex items-center gap-2 ${canCraft ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-blue-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}`}
+                                        disabled={!canCraft || isQueueFull}
+                                        className={`ml-2 px-5 py-3 rounded-2xl font-black text-xs uppercase shadow-md transition-all active:scale-95 flex items-center gap-2 ${canCraft && !isQueueFull ? 'bg-blue-500 text-white hover:bg-blue-600 shadow-blue-200' : 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'}`}
                                     >
-                                        {canCraft ? (
+                                        {isQueueFull ? (
+                                            <>Đầy hàng chờ <Layers size={16}/></>
+                                        ) : canCraft ? (
                                             <>Chế biến <ChefHat size={16}/></>
                                         ) : (
                                             <>Thiếu đồ <AlertCircle size={16}/></>

@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot } from '../types';
+import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot } from '../types';
 import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from '../data/farmData';
 import { playSFX } from '../utils/sound';
 
@@ -166,7 +166,43 @@ export const useFarmGame = (
                 }
             }
 
-            // 3. Orders Management
+            // 3. Machine Auto-Process Queue Logic
+            if (prev.machineSlots) {
+                const updatedSlots = prev.machineSlots.map(slot => {
+                    if (slot.activeRecipeId && slot.startedAt) {
+                        const recipe = RECIPES.find(r => r.id === slot.activeRecipeId);
+                        if (recipe) {
+                            const elapsed = (currentTime - slot.startedAt) / 1000;
+                            if (elapsed >= recipe.duration) {
+                                // JOB DONE: Move to storage, pull from queue
+                                hasChanges = true;
+                                const newStorage = [...(slot.storage || []), slot.activeRecipeId];
+                                
+                                let nextRecipeId: string | null = null;
+                                let nextStart: number | null = null;
+                                let newQueue = [...(slot.queue || [])];
+
+                                if (newQueue.length > 0) {
+                                    nextRecipeId = newQueue.shift() || null;
+                                    nextStart = currentTime;
+                                }
+
+                                return {
+                                    ...slot,
+                                    storage: newStorage,
+                                    activeRecipeId: nextRecipeId,
+                                    startedAt: nextStart,
+                                    queue: newQueue
+                                };
+                            }
+                        }
+                    }
+                    return slot;
+                });
+                if (hasChanges) newState.machineSlots = updatedSlots;
+            }
+
+            // 4. Orders Management
             let currentOrders = prev.activeOrders || [];
             const validOrders = currentOrders.filter(o => o.expiresAt > currentTime);
             
@@ -319,7 +355,7 @@ export const useFarmGame = (
       onUpdateState(prev => ({
           ...prev,
           inventory: { ...prev.inventory, [machineId]: count - 1 },
-          machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId, activeRecipeId: null, startedAt: null } : s)
+          machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId, activeRecipeId: null, startedAt: null, queue: [], storage: [] } : s)
       }));
       return { success: true };
   };
@@ -348,7 +384,7 @@ export const useFarmGame = (
                   if (item) sellPrice = Math.floor(item.cost / 2);
 
                   // Clear slot
-                  newState.machineSlots = prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId: null, activeRecipeId: null, startedAt: null } : s);
+                  newState.machineSlots = prev.machineSlots?.map(s => s.id === slotId ? { ...s, machineId: null, activeRecipeId: null, startedAt: null, queue: [], storage: [] } : s);
               }
           }
 
@@ -562,10 +598,23 @@ export const useFarmGame = (
               newHarvest[input.id] = (newHarvest[input.id] || 0) - input.amount;
           });
 
+          // Queue Logic
+          let newSlot = { ...slot };
+          if (!slot.activeRecipeId) {
+              // Machine is idle, start immediately
+              newSlot.activeRecipeId = recipe.id;
+              newSlot.startedAt = Date.now();
+          } else {
+              // Machine is busy, add to queue
+              const queue = slot.queue || [];
+              if (queue.length >= 3) return prev; // Limit reached (safety check, UI should prevent this)
+              newSlot.queue = [...queue, recipe.id];
+          }
+
           return {
               ...prev,
               harvestedCrops: newHarvest,
-              machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, activeRecipeId: recipe.id, startedAt: Date.now() } : s)
+              machineSlots: prev.machineSlots?.map(s => s.id === slotId ? newSlot : s)
           };
       });
       return { success: true };
@@ -573,32 +622,46 @@ export const useFarmGame = (
 
   const collectMachine = (slotId: number) => {
       const slot = userState.machineSlots?.find(s => s.id === slotId);
-      if (!slot || !slot.activeRecipeId) return { success: false, msg: "Không có gì để thu hoạch" };
+      if (!slot) return { success: false, msg: "Lỗi máy" };
       
-      const recipe = RECIPES.find(r => r.id === slot.activeRecipeId);
-      if (!recipe) return { success: false, msg: "Lỗi công thức" };
+      const storedItems = slot.storage || [];
+      if (storedItems.length === 0) return { success: false, msg: "Không có gì để thu hoạch" };
 
       playSFX('harvest');
       onUpdateState(prev => {
           const currentHarvest = prev.harvestedCrops || {};
           const newHarvest = { ...currentHarvest };
-          newHarvest[recipe.outputId] = (newHarvest[recipe.outputId] || 0) + 1;
+          
+          let expGained = 0;
+          storedItems.forEach(recipeId => {
+              const recipe = RECIPES.find(r => r.id === recipeId);
+              if (recipe) {
+                  newHarvest[recipe.outputId] = (newHarvest[recipe.outputId] || 0) + 1;
+                  expGained += recipe.exp;
+              }
+          });
 
-          let newExp = (prev.farmExp || 0) + recipe.exp;
+          let newExp = (prev.farmExp || 0) + expGained;
           let newLevel = prev.farmLevel || 1;
-          const XP_NEEDED = newLevel * 100;
-          if (newExp >= XP_NEEDED) { newLevel += 1; newExp -= XP_NEEDED; }
+          // Level up logic (simplified for bulk)
+          while (newExp >= newLevel * 100 && newLevel < 50) { 
+              newExp -= newLevel * 100;
+              newLevel++;
+          }
 
           return {
               ...prev,
               harvestedCrops: newHarvest,
               farmExp: newExp,
               farmLevel: newLevel,
-              machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, activeRecipeId: null, startedAt: null } : s)
+              machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { 
+                  ...s, 
+                  storage: [] // Clear storage
+              } : s)
           };
       });
-      updateMissionProgress('HARVEST', 1); 
-      return { success: true };
+      updateMissionProgress('HARVEST', storedItems.length); 
+      return { success: true, count: storedItems.length };
   };
 
   const deliverOrder = (order: FarmOrder) => {
@@ -643,12 +706,35 @@ export const useFarmGame = (
       }));
   };
 
+  // --- SPEED UP LOGIC ---
+  const speedUpItem = (type: 'CROP' | 'ANIMAL' | 'MACHINE', slotId: number) => {
+      playSFX('powerup');
+      onUpdateState(prev => {
+          if (type === 'CROP') {
+              return {
+                  ...prev,
+                  farmPlots: prev.farmPlots.map(p => p.id === slotId ? { ...p, plantedAt: (p.plantedAt || 0) - 300000 } : p) // -5 mins
+              };
+          } else if (type === 'ANIMAL') {
+              return {
+                  ...prev,
+                  livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, fedAt: (s.fedAt || 0) - 300000 } : s)
+              };
+          } else {
+              return {
+                  ...prev,
+                  machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, startedAt: (s.startedAt || 0) - 300000 } : s)
+              };
+          }
+      });
+  };
+
   return { 
       now, 
       plantSeed, 
       placeAnimal, 
       placeMachine,
-      reclaimItem, // Export new function
+      reclaimItem, 
       waterPlot, 
       resolvePest, 
       harvestPlot, 
@@ -664,6 +750,7 @@ export const useFarmGame = (
       canAfford, 
       updateMissionProgress, 
       checkWellUsage, 
-      useWell 
+      useWell,
+      speedUpItem // Exported
   };
 };

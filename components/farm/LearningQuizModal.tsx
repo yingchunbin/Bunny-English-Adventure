@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Word } from '../../types';
-import { X, Check, BrainCircuit, Droplets, Bug } from 'lucide-react';
+import { X, Check, BrainCircuit, Droplets, Bug, Zap } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { WordImage } from '../WordImage';
 
 interface LearningQuizModalProps {
   words: Word[];
-  type: 'WATER' | 'PEST';
+  type: 'WATER' | 'PEST' | 'SPEED_UP';
   onSuccess: () => void;
   onClose: () => void;
   onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
@@ -41,20 +41,37 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
 
   if (!question) return null;
 
+  let icon = <Zap size={32} />;
+  let title = "Học Để Tăng Tốc";
+  let desc = "Trả lời đúng để giảm thời gian chờ!";
+  let bg = "bg-yellow-100 text-yellow-600";
+
+  if (type === 'WATER') {
+      icon = <Droplets size={32} />;
+      title = "Giếng Thần Tri Thức";
+      desc = "Chọn hình đúng để lấy nước!";
+      bg = "bg-blue-100 text-blue-500";
+  } else if (type === 'PEST') {
+      icon = <Bug size={32} />;
+      title = "Thử Thách Nông Trại";
+      desc = "Trả lời đúng để dọn dẹp!";
+      bg = "bg-green-100 text-green-500";
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fadeIn">
         <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl relative border-4 border-indigo-200">
             <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X /></button>
             
             <div className="text-center mb-6">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg ${type === 'WATER' ? 'bg-blue-100 text-blue-500' : 'bg-green-100 text-green-500'}`}>
-                    {type === 'WATER' ? <Droplets size={32} /> : <Bug size={32} />}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 border-4 border-white shadow-lg ${bg}`}>
+                    {icon}
                 </div>
                 <h3 className="text-lg font-black text-indigo-800 uppercase">
-                    {type === 'WATER' ? "Giếng Thần Tri Thức" : "Thử Thách Nông Trại"}
+                    {title}
                 </h3>
                 <p className="text-xs font-bold text-slate-500">
-                    {type === 'WATER' ? "Chọn hình đúng để lấy nước!" : "Trả lời đúng để dọn dẹp!"}
+                    {desc}
                 </p>
             </div>
 

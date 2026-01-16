@@ -138,6 +138,8 @@ export interface MachineSlot {
     isUnlocked: boolean;
     activeRecipeId: string | null;
     startedAt: number | null;
+    queue?: string[]; // Array of recipeIds waiting in line
+    storage?: string[]; // Array of recipeIds that are finished and waiting to be collected
     isReady?: boolean;
 }
 

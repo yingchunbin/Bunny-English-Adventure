@@ -10,10 +10,10 @@ import { InventoryModal } from './farm/InventoryModal';
 import { BarnModal } from './farm/BarnModal';
 import { LearningQuizModal } from './farm/LearningQuizModal';
 import { ItemManageModal } from './farm/ItemManageModal'; 
-import { MachineProductionModal } from './farm/MachineProductionModal'; // Import new modal
+import { MachineProductionModal } from './farm/MachineProductionModal'; 
 import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, ArrowUpCircle, Sparkles, Settings } from 'lucide-react';
+import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, ArrowUpCircle, Sparkles, Settings, Layers } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 
 interface FarmProps {
@@ -44,16 +44,16 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
-  const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST', plotId?: number } | null>(null);
+  const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST' | 'SPEED_UP', plotId?: number, slotId?: number, entityType?: 'CROP' | 'ANIMAL' | 'MACHINE' } | null>(null);
   const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'>('VIEW');
   const [initialInvTab, setInitialInvTab] = useState<'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR'>('SEEDS');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [manageItemConfig, setManageItemConfig] = useState<{ type: 'ANIMAL' | 'MACHINE', slotId: number, itemId: string } | null>(null);
-  const [productionConfig, setProductionConfig] = useState<{ slotId: number, machineId: string } | null>(null); // New state for production
+  const [productionConfig, setProductionConfig] = useState<{ slotId: number, machineId: string } | null>(null); 
   
   // FX States
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
@@ -228,6 +228,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           resolvePest(quizContext.plotId);
           const plot = userState.farmPlots.find(p => p.id === quizContext.plotId);
           if (plot) addFloatingText(window.innerWidth/2, window.innerHeight/2, "Sạch sẽ!", "text-green-500");
+      } else if (quizContext?.type === 'SPEED_UP' && quizContext.slotId && quizContext.entityType) {
+          speedUpItem(quizContext.entityType, quizContext.slotId);
+          addFloatingText(window.innerWidth/2, window.innerHeight/2, "Tăng tốc!", "text-yellow-500");
       }
       setActiveModal('NONE');
       setQuizContext(null);
@@ -250,12 +253,25 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   const handleCollectMachine = (slot: any, e: React.MouseEvent) => {
-      const recipe = RECIPES.find(r => r.id === slot.activeRecipeId);
-      if(recipe) {
+      // NOTE: Now collects entire storage
+      const res = collectMachine(slot.id);
+      if (res && res.success) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          const prod = PRODUCTS.find(p => p.id === recipe.outputId);
-          triggerHarvestFX(rect, prod?.emoji || '📦', 1, recipe.exp);
-          collectMachine(slot.id);
+          addFloatingText(rect.left, rect.top, `+${res.count} Sản phẩm`, "text-green-500");
+          // Trigger FX for first item as representative
+          const lastItem = slot.storage?.[slot.storage.length-1];
+          if(lastItem) {
+              const recipe = RECIPES.find(r => r.id === lastItem);
+              const prod = PRODUCTS.find(p => p.id === recipe?.outputId);
+              if(prod) triggerHarvestFX(rect, prod.emoji, res.count, 0); // XP handled in useFarmGame
+          }
+      } else if (res && !res.success) {
+          // If empty, open production menu
+          const machine = MACHINES.find(m => m.id === slot.machineId);
+          if(machine) {
+              setProductionConfig({ slotId: slot.id, machineId: machine.id });
+              setActiveModal('PRODUCTION');
+          }
       }
   };
 
@@ -334,6 +350,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       </button>
   );
 
+  const renderSpeedUpButton = (type: 'CROP' | 'ANIMAL' | 'MACHINE', slotId: number) => (
+      <button
+          onClick={(e) => { e.stopPropagation(); setQuizContext({ type: 'SPEED_UP', slotId, entityType: type }); setActiveModal('QUIZ'); }}
+          className="absolute top-2 left-2 z-30 bg-yellow-400 text-white p-1.5 rounded-full shadow-sm hover:bg-yellow-500 border-2 border-white animate-pulse active:scale-90 transition-all"
+      >
+          <Zap size={14} fill="currentColor" />
+      </button>
+  );
+
   const renderCrops = () => (
       <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
           {userState.farmPlots.map(plot => {
@@ -370,6 +395,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                   </div>
                               )}
                               
+                              {/* SPEED UP BUTTON */}
+                              {!isReady && !hasPest && renderSpeedUpButton('CROP', plot.id)}
+
                               <div className={`text-7xl transition-all duration-500 z-10 ${isReady ? 'scale-110 drop-shadow-2xl' : 'scale-75 opacity-90 grayscale-[0.3]'}`}>
                                   {crop.emoji}
                               </div>
@@ -438,6 +466,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </div>
                           )}
 
+                          {/* SPEED UP */}
+                          {animal && isFed && !isReady && renderSpeedUpButton('ANIMAL', slot.id)}
+
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !animal ? (
@@ -475,8 +506,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const machine = slot.machineId ? MACHINES.find(m => m.id === slot.machineId) : null;
                   const recipe = slot.activeRecipeId ? RECIPES.find(r => r.id === slot.activeRecipeId) : null;
                   const progress = recipe && slot.startedAt ? Math.min(100, ((now - slot.startedAt)/1000 / recipe.duration) * 100) : 0;
-                  const isReady = recipe && progress >= 100;
-                  const product = recipe ? PRODUCTS.find(p => p.id === recipe.outputId) : null;
+                  const storageItems = slot.storage || [];
+                  const hasStorage = storageItems.length > 0;
+                  
+                  // Identify product waiting in storage (show last one)
+                  const storedRecipeId = storageItems[storageItems.length - 1];
+                  const storedRecipe = storedRecipeId ? RECIPES.find(r => r.id === storedRecipeId) : null;
+                  const storedProduct = storedRecipe ? PRODUCTS.find(p => p.id === storedRecipe.outputId) : null;
 
                   return (
                       <button 
@@ -488,9 +524,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 setInitialInvTab('MACHINES');
                                 setActiveModal('INVENTORY'); 
                             }
-                            else if (isReady) handleCollectMachine(slot, e);
-                            else if (!recipe) { 
-                                // Open Production Modal instead of auto-start
+                            else if (hasStorage) handleCollectMachine(slot, e);
+                            else { 
+                                // Open Production Modal to queue items
                                 setProductionConfig({ slotId: slot.id, machineId: machine.id });
                                 setActiveModal('PRODUCTION');
                             }
@@ -514,6 +550,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </div>
                           )}
 
+                          {/* SPEED UP - Only if working and not finished */}
+                          {machine && recipe && renderSpeedUpButton('MACHINE', slot.id)}
+
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !machine ? (
@@ -523,27 +562,46 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  <div className={`text-7xl z-10 relative drop-shadow-md transition-all ${recipe && !isReady ? 'animate-bounce-slight' : ''}`}>
+                                  <div className={`text-7xl z-10 relative drop-shadow-md transition-all ${recipe ? 'animate-bounce-slight' : ''}`}>
                                       {machine.emoji}
                                   </div>
                                   
                                   {/* Working Effects */}
-                                  {recipe && !isReady && (
+                                  {recipe && (
                                       <>
                                           <div className="absolute -top-4 right-0 text-xl animate-float-smoke opacity-70 pointer-events-none">💨</div>
                                           <div className="absolute bottom-2 right-2 text-slate-400 animate-spin-slow pointer-events-none"><Settings size={18} /></div>
                                       </>
                                   )}
 
-                                  {recipe && isReady && (
-                                      <div className="absolute inset-0 bg-white/80 flex flex-col items-center justify-center z-20 backdrop-blur-sm">
-                                          <div className="text-6xl animate-bounce mb-2 drop-shadow-lg">{product?.emoji}</div>
+                                  {/* FINISHED STORAGE DISPLAY - OVERLAY */}
+                                  {hasStorage && (
+                                      <div className="absolute inset-0 bg-white/60 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
+                                          <div className="text-6xl animate-bounce mb-2 drop-shadow-lg relative">
+                                              {storedProduct?.emoji}
+                                              {storageItems.length > 1 && (
+                                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full border border-white">
+                                                      x{storageItems.length}
+                                                  </span>
+                                              )}
+                                          </div>
                                           {renderHarvestButton()}
                                       </div>
                                   )}
-                                  {recipe && !isReady && (
+
+                                  {/* PROGRESS BAR (Only if working) */}
+                                  {recipe && (
                                       <div className="absolute bottom-6 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+                                      </div>
+                                  )}
+
+                                  {/* QUEUE DISPLAY (Only if active recipe exists) */}
+                                  {slot.queue && slot.queue.length > 0 && (
+                                      <div className="absolute top-2 left-2 z-20 flex gap-1">
+                                          {[...Array(slot.queue.length)].map((_, i) => (
+                                              <div key={i} className="w-3 h-3 bg-blue-500 rounded-full border border-white shadow-sm" />
+                                          ))}
                                       </div>
                                   )}
                               </>
@@ -731,14 +789,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         handleShowAlert(res.msg);
                     } else {
                         playSFX('success');
-                        setActiveModal('NONE');
-                        setProductionConfig(null);
+                        // Do not close immediately, allow multi-queue
                     }
                 }}
                 onClose={() => {
                     setActiveModal('NONE');
                     setProductionConfig(null);
                 }}
+                queueLength={userState.machineSlots?.find(s => s.id === productionConfig.slotId)?.queue?.length || 0}
             />
         )}
 
