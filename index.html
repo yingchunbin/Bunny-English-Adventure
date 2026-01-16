@@ -57,6 +57,18 @@
         100% { transform: translateX(0px) translateY(0px); }
       }
       .cloud-anim { animation: float-cloud 6s ease-in-out infinite; }
+
+      /* Animation for Walking Pets */
+      @keyframes walk-cycle {
+        0% { transform: translateX(0) scaleX(1); }
+        45% { transform: translateX(20px) scaleX(1); }
+        50% { transform: translateX(20px) scaleX(-1); } /* Turn around */
+        95% { transform: translateX(0) scaleX(-1); }
+        100% { transform: translateX(0) scaleX(1); }
+      }
+      .animate-walk {
+        animation: walk-cycle 8s infinite linear;
+      }
       
       .glass-panel {
         background: rgba(255, 255, 255, 0.7);

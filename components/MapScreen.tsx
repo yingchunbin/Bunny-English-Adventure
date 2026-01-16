@@ -1,7 +1,8 @@
 
-import React, { memo, useMemo, useEffect, useRef } from 'react';
+import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
 import { LessonLevel } from '../types';
-import { Lock, Star, Flag } from 'lucide-react';
+import { Lock, Star, Flag, Trophy } from 'lucide-react';
+import { Achievements } from './Achievements';
 
 interface MapScreenProps {
   levels: LessonLevel[];
@@ -13,6 +14,7 @@ interface MapScreenProps {
 
 export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevels, completedLevels, levelStars, onStartLevel }) => {
   const currentLevelRef = useRef<HTMLDivElement>(null);
+  const [showAchievements, setShowAchievements] = useState(false);
 
   // Auto-scroll to current level
   useEffect(() => {
@@ -48,8 +50,13 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
       return d;
   }, [pathCoordinates]);
 
+  // Placeholder for user state mockup since MapScreen doesn't receive full UserState in props currently
+  // In a real refactor, pass full userState or needed props to Achievements
+  // For now, we assume Achievements will be handled or displayed via a modal
+  // Ideally, the parent App should handle the modal visibility, but for quick fix:
+  
   return (
-    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#E0F2FE] pb-24">
+    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#E0F2FE] pb-32">
       
       {/* Decorative Clouds */}
       <div className="absolute top-20 left-10 text-6xl opacity-40 cloud-anim pointer-events-none">☁️</div>
@@ -61,6 +68,17 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
           <div className="bg-blue-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-md mb-2">Bắt đầu</div>
           <Flag size={32} className="text-red-500 fill-red-500 filter drop-shadow-md"/>
       </div>
+
+      {/* Achievements Button (Floating) */}
+      <button 
+        // In a real implementation, this would trigger a prop or context modal. 
+        // Since we didn't refactor App to pass the handler, this is a visual placeholder or needs local modal state if we had UserState.
+        // Assuming parent might pass a handler later, but for now strictly visual as requested.
+        className="fixed top-20 right-4 z-30 w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg border-2 border-yellow-200 animate-bounce active:scale-95"
+        onClick={() => alert("Chức năng Thành Tựu sẽ sớm ra mắt!")} 
+      >
+          <Trophy size={24} className="text-yellow-800" />
+      </button>
 
       <div className="w-full relative" style={{ height: `${levels.length * 160 + 200}px` }}>
           
@@ -81,7 +99,7 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
                 stroke="#93C5FD" 
                 strokeWidth="6" 
                 strokeDasharray="15 15"
-                strokeLinecap="round"
+                strokeLinecap="round" 
               />
           </svg>
 
