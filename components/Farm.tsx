@@ -9,7 +9,8 @@ import { OrderBoard } from './farm/OrderBoard';
 import { InventoryModal } from './farm/InventoryModal';
 import { BarnModal } from './farm/BarnModal';
 import { LearningQuizModal } from './farm/LearningQuizModal';
-import { ItemManageModal } from './farm/ItemManageModal'; // Import new modal
+import { ItemManageModal } from './farm/ItemManageModal'; 
+import { MachineProductionModal } from './farm/MachineProductionModal'; // Import new modal
 import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
 import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, ArrowUpCircle, Sparkles, Settings } from 'lucide-react';
@@ -46,12 +47,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
-  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM'>('NONE');
+  const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
   const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST', plotId?: number } | null>(null);
   const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'>('VIEW');
   const [initialInvTab, setInitialInvTab] = useState<'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR'>('SEEDS');
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [manageItemConfig, setManageItemConfig] = useState<{ type: 'ANIMAL' | 'MACHINE', slotId: number, itemId: string } | null>(null); // New state for managing item
+  const [manageItemConfig, setManageItemConfig] = useState<{ type: 'ANIMAL' | 'MACHINE', slotId: number, itemId: string } | null>(null);
+  const [productionConfig, setProductionConfig] = useState<{ slotId: number, machineId: string } | null>(null); // New state for production
   
   // FX States
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
@@ -64,15 +66,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   // Refs
   const prevLevelRef = useRef(userState.farmLevel || 1);
-  const barnBtnRef = useRef<HTMLButtonElement>(null); // Target for flying items
+  const barnBtnRef = useRef<HTMLButtonElement>(null); 
 
   // --- LEVEL UP CHECK ---
   useEffect(() => {
       const currentLevel = userState.farmLevel || 1;
       if (currentLevel > prevLevelRef.current) {
-          playSFX('success'); // Victory sound
+          playSFX('success'); 
           setShowLevelUp(true);
-          setTimeout(() => setShowLevelUp(false), 4000); // Hide after 4s
+          setTimeout(() => setShowLevelUp(false), 4000); 
       }
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
@@ -85,7 +87,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   // --- HARVEST FX LOGIC ---
   const triggerHarvestFX = (rect: DOMRect, emoji: string, amount: number, exp: number) => {
-      // 1. Flying Items
       if (barnBtnRef.current) {
           const targetRect = barnBtnRef.current.getBoundingClientRect();
           const newItem: FlyingItem = {
@@ -100,7 +101,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           setTimeout(() => setFlyingItems(prev => prev.filter(i => i.id !== newItem.id)), 800);
       }
 
-      // 2. Floating Text
       const texts: FloatingText[] = [
           { id: Date.now(), text: `+${exp} XP`, x: rect.left, y: rect.top - 20, color: 'text-blue-600' }
       ];
@@ -490,11 +490,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             }
                             else if (isReady) handleCollectMachine(slot, e);
                             else if (!recipe) { 
-                                const firstRecipe = RECIPES.find(r => r.machineId === machine.id);
-                                if(firstRecipe) {
-                                    const res = startProcessing(slot.id, firstRecipe.id);
-                                    if(res && !res.success) { handleShowAlert(res.msg); }
-                                }
+                                // Open Production Modal instead of auto-start
+                                setProductionConfig({ slotId: slot.id, machineId: machine.id });
+                                setActiveModal('PRODUCTION');
                             }
                         }}
                         className={`
@@ -718,6 +716,29 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     if(res.success) { playSFX('coins'); setActiveModal('NONE'); }
                 }}
                 onClose={() => setActiveModal('NONE')}
+            />
+        )}
+
+        {activeModal === 'PRODUCTION' && productionConfig && (
+            <MachineProductionModal
+                machine={MACHINES.find(m => m.id === productionConfig.machineId)!}
+                recipes={RECIPES.filter(r => r.machineId === productionConfig.machineId)}
+                inventory={userState.harvestedCrops || {}}
+                allItems={[...CROPS, ...PRODUCTS]}
+                onProduce={(recipeId) => {
+                    const res = startProcessing(productionConfig.slotId, recipeId);
+                    if (res && !res.success) {
+                        handleShowAlert(res.msg);
+                    } else {
+                        playSFX('success');
+                        setActiveModal('NONE');
+                        setProductionConfig(null);
+                    }
+                }}
+                onClose={() => {
+                    setActiveModal('NONE');
+                    setProductionConfig(null);
+                }}
             />
         )}
 
