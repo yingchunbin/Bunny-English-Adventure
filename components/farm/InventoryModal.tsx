@@ -27,8 +27,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
   // Helper to render an item row
   const renderItemRow = (item: FarmItem, count: number, isSeed: boolean) => {
-      // In select mode, show seeds even if 0 count to prompt buying
-      // In VIEW mode, only show owned items
+      // In select mode (planting), show seeds even if 0 count to prompt buying
+      if (mode === 'SELECT_SEED' && !isSeed) return null;
+      
+      // In VIEW mode, ONLY show items with count > 0
       if (mode === 'VIEW' && count <= 0) return null; 
 
       return (
@@ -106,10 +108,17 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 {activeTab === 'SEEDS' && (
                     <>
                         {seeds.filter(s => !s.isMagic).map(seed => renderItemRow(seed, inventory[seed.id] || 0, true))}
-                        {/* Always show option to buy more if empty list or just at bottom */}
-                        <button onClick={onGoToShop} className="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 mt-4">
-                            Đến Cửa Hàng mua thêm hạt giống <ArrowRight size={16}/>
-                        </button>
+                        
+                        {mode === 'SELECT_SEED' && (
+                            <button onClick={onGoToShop} className="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 mt-4">
+                                Đến Cửa Hàng mua thêm hạt giống <ArrowRight size={16}/>
+                            </button>
+                        )}
+                        
+                        {/* Check if empty in VIEW mode */}
+                        {mode === 'VIEW' && seeds.filter(s => inventory[s.id] > 0).length === 0 && (
+                             <div className="text-center py-10 text-slate-400 font-bold text-sm opacity-60">Chưa có hạt giống nào!</div>
+                        )}
                     </>
                 )}
 
@@ -119,8 +128,9 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                             const count = harvested[p.id] || 0;
                             return renderItemRow(p, count, false);
                         })}
-                        {Object.values(harvested).reduce((a,b)=>a+b, 0) === 0 && (
-                            <div className="text-center py-10 text-slate-400 font-bold text-sm">Chưa có nông sản nào!</div>
+                        
+                        {Object.values(harvested).reduce((a,b)=>a+(b as number), 0) === 0 && (
+                            <div className="text-center py-10 text-slate-400 font-bold text-sm opacity-60">Chưa có nông sản nào!</div>
                         )}
                     </>
                 )}

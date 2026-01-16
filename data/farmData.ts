@@ -22,7 +22,7 @@ export const CROPS: Crop[] = [
   { id: 'mushroom', name: 'Nấm', emoji: '🍄', type: 'CROP', currency: 'COIN', cost: 20, sellPrice: 50, growthTime: 60, exp: 15, unlockReq: 2 },
   { id: 'pea', name: 'Đậu Hà Lan', emoji: '🫛', type: 'CROP', currency: 'COIN', cost: 30, sellPrice: 70, growthTime: 100, exp: 20, unlockReq: 3 },
   { id: 'sweet_potato', name: 'Khoai lang', emoji: '🍠', type: 'CROP', currency: 'COIN', cost: 35, sellPrice: 80, growthTime: 110, exp: 22, unlockReq: 4 },
-  { id: 'radish', name: 'Củ cải', emoji: '🫚', type: 'CROP', currency: 'COIN', cost: 20, sellPrice: 45, growthTime: 50, exp: 12, unlockReq: 1 },
+  { id: 'ginger', name: 'Củ gừng', emoji: '🫚', type: 'CROP', currency: 'COIN', cost: 20, sellPrice: 45, growthTime: 50, exp: 12, unlockReq: 1 },
   { id: 'leafy_green', name: 'Rau xanh', emoji: '🥗', type: 'CROP', currency: 'COIN', cost: 15, sellPrice: 35, growthTime: 40, exp: 10, unlockReq: 1 },
   { id: 'bell_pepper', name: 'Ớt chuông', emoji: '🫑', type: 'CROP', currency: 'COIN', cost: 50, sellPrice: 115, growthTime: 200, exp: 35, unlockReq: 5 },
   // Industrial & Trees

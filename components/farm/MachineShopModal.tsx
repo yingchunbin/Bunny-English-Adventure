@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { MachineItem, ProcessingRecipe, Crop, Product } from '../../types';
-import { X, Lock, ArrowRight, Factory, Zap } from 'lucide-react';
+import { X, Lock, ArrowRight, Factory, Zap, Star, Coins } from 'lucide-react';
 
 interface MachineShopModalProps {
   machines: MachineItem[];
@@ -14,6 +14,19 @@ interface MachineShopModalProps {
 }
 
 export const MachineShopModal: React.FC<MachineShopModalProps> = ({ machines, recipes, allItems, userLevel, userCoins, onBuy, onClose }) => {
+  
+  // Sort machines: Unlocked first -> Min Level -> Cost
+  const sortedMachines = [...machines].sort((a, b) => {
+      const levelA = a.minLevel || 0;
+      const levelB = b.minLevel || 0;
+      const lockedA = userLevel < levelA;
+      const lockedB = userLevel < levelB;
+
+      if (lockedA !== lockedB) return lockedA ? 1 : -1;
+      if (levelA !== levelB) return levelA - levelB;
+      return a.cost - b.cost;
+  });
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fadeIn">
         <div className="bg-white rounded-[2.5rem] w-full max-w-md relative border-8 border-slate-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
@@ -30,13 +43,14 @@ export const MachineShopModal: React.FC<MachineShopModalProps> = ({ machines, re
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 no-scrollbar">
-                {machines.map(machine => {
+                {sortedMachines.map(machine => {
                     const isLocked = userLevel < (machine.minLevel || 0);
                     const canAfford = userCoins >= machine.cost;
                     const machineRecipes = recipes.filter(r => r.machineId === machine.id);
+                    const currency = machine.currency || 'COIN';
 
                     return (
-                        <div key={machine.id} className={`bg-white rounded-[2rem] p-5 border-4 relative transition-all ${isLocked ? 'border-slate-200 opacity-70' : 'border-blue-100 hover:border-blue-300 shadow-lg'}`}>
+                        <div key={machine.id} className={`bg-white rounded-[2rem] p-5 border-4 relative transition-all ${isLocked ? 'border-slate-200 opacity-70 grayscale-[0.5]' : 'border-blue-100 hover:border-blue-300 shadow-lg'}`}>
                             
                             {/* Header */}
                             <div className="flex justify-between items-start mb-4">
@@ -47,8 +61,8 @@ export const MachineShopModal: React.FC<MachineShopModalProps> = ({ machines, re
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{machine.description}</p>
                                     </div>
                                 </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-black border ${canAfford ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
-                                    {machine.cost} 🟡
+                                <div className={`px-3 py-1 rounded-full text-xs font-black border flex items-center gap-1 ${canAfford ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-400 border-slate-200'}`}>
+                                    {machine.cost} {currency === 'STAR' ? <Star size={12} fill="currentColor"/> : <Coins size={12} fill="currentColor"/>}
                                 </div>
                             </div>
 

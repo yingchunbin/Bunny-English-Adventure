@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { AnimalItem, Crop, Product } from '../../types';
-import { X, Lock, Clock, ArrowRight, Info } from 'lucide-react';
+import { X, Lock, Clock, ArrowRight, Info, Star, Coins } from 'lucide-react';
 import { Avatar } from '../Avatar';
 
 interface AnimalShopModalProps {
@@ -15,6 +15,19 @@ interface AnimalShopModalProps {
 }
 
 export const AnimalShopModal: React.FC<AnimalShopModalProps> = ({ animals, crops, products, userLevel, userCoins, onBuy, onClose }) => {
+  
+  // Sort animals: Unlocked first -> Min Level -> Cost
+  const sortedAnimals = [...animals].sort((a, b) => {
+      const levelA = a.minLevel || 0;
+      const levelB = b.minLevel || 0;
+      const lockedA = userLevel < levelA;
+      const lockedB = userLevel < levelB;
+
+      if (lockedA !== lockedB) return lockedA ? 1 : -1;
+      if (levelA !== levelB) return levelA - levelB;
+      return a.cost - b.cost;
+  });
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md animate-fadeIn">
         <div className="bg-white rounded-[2.5rem] w-full max-w-md relative border-8 border-orange-200 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden">
@@ -33,14 +46,15 @@ export const AnimalShopModal: React.FC<AnimalShopModalProps> = ({ animals, crops
 
             {/* List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-orange-50/30 no-scrollbar">
-                {animals.map(animal => {
+                {sortedAnimals.map(animal => {
                     const isLocked = userLevel < (animal.minLevel || 0);
                     const feedItem = [...crops, ...products].find(c => c.id === animal.feedCropId);
                     const produceItem = [...crops, ...products].find(p => p.id === animal.produceId);
                     const canAfford = userCoins >= animal.cost;
+                    const currency = animal.currency || 'COIN';
 
                     return (
-                        <div key={animal.id} className={`bg-white rounded-3xl p-4 border-4 relative transition-all ${isLocked ? 'border-slate-200 opacity-80' : 'border-orange-100 hover:border-orange-300 shadow-md'}`}>
+                        <div key={animal.id} className={`bg-white rounded-3xl p-4 border-4 relative transition-all ${isLocked ? 'border-slate-200 opacity-70 grayscale-[0.5]' : 'border-orange-100 hover:border-orange-300 shadow-md'}`}>
                             
                             <div className="flex gap-4">
                                 {/* Left: Image */}
@@ -60,7 +74,7 @@ export const AnimalShopModal: React.FC<AnimalShopModalProps> = ({ animals, crops
                                                 <span>{feedItem?.emoji}</span>
                                                 <span className="text-blue-600">x{animal.feedAmount}</span>
                                             </div>
-                                            <span className="text-[10px] text-slate-400 truncate">{feedItem?.name}</span>
+                                            <span className="text-[10px] text-slate-400 truncate max-w-[60px]">{feedItem?.name}</span>
                                         </div>
 
                                         {/* Produce Row */}
@@ -84,7 +98,7 @@ export const AnimalShopModal: React.FC<AnimalShopModalProps> = ({ animals, crops
                                             disabled={!canAfford}
                                             className={`mt-auto w-full py-2 rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-1 transition-all active:scale-95 ${canAfford ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
                                         >
-                                            {animal.cost} 🟡 Mua ngay
+                                            {animal.cost} {currency === 'STAR' ? <Star size={12} fill="currentColor"/> : <Coins size={12} fill="currentColor"/>} Mua ngay
                                         </button>
                                     )}
                                 </div>

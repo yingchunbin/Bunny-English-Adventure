@@ -48,6 +48,25 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       );
   };
 
+  // Helper to sort items: Unlocked first, then by level, then by cost
+  const sortItems = <T extends { unlockReq?: number, minLevel?: number, cost: number }>(items: T[]) => {
+      return [...items].sort((a, b) => {
+          const levelA = a.unlockReq ?? a.minLevel ?? 0;
+          const levelB = b.unlockReq ?? b.minLevel ?? 0;
+          const lockedA = farmLevel < levelA;
+          const lockedB = farmLevel < levelB;
+
+          if (lockedA !== lockedB) return lockedA ? 1 : -1; // Locked items at bottom
+          if (levelA !== levelB) return levelA - levelB; // Lower level requirement first
+          return a.cost - b.cost; // Cheaper items first
+      });
+  };
+
+  const sortedCrops = sortItems(crops.filter(c => !c.isMagic));
+  const sortedAnimals = sortItems(animals);
+  const sortedMachines = sortItems(machines);
+  const sortedDecor = sortItems(decorations);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
         <div className="bg-white rounded-[3rem] w-full max-w-lg h-[90vh] flex flex-col overflow-hidden border-8 border-pink-200 shadow-2xl relative">
@@ -90,8 +109,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {/* SEEDS */}
                 {tab === 'SEEDS' && (
                     <div className="grid grid-cols-1 gap-3">
-                        {crops.map(crop => {
-                            if (crop.isMagic) return null;
+                        {sortedCrops.map(crop => {
                             const isLocked = farmLevel < (crop.unlockReq || 0);
                             const amount = seedAmounts[crop.id] || 1;
                             const totalCost = crop.cost * amount;
@@ -126,15 +144,30 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {/* ANIMALS */}
                 {tab === 'ANIMALS' && (
                     <div className="grid grid-cols-1 gap-3">
-                        {animals.map(animal => {
+                        {sortedAnimals.map(animal => {
                             const isLocked = farmLevel < (animal.minLevel || 0);
                             const currency = animal.currency || 'COIN';
+                            // Find feed and produce items to show details
+                            const feedItem = crops.find(c => c.id === animal.feedCropId);
+                            // Produce item could be in PRODUCTS array which isn't passed here directly, 
+                            // but we can infer or rely on text if item not found, 
+                            // however to keep it simple, we just show name.
+                            
                             return (
                                 <div key={animal.id} className="bg-white p-3 rounded-2xl border-4 border-orange-100 flex items-center gap-3">
                                     <div className="text-5xl">{animal.emoji}</div>
                                     <div className="flex-1">
                                         <div className="font-black text-slate-700 text-sm">{animal.name}</div>
-                                        <div className="text-[10px] text-slate-500 font-bold">SX: {Math.ceil(animal.produceTime/60)}p</div>
+                                        
+                                        <div className="flex flex-wrap gap-2 mt-1">
+                                            <div className="text-[10px] bg-orange-50 px-2 py-1 rounded text-orange-600 font-bold flex items-center gap-1">
+                                                Ăn: {feedItem ? feedItem.emoji : '???'}
+                                            </div>
+                                            <div className="text-[10px] bg-blue-50 px-2 py-1 rounded text-blue-600 font-bold">
+                                                SX: {Math.ceil(animal.produceTime/60)}p
+                                            </div>
+                                        </div>
+
                                         {isLocked ? <div className="text-[10px] text-slate-400 mt-2 font-bold"><Lock size={10} className="inline"/> Cấp {animal.minLevel}</div> : renderBuyButton(animal.cost, currency, () => onBuyAnimal && onBuyAnimal(animal), false)}
                                     </div>
                                 </div>
@@ -146,7 +179,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {/* MACHINES */}
                 {tab === 'MACHINES' && (
                     <div className="grid grid-cols-1 gap-3">
-                        {machines.map(machine => {
+                        {sortedMachines.map(machine => {
                             const isLocked = farmLevel < (machine.minLevel || 0);
                             const currency = machine.currency || 'COIN';
                             return (
@@ -166,7 +199,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 {/* DECOR */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
-                        {decorations.map(decor => {
+                        {sortedDecor.map(decor => {
                             const owned = userState.decorations?.includes(decor.id);
                             const currency = decor.currency || 'COIN';
                             return (
