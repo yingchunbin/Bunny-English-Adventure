@@ -276,7 +276,9 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
           const distractors = words.filter(w => w.id !== target.id)
                                    .sort(() => 0.5 - Math.random())
                                    .slice(0, 3);
-          setOptions([target, ...distractors].sort(() => 0.5 - Math.random()));
+          const fullOptions = [target, ...distractors].sort(() => 0.5 - Math.random());
+          // CRITICAL FIX: Ensure max 4 options
+          setOptions(fullOptions.slice(0, 4));
       }
 
       if (type === 'LISTEN') {
@@ -464,7 +466,7 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
       }
       return (
           <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-              {options.map((opt, idx) => {
+              {options.slice(0, 4).map((opt, idx) => { // Force slice to 4 to prevent UI break
                   const id = opt.id || idx;
                   const isDisabled = disabledOptions.includes(id);
                   const content = questionType === 'SPELLING' ? opt.text :

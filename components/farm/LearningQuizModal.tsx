@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Word } from '../../types';
-import { X, Check, BrainCircuit, Droplets, Bug, Zap } from 'lucide-react';
+import { X, Check, BrainCircuit, Droplets, Bug, Zap, Volume2 } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { WordImage } from '../WordImage';
 
@@ -14,18 +14,39 @@ interface LearningQuizModalProps {
 }
 
 export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, onSuccess, onClose, onShowAlert }) => {
-  const [question, setQuestion] = useState<{ target: Word, options: Word[] } | null>(null);
+  const [question, setQuestion] = useState<{ target: Word, options: Word[], mode: 'IMAGE_TO_EN' | 'EN_TO_VI' | 'LISTEN' } | null>(null);
   
   useEffect(() => {
       if (words.length >= 4) {
           const target = words[Math.floor(Math.random() * words.length)];
           const distractors = words.filter(w => w.id !== target.id).sort(() => 0.5 - Math.random()).slice(0, 3);
+          const modes: ('IMAGE_TO_EN' | 'EN_TO_VI' | 'LISTEN')[] = ['IMAGE_TO_EN', 'EN_TO_VI'];
+          if (target.emoji) modes.push('LISTEN'); // Only audio quiz if emoji exists to show as options
+          
+          const mode = modes[Math.floor(Math.random() * modes.length)];
+
           setQuestion({
               target,
-              options: [target, ...distractors].sort(() => 0.5 - Math.random())
+              options: [target, ...distractors].sort(() => 0.5 - Math.random()),
+              mode
           });
+
+          if (mode === 'LISTEN') {
+              setTimeout(() => {
+                  const u = new SpeechSynthesisUtterance(target.english);
+                  u.lang = 'en-US';
+                  window.speechSynthesis.speak(u);
+              }, 500);
+          }
       }
   }, []);
+
+  const playAudio = () => {
+      if (!question) return;
+      const u = new SpeechSynthesisUtterance(question.target.english);
+      u.lang = 'en-US';
+      window.speechSynthesis.speak(u);
+  }
 
   const handleAnswer = (wordId: string) => {
       if (!question) return;
@@ -76,8 +97,19 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
             </div>
 
             <div className="mb-6 text-center">
-                <p className="text-slate-600 font-bold mb-2">Đâu là từ:</p>
-                <h2 className="text-3xl font-black text-indigo-600">{question.target.english}</h2>
+                {question.mode === 'LISTEN' ? (
+                    <button onClick={playAudio} className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse hover:bg-blue-600 transition-colors">
+                        <Volume2 size={40} className="text-white"/>
+                    </button>
+                ) : (
+                    <h2 className="text-3xl font-black text-indigo-600">
+                        {question.mode === 'EN_TO_VI' ? question.target.english : question.target.vietnamese}
+                    </h2>
+                )}
+                <p className="text-slate-400 font-bold text-xs mt-2 uppercase tracking-widest">
+                    {question.mode === 'LISTEN' ? 'Nghe và chọn hình đúng' : 
+                     question.mode === 'EN_TO_VI' ? 'Chọn nghĩa tiếng Việt' : 'Chọn từ tiếng Anh đúng'}
+                </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -85,9 +117,13 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
                     <button 
                         key={opt.id}
                         onClick={() => handleAnswer(opt.id)}
-                        className="aspect-square bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all active:scale-95 p-2"
+                        className={`aspect-square bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all active:scale-95 p-2 flex items-center justify-center`}
                     >
-                        <WordImage word={opt} className="w-full h-full rounded-lg" hideLabel />
+                        {question.mode === 'EN_TO_VI' ? (
+                            <span className="font-bold text-slate-700 text-center">{opt.vietnamese}</span>
+                        ) : (
+                            <WordImage word={opt} className="w-full h-full rounded-lg" hideLabel={question.mode === 'LISTEN'} />
+                        )}
                     </button>
                 ))}
             </div>

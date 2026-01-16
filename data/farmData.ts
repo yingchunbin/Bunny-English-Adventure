@@ -89,15 +89,16 @@ export const ANIMALS: AnimalItem[] = [
     { id: 'cat_pet', name: 'Mèo mướp', emoji: '🐈', type: 'ANIMAL', currency: 'COIN', cost: 800, produceId: 'yarn_ball', produceTime: 300, feedCropId: 'milk', feedAmount: 1, exp: 90, minLevel: 5 },
     { id: 'yak', name: 'Bò Tây Tạng', emoji: '🐂', type: 'ANIMAL', currency: 'STAR', cost: 20, produceId: 'yak_milk', produceTime: 400, feedCropId: 'wheat', feedAmount: 5, exp: 200, minLevel: 12 },
     { id: 'deer', name: 'Hươu', emoji: '🦌', type: 'ANIMAL', currency: 'STAR', cost: 12, produceId: 'antler', produceTime: 500, feedCropId: 'leafy_green', feedAmount: 4, exp: 140, minLevel: 10 },
-    { id: 'bat', name: 'Dơi', emoji: '🦇', type: 'ANIMAL', currency: 'COIN', cost: 300, produceId: 'guano', produceTime: 150, feedCropId: 'strawberry', feedAmount: 1, exp: 40, minLevel: 6 },
-    { id: 'frog', name: 'Ếch', emoji: '🐸', type: 'ANIMAL', currency: 'COIN', cost: 100, produceId: 'frog_leg', produceTime: 100, feedCropId: 'rice', feedAmount: 1, exp: 20, minLevel: 2 }, // Fixed: Eats Rice
+    { id: 'bat', name: 'Dơi', emoji: '🦇', type: 'ANIMAL', currency: 'COIN', cost: 300, produceId: 'guano', produceTime: 150, feedCropId: 'tomato', feedAmount: 2, exp: 40, minLevel: 6 }, // Fixed feed to Tomato
+    { id: 'frog', name: 'Ếch', emoji: '🐸', type: 'ANIMAL', currency: 'COIN', cost: 100, produceId: 'frog_leg', produceTime: 100, feedCropId: 'rice', feedAmount: 1, exp: 20, minLevel: 2 },
     { id: 'crab', name: 'Cua', emoji: '🦀', type: 'ANIMAL', currency: 'COIN', cost: 200, produceId: 'crab_meat', produceTime: 200, feedCropId: 'fish_roe', feedAmount: 1, exp: 35, minLevel: 7 },
     { id: 'lobster', name: 'Tôm hùm', emoji: '🦞', type: 'ANIMAL', currency: 'STAR', cost: 8, produceId: 'lobster_tail', produceTime: 300, feedCropId: 'fish_roe', feedAmount: 2, exp: 80, minLevel: 9 },
     { id: 'shrimp', name: 'Tôm', emoji: '🦐', type: 'ANIMAL', currency: 'COIN', cost: 150, produceId: 'shrimp_meat', produceTime: 120, feedCropId: 'rice', feedAmount: 1, exp: 25, minLevel: 4 },
     { id: 'squid', name: 'Mực', emoji: '🦑', type: 'ANIMAL', currency: 'COIN', cost: 300, produceId: 'ink_sac', produceTime: 180, feedCropId: 'fish_roe', feedAmount: 1, exp: 45, minLevel: 6 },
 ];
 
-// --- PRODUCTS & PROCESSED (100+ Types mixed) ---
+// ... rest of the file (PRODUCTS, MACHINES, RECIPES, DECORATIONS, MISSIONS) remains the same as previous but kept clipped for brevity if not changed ...
+// Re-exporting unchanged arrays to keep file valid
 export const PRODUCTS: Product[] = [
     // Animal Raw
     { id: 'egg', name: 'Trứng gà', emoji: '🥚', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 40 },
@@ -190,7 +191,6 @@ export const PRODUCTS: Product[] = [
     { id: 'candle', name: 'Nến thơm', emoji: '🕯️', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 350 },
 ];
 
-// --- MACHINES (20 Types) ---
 export const MACHINES: MachineItem[] = [
     { id: 'bakery', name: 'Lò Bánh', emoji: '🥖', type: 'MACHINE', currency: 'COIN', cost: 800, unlockPrice: 800, description: 'Nướng bánh mì thơm ngon', minLevel: 2 },
     { id: 'dairy', name: 'Nhà máy Sữa', emoji: '🧀', type: 'MACHINE', currency: 'COIN', cost: 1500, unlockPrice: 1500, description: 'Làm bơ và phô mai', minLevel: 4 },
@@ -214,7 +214,6 @@ export const MACHINES: MachineItem[] = [
     { id: 'chocolatier', name: 'Máy Sô Cô La', emoji: '🍫', type: 'MACHINE', currency: 'COIN', cost: 3500, unlockPrice: 3500, description: 'Làm sô cô la', minLevel: 11 },
 ];
 
-// --- RECIPES ---
 export const RECIPES: ProcessingRecipe[] = [
     // Bakery
     { id: 'r_bread', machineId: 'bakery', name: 'Bánh mì', input: [{id: 'wheat', amount: 2}, {id: 'egg', amount: 1}], outputId: 'bread', duration: 30, exp: 20 },
@@ -279,7 +278,6 @@ export const RECIPES: ProcessingRecipe[] = [
     { id: 'r_chocolate', machineId: 'chocolatier', name: 'Sô cô la', input: [{id: 'cocoa', amount: 2}, {id: 'sugar', amount: 1}, {id: 'milk', amount: 1}], outputId: 'chocolate', duration: 90, exp: 60 },
 ];
 
-// --- DECORATIONS ---
 export const DECORATIONS: Decor[] = [
     { id: 'fence', name: 'Hàng rào', emoji: '🚧', type: 'DECOR', currency: 'COIN', cost: 100 },
     { id: 'flower_pot', name: 'Chậu hoa', emoji: '🌻', type: 'DECOR', currency: 'COIN', cost: 200 },
@@ -292,18 +290,14 @@ export const DECORATIONS: Decor[] = [
 ];
 
 export const FARM_ACHIEVEMENTS_DATA: Mission[] = [
-    // Achievements (One time)
     { id: 'ach_hv_50', desc: 'Thu hoạch 50 lần', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
     { id: 'ach_hv_200', desc: 'Tay gặt siêu đẳng', type: 'HARVEST', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 15 }, completed: false, claimed: false },
     { id: 'ach_hv_1000', desc: 'Thần Nông tái thế', type: 'HARVEST', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
-    
     { id: 'ach_earn_1k', desc: 'Kiếm 1000 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
     { id: 'ach_earn_10k', desc: 'Đại gia phố huyện', type: 'EARN', category: 'ACHIEVEMENT', target: 10000, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
-    
     { id: 'ach_feed_20', desc: 'Cho ăn 20 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'FERTILIZER', amount: 5 }, completed: false, claimed: false },
     { id: 'ach_feed_100', desc: 'Bạn của muôn loài', type: 'FEED', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
-
-    { id: 'ach_bake_20', desc: 'Thợ làm bánh', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false }, // Logic for this specific type needs implementation in useFarmGame
+    { id: 'ach_bake_20', desc: 'Thợ làm bánh', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false },
     { id: 'ach_water_100', desc: 'Thần Mưa', type: 'WATER', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
 ];
 

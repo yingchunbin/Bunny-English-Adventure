@@ -39,12 +39,12 @@ const DEFAULT_USER_STATE: UserState = {
   ],
   // Unlock first 2 slots by default for animals and machines
   livestockSlots: [
-      { id: 1, isUnlocked: true, animalId: null, fedAt: null },
-      { id: 2, isUnlocked: true, animalId: null, fedAt: null },
+      { id: 1, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
+      { id: 2, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
   ],
   machineSlots: [
-      { id: 1, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null },
-      { id: 2, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null },
+      { id: 1, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, storage: [], queue: [] },
+      { id: 2, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, storage: [], queue: [] },
   ],
   inventory: { 'carrot': 2, 'wheat': 2 }, 
   harvestedCrops: {},
@@ -248,7 +248,8 @@ export default function App() {
               <TimeAttackGame 
                   words={LEVELS.flatMap(l => l.words)}
                   onComplete={(score) => {
-                      setUserState(prev => ({ ...prev, coins: prev.coins + score }));
+                      const earnedCoins = Math.floor(score / 10);
+                      setUserState(prev => ({ ...prev, coins: prev.coins + earnedCoins }));
                       setScreen(Screen.HOME);
                   }}
                   onExit={() => setScreen(Screen.HOME)}

@@ -237,11 +237,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   const handleCollectProduct = (slot: any, e: React.MouseEvent) => {
+      // Collects entire storage now
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if(animal) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          triggerHarvestFX(rect, animal.emoji, 1, animal.exp);
-          collectProduct(slot.id);
+          const count = slot.storage?.length || 0;
+          
+          if (count > 0) {
+              triggerHarvestFX(rect, animal.emoji, count, animal.exp * count);
+              collectProduct(slot.id);
+          }
       }
   };
 
@@ -432,7 +437,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const animal = slot.animalId ? ANIMALS.find(a => a.id === slot.animalId) : null;
                   const isFed = !!slot.fedAt;
                   const progress = animal && isFed ? Math.min(100, ((now - (slot.fedAt || 0))/1000 / animal.produceTime) * 100) : 0;
-                  const isReady = isFed && progress >= 100;
+                  // Ready means: Storage has items OR current cycle is done (though now current cycle done means auto-pushed to storage, but visually if storage has items we show collect)
+                  const storageItems = slot.storage || [];
+                  const hasStorage = storageItems.length > 0;
+                  const isProducing = isFed; // It is producing if fedAt is set
+
+                  const storedProduceId = storageItems[0];
+                  const produce = PRODUCTS.find(p => p.id === storedProduceId);
 
                   return (
                       <button 
@@ -444,7 +455,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 setInitialInvTab('ANIMALS');
                                 setActiveModal('INVENTORY'); 
                             }
-                            else if (isReady) handleCollectProduct(slot, e);
+                            else if (hasStorage) handleCollectProduct(slot, e);
                             else if (!isFed) handleFeedAnimal(slot);
                         }}
                         className={`
@@ -467,7 +478,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                           )}
 
                           {/* SPEED UP */}
-                          {animal && isFed && !isReady && renderSpeedUpButton('ANIMAL', slot.id)}
+                          {animal && isFed && renderSpeedUpButton('ANIMAL', slot.id)}
 
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
@@ -478,12 +489,27 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  <div className={`text-7xl z-10 transition-all ${!isFed ? 'grayscale opacity-60 scale-90' : isReady ? 'scale-110 drop-shadow-xl' : 'animate-walk'}`}>
+                                  <div className={`text-7xl z-10 transition-all ${!isFed ? 'scale-90' : 'animate-walk'}`}>
                                       {animal.emoji}
                                   </div>
-                                  {isReady && renderHarvestButton()}
-                                  {!isFed && <div className="absolute bottom-6 bg-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg z-20 flex items-center gap-1 border-2 border-white"><Zap size={10} fill="currentColor"/> ĐÓI BỤNG</div>}
-                                  {isFed && !isReady && (
+                                  
+                                  {hasStorage && (
+                                      <div className="absolute inset-0 bg-white/60 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
+                                          <div className="text-5xl animate-bounce mb-2 drop-shadow-lg relative">
+                                              {produce?.emoji || '🥚'}
+                                              {storageItems.length > 1 && (
+                                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full border border-white">
+                                                      x{storageItems.length}
+                                                  </span>
+                                              )}
+                                          </div>
+                                          {renderHarvestButton()}
+                                      </div>
+                                  )}
+
+                                  {!isFed && !hasStorage && <div className="absolute bottom-6 bg-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg z-20 flex items-center gap-1 border-2 border-white"><Zap size={10} fill="currentColor"/> ĐÓI BỤNG</div>}
+                                  
+                                  {isFed && (
                                       <div className="absolute bottom-6 w-16 h-2 bg-black/10 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-orange-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
