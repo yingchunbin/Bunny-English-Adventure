@@ -129,6 +129,7 @@ export interface LivestockSlot {
     isUnlocked: boolean;
     animalId: string | null;
     fedAt: number | null; 
+    queue?: number; // Number of pre-paid feeds waiting
     storage?: string[]; // Array of product IDs ready to collect
     isReady?: boolean;
 }

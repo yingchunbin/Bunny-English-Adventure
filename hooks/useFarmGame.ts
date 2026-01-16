@@ -92,7 +92,7 @@ export const useFarmGame = (
               const currentAchievements = newState.missions?.filter(m => m.category === 'ACHIEVEMENT') || [];
               const dailies = [...DAILY_MISSION_POOL]
                   .sort(() => 0.5 - Math.random())
-                  .slice(0, 5) // Updated to 5 daily missions
+                  .slice(0, 5) // 5 daily missions
                   .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
               
               newState.missions = [...currentAchievements, ...dailies];
@@ -186,51 +186,44 @@ export const useFarmGame = (
                 if (hasChanges) newState.machineSlots = updatedSlots;
             }
 
-            // 4. Animal Auto-Process (New Logic)
+            // 4. Animal Auto-Process (Updated Logic for Queue)
             if (prev.livestockSlots) {
                 const updatedSlots = prev.livestockSlots.map(slot => {
-                    if (slot.animalId && slot.fedAt) {
+                    if (slot.animalId) {
                         const animal = ANIMALS.find(a => a.id === slot.animalId);
                         if (animal) {
-                            const elapsed = (currentTime - slot.fedAt) / 1000;
-                            if (elapsed >= animal.produceTime) {
-                                // Production complete!
-                                hasChanges = true;
-                                
-                                // Move product to storage if space
-                                let newStorage = [...(slot.storage || [])];
-                                let newFedAt: number | null = null; // Default to stop feeding
-                                
-                                if (newStorage.length < 3) {
-                                    newStorage.push(animal.produceId);
-                                    
-                                    // AUTO-FEED CHECK
-                                    const feedName = animal.feedCropId;
-                                    const currentFeedStock = newState.harvestedCrops?.[feedName] || prev.harvestedCrops?.[feedName] || 0;
-                                    
-                                    if (currentFeedStock >= animal.feedAmount) {
-                                        // Deduct feed
-                                        newState.harvestedCrops = {
-                                            ...(newState.harvestedCrops || prev.harvestedCrops),
-                                            [feedName]: currentFeedStock - animal.feedAmount
-                                        };
-                                        // Restart cycle
-                                        newFedAt = currentTime;
-                                    }
-                                } else {
-                                    // Storage full, keep fedAt as 'done' time but effectively paused? 
-                                    // Actually we just clear fedAt so it shows "Hungry" state later or "Ready" state depending on UI logic
-                                    // But wait, if we clear fedAt, progress bar resets. 
-                                    // If we leave fedAt, it stays at 100%. 
-                                    // BUT our new logic is push to storage.
-                                    // So we just clear fedAt. The product is in storage.
-                                    newFedAt = null;
-                                }
+                            let newStorage = [...(slot.storage || [])];
+                            let newFedAt = slot.fedAt;
+                            let newQueue = slot.queue || 0;
+                            let slotChanged = false;
 
+                            // 1. Check if current feeding is done
+                            if (newFedAt) {
+                                const elapsed = (currentTime - newFedAt) / 1000;
+                                if (elapsed >= animal.produceTime) {
+                                    newStorage.push(animal.produceId);
+                                    newFedAt = null; // Feeding done
+                                    slotChanged = true;
+                                }
+                            }
+
+                            // 2. Check if we should start next feeding from queue
+                            // Limit is 3: (current_producing:1 + waiting_in_queue + storage) must handle nicely.
+                            // Actually, strict limit is usually on OUTPUT storage.
+                            // If storage is full (3 items), we stop.
+                            if (!newFedAt && newQueue > 0 && newStorage.length < 3) {
+                                newQueue--;
+                                newFedAt = currentTime;
+                                slotChanged = true;
+                            }
+
+                            if (slotChanged) {
+                                hasChanges = true;
                                 return {
                                     ...slot,
                                     storage: newStorage,
-                                    fedAt: newFedAt
+                                    fedAt: newFedAt,
+                                    queue: newQueue
                                 };
                             }
                         }
@@ -376,7 +369,7 @@ export const useFarmGame = (
       onUpdateState(prev => ({
           ...prev,
           inventory: { ...prev.inventory, [animalId]: count - 1 },
-          livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, animalId, fedAt: null, storage: [] } : s)
+          livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, animalId, fedAt: null, storage: [], queue: 0 } : s)
       }));
       return { success: true };
   };
@@ -406,7 +399,7 @@ export const useFarmGame = (
                   itemId = slot.animalId;
                   const item = ANIMALS.find(a => a.id === itemId);
                   if (item) sellPrice = Math.floor(item.cost / 2);
-                  newState.livestockSlots = prev.livestockSlots?.map(s => s.id === slotId ? { ...s, animalId: null, fedAt: null, storage: [] } : s);
+                  newState.livestockSlots = prev.livestockSlots?.map(s => s.id === slotId ? { ...s, animalId: null, fedAt: null, storage: [], queue: 0 } : s);
               }
           } else {
               const slot = prev.machineSlots?.find(s => s.id === slotId);
@@ -552,6 +545,16 @@ export const useFarmGame = (
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if (!animal) return;
 
+      // Check Limits (3 max capacity including: current active, queue, storage)
+      // Actually simple rule: Queue + Storage cannot exceed 3 (or whatever capacity is)
+      const currentActive = slot.fedAt ? 1 : 0;
+      const currentQueue = slot.queue || 0;
+      const currentStorage = slot.storage?.length || 0;
+      
+      if ((currentActive + currentQueue + currentStorage) >= 3) {
+          return { success: false, msg: "Chuồng đầy rồi! Hãy thu hoạch trước khi cho ăn tiếp." };
+      }
+
       const feedName = CROPS.find(c => c.id === animal.feedCropId)?.name || 'thức ăn';
       const userFeedAmount = userState.harvestedCrops?.[animal.feedCropId] || 0;
 
@@ -563,16 +566,27 @@ export const useFarmGame = (
       }
 
       playSFX('eat'); 
-      onUpdateState(prev => ({
-          ...prev,
-          harvestedCrops: {
-              ...prev.harvestedCrops,
-              [animal.feedCropId]: (prev.harvestedCrops?.[animal.feedCropId] || 0) - animal.feedAmount
-          },
-          livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, fedAt: Date.now() } : s)
-      }));
+      onUpdateState(prev => {
+          let newSlot = { ...slot };
+          // If not currently working, start immediately
+          if (!slot.fedAt) {
+              newSlot.fedAt = Date.now();
+          } else {
+              // Add to queue
+              newSlot.queue = (slot.queue || 0) + 1;
+          }
+
+          return {
+            ...prev,
+            harvestedCrops: {
+                ...prev.harvestedCrops,
+                [animal.feedCropId]: (prev.harvestedCrops?.[animal.feedCropId] || 0) - animal.feedAmount
+            },
+            livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? newSlot : s)
+          }
+      });
       updateMissionProgress('FEED', 1);
-      return { success: true, msg: `Đã cho ${animal.name} ăn ngon lành!` };
+      return { success: true, msg: `Đã cho ${animal.name} ăn! -${animal.feedAmount} ${feedName}` };
   };
 
   const collectProduct = (slotId: number) => {

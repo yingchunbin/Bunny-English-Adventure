@@ -254,10 +254,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
-  const handleFeedAnimal = (slot: any) => {
+  const handleFeedAnimal = (slot: any, e: React.MouseEvent) => {
+      // Prevent bubble up
+      e.stopPropagation();
       const res = feedAnimal(slot.id);
       if (res && !res.success) {
           handleShowAlert(res.msg);
+      } else if (res && res.success) {
+          // Show floating text for consumption
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          // Extract amount and name from message or just use generic text
+          // The message is "Đã cho [name] ăn! -[amount] [feedName]"
+          const parts = res.msg.split('-');
+          if (parts.length > 1) {
+             addFloatingText(rect.left, rect.top, `-${parts[1]}`, "text-orange-600");
+          }
       }
   };
 
@@ -441,13 +452,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const animal = slot.animalId ? ANIMALS.find(a => a.id === slot.animalId) : null;
                   const isFed = !!slot.fedAt;
                   const progress = animal && isFed ? Math.min(100, ((now - (slot.fedAt || 0))/1000 / animal.produceTime) * 100) : 0;
-                  // Ready means: Storage has items OR current cycle is done (though now current cycle done means auto-pushed to storage, but visually if storage has items we show collect)
                   const storageItems = slot.storage || [];
                   const hasStorage = storageItems.length > 0;
-                  const isProducing = isFed; // It is producing if fedAt is set
-
+                  const queueCount = slot.queue || 0;
+                  
                   const storedProduceId = storageItems[0];
                   const produce = PRODUCTS.find(p => p.id === storedProduceId);
+                  const feedItem = animal ? CROPS.find(c => c.id === animal.feedCropId) : null;
 
                   return (
                       <button 
@@ -460,7 +471,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 setActiveModal('INVENTORY'); 
                             }
                             else if (hasStorage) handleCollectProduct(slot, e);
-                            else if (!isFed) handleFeedAnimal(slot);
+                            else handleFeedAnimal(slot, e); // Queue feed
                         }}
                         className={`
                             relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-md overflow-hidden flex flex-col items-center justify-center
@@ -493,6 +504,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
+                                  {/* Queue Display */}
+                                  {queueCount > 0 && (
+                                      <div className="absolute top-2 left-2 z-20 flex gap-1 bg-white/80 px-1.5 py-0.5 rounded-full shadow-sm border border-slate-100">
+                                          <span className="text-xs">{feedItem?.emoji}</span>
+                                          <span className="text-[10px] font-black text-orange-600">x{queueCount}</span>
+                                      </div>
+                                  )}
+
                                   <div className={`text-7xl z-10 transition-all ${!isFed ? 'scale-90' : 'animate-walk'}`}>
                                       {animal.emoji}
                                   </div>
