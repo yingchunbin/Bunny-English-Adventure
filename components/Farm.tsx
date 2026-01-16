@@ -119,7 +119,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const handleExpand = (type: 'PLOT' | 'PEN' | 'MACHINE') => {
       const baseCost = 500;
       let currentCount = 0;
-      if (type === 'PLOT') currentCount = userState.farmPlots.length;
+      if (type === 'PLOT') {
+          // Count only unlocked plots for pricing scaling, or all? Usually all to keep consistent indexing.
+          // Let's count unlocked only for fairness, or total. Let's use total.
+          currentCount = userState.farmPlots.length; 
+      }
       if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
       if (type === 'MACHINE') currentCount = userState.machineSlots?.length || 0;
 
@@ -134,10 +138,27 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   playSFX('success');
                   onUpdateState(prev => {
                       const newState = { ...prev, coins: prev.coins - finalCost };
-                      const newId = Date.now();
-                      if (type === 'PLOT') newState.farmPlots = [...prev.farmPlots, { id: newId, isUnlocked: true, cropId: null, plantedAt: null }];
-                      else if (type === 'PEN') newState.livestockSlots = [...(prev.livestockSlots || []), { id: newId, isUnlocked: true, animalId: null, fedAt: null }];
-                      else if (type === 'MACHINE') newState.machineSlots = [...(prev.machineSlots || []), { id: newId, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null }];
+                      
+                      if (type === 'PLOT') {
+                          // Check if there is a locked plot to unlock first
+                          const lockedPlotIndex = prev.farmPlots.findIndex(p => !p.isUnlocked);
+                          if (lockedPlotIndex !== -1) {
+                              const newPlots = [...prev.farmPlots];
+                              newPlots[lockedPlotIndex] = { ...newPlots[lockedPlotIndex], isUnlocked: true };
+                              newState.farmPlots = newPlots;
+                          } else {
+                              const newId = Date.now();
+                              newState.farmPlots = [...prev.farmPlots, { id: newId, isUnlocked: true, cropId: null, plantedAt: null }];
+                          }
+                      }
+                      else if (type === 'PEN') {
+                          const newId = Date.now();
+                          newState.livestockSlots = [...(prev.livestockSlots || []), { id: newId, isUnlocked: true, animalId: null, fedAt: null }];
+                      }
+                      else if (type === 'MACHINE') {
+                          const newId = Date.now();
+                          newState.machineSlots = [...(prev.machineSlots || []), { id: newId, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null }];
+                      }
                       return newState;
                   });
               } else {
@@ -151,10 +172,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   // --- INTERACTION LOGIC ---
   const handlePlotClick = (plot: any, e: React.MouseEvent) => {
+      // Fix: Allow clicking locked plots to show unlock dialog
       if (!plot.isUnlocked) {
-          playSFX('wrong'); // Feedback for locked
+          setSelectedId(plot.id);
+          setActiveModal('PLOT');
           return;
       }
+
       const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
       
       if (crop && (plot.hasBug || plot.hasWeed)) {
@@ -213,6 +237,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           const prod = PRODUCTS.find(p => p.id === animal.produceId);
           triggerHarvestFX(rect, prod?.emoji || '📦', 1, animal.exp);
           collectProduct(slot.id);
+      }
+  };
+
+  const handleFeedAnimal = (slot: any) => {
+      const res = feedAnimal(slot.id);
+      if (res && !res.success) {
+          playSFX('wrong');
+          alert(res.msg); // Show explicit error message
       }
   };
 
@@ -387,7 +419,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 setActiveModal('INVENTORY'); 
                             }
                             else if (isReady) handleCollectProduct(slot, e);
-                            else if (!isFed) feedAnimal(slot.id);
+                            else if (!isFed) handleFeedAnimal(slot);
                         }}
                         className={`
                             relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-md overflow-hidden flex flex-col items-center justify-center
@@ -448,7 +480,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             else if (isReady) handleCollectMachine(slot, e);
                             else if (!recipe) { 
                                 const firstRecipe = RECIPES.find(r => r.machineId === machine.id);
-                                if(firstRecipe) startProcessing(slot.id, firstRecipe.id);
+                                if(firstRecipe) {
+                                    const res = startProcessing(slot.id, firstRecipe.id);
+                                    if(res && !res.success) { playSFX('wrong'); alert(res.msg); }
+                                }
                             }
                         }}
                         className={`
@@ -755,7 +790,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
         {activeModal === 'ORDERS' && (
             <OrderBoard 
                 orders={userState.activeOrders || []} 
-                items={[...CROPS, ...PRODUCTS]}
+                items={[...CROPS, ...PRODUCTS]} // Pass full list including products
                 inventory={userState.harvestedCrops || {}}
                 onDeliver={(o) => deliverOrder(o)}
                 onRefresh={() => {

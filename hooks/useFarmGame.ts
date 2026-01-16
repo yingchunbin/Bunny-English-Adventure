@@ -281,7 +281,7 @@ export const useFarmGame = (
       const currentInventory = userState.inventory || {};
       const count = currentInventory[seedId] || 0;
       
-      if (count <= 0) return { success: false, msg: "Hết hạt giống rồi bé ơi!" };
+      if (count <= 0) return { success: false, msg: "Hết hạt giống rồi bé ơi! Hãy vào Cửa Hàng mua thêm." };
       
       playSFX('click');
       onUpdateState(prev => ({
@@ -453,10 +453,13 @@ export const useFarmGame = (
       const userFeedAmount = userState.harvestedCrops?.[animal.feedCropId] || 0;
 
       if (userFeedAmount < animal.feedAmount) {
-          return { success: false, msg: `Bé thiếu ${animal.feedAmount - userFeedAmount} ${feedName} để cho ${animal.name} ăn!` };
+          return { 
+              success: false, 
+              msg: `Bé cần ${animal.feedAmount} ${feedName} (trong Kho nông sản) để cho ${animal.name} ăn. Bé đang có ${userFeedAmount}. Hãy trồng thêm nhé!` 
+          };
       }
 
-      playSFX('eat'); // Changed sound
+      playSFX('eat'); 
       onUpdateState(prev => ({
           ...prev,
           harvestedCrops: {
@@ -508,7 +511,8 @@ export const useFarmGame = (
       // Check inputs
       for (const input of recipe.input) {
           if ((currentHarvest[input.id] || 0) < input.amount) {
-              return { success: false, msg: `Thiếu nguyên liệu!` };
+              const inputItem = [...CROPS, ...PRODUCTS].find(i => i.id === input.id);
+              return { success: false, msg: `Thiếu ${input.amount} ${inputItem?.name || 'nguyên liệu'} trong Kho nông sản!` };
           }
       }
 
@@ -554,9 +558,6 @@ export const useFarmGame = (
               machineSlots: prev.machineSlots?.map(s => s.id === slotId ? { ...s, activeRecipeId: null, startedAt: null } : s)
           };
       });
-      // Special logic: If collecting baked goods, check 'ach_bake' achievement if exists? 
-      // Actually updateMissionProgress is generic by type. 
-      // We can overload 'HARVEST' for this or just assume all collection is HARVEST.
       updateMissionProgress('HARVEST', 1); 
       return { success: true };
   };
@@ -568,7 +569,7 @@ export const useFarmGame = (
           if ((currentCrops[req.cropId] || 0) < req.amount) hasEnough = false;
       });
 
-      if (!hasEnough) return { success: false, msg: "Bé chưa đủ hàng để giao!" };
+      if (!hasEnough) return { success: false, msg: "Bé chưa đủ hàng trong Kho nông sản để giao!" };
 
       playSFX('success');
       onUpdateState(prev => {
