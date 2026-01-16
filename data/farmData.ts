@@ -85,12 +85,12 @@ export const ANIMALS: AnimalItem[] = [
     { id: 'fish_koi', name: 'Cá Koi', emoji: '🎏', type: 'ANIMAL', currency: 'STAR', cost: 5, produceId: 'fish_roe', produceTime: 120, feedCropId: 'rice', feedAmount: 1, exp: 50, minLevel: 6 },
     { id: 'snail', name: 'Ốc sên', emoji: '🐌', type: 'ANIMAL', currency: 'COIN', cost: 50, produceId: 'snail_shell', produceTime: 300, feedCropId: 'leafy_green', feedAmount: 1, exp: 10, minLevel: 1 },
     // More basic farm animals
-    { id: 'dog_guard', name: 'Chó giữ nhà', emoji: '🐕', type: 'ANIMAL', currency: 'COIN', cost: 1000, produceId: 'bone', produceTime: 360, feedCropId: 'bacon', feedAmount: 1, exp: 110, minLevel: 5 }, // Just for fun mechanic
+    { id: 'dog_guard', name: 'Chó giữ nhà', emoji: '🐕', type: 'ANIMAL', currency: 'COIN', cost: 1000, produceId: 'bone', produceTime: 360, feedCropId: 'bacon', feedAmount: 1, exp: 110, minLevel: 5 }, 
     { id: 'cat_pet', name: 'Mèo mướp', emoji: '🐈', type: 'ANIMAL', currency: 'COIN', cost: 800, produceId: 'yarn_ball', produceTime: 300, feedCropId: 'milk', feedAmount: 1, exp: 90, minLevel: 5 },
     { id: 'yak', name: 'Bò Tây Tạng', emoji: '🐂', type: 'ANIMAL', currency: 'STAR', cost: 20, produceId: 'yak_milk', produceTime: 400, feedCropId: 'wheat', feedAmount: 5, exp: 200, minLevel: 12 },
     { id: 'deer', name: 'Hươu', emoji: '🦌', type: 'ANIMAL', currency: 'STAR', cost: 12, produceId: 'antler', produceTime: 500, feedCropId: 'leafy_green', feedAmount: 4, exp: 140, minLevel: 10 },
     { id: 'bat', name: 'Dơi', emoji: '🦇', type: 'ANIMAL', currency: 'COIN', cost: 300, produceId: 'guano', produceTime: 150, feedCropId: 'strawberry', feedAmount: 1, exp: 40, minLevel: 6 },
-    { id: 'frog', name: 'Ếch', emoji: '🐸', type: 'ANIMAL', currency: 'COIN', cost: 100, produceId: 'frog_leg', produceTime: 100, feedCropId: 'insect', feedAmount: 1, exp: 20, minLevel: 2 }, // Joke item
+    { id: 'frog', name: 'Ếch', emoji: '🐸', type: 'ANIMAL', currency: 'COIN', cost: 100, produceId: 'frog_leg', produceTime: 100, feedCropId: 'rice', feedAmount: 1, exp: 20, minLevel: 2 }, // Fixed: Eats Rice
     { id: 'crab', name: 'Cua', emoji: '🦀', type: 'ANIMAL', currency: 'COIN', cost: 200, produceId: 'crab_meat', produceTime: 200, feedCropId: 'fish_roe', feedAmount: 1, exp: 35, minLevel: 7 },
     { id: 'lobster', name: 'Tôm hùm', emoji: '🦞', type: 'ANIMAL', currency: 'STAR', cost: 8, produceId: 'lobster_tail', produceTime: 300, feedCropId: 'fish_roe', feedAmount: 2, exp: 80, minLevel: 9 },
     { id: 'shrimp', name: 'Tôm', emoji: '🦐', type: 'ANIMAL', currency: 'COIN', cost: 150, produceId: 'shrimp_meat', produceTime: 120, feedCropId: 'rice', feedAmount: 1, exp: 25, minLevel: 4 },
@@ -113,6 +113,24 @@ export const PRODUCTS: Product[] = [
     { id: 'leather', name: 'Da thuộc', emoji: '👜', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 300 },
     { id: 'rabbit_fur', name: 'Lông thỏ', emoji: '🐇', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 110 },
     { id: 'quail_egg', name: 'Trứng cút', emoji: '🥚', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 30 },
+    { id: 'turkey_meat', name: 'Thịt gà tây', emoji: '🍖', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 250 },
+    { id: 'horse_hair', name: 'Lông ngựa', emoji: '🐎', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 300 },
+    { id: 'llama_wool', name: 'Len lạc đà', emoji: '🦙', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 320 },
+    { id: 'ostrich_egg', name: 'Trứng đà điểu', emoji: '🥚', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 400 },
+    { id: 'peacock_feather', name: 'Lông công', emoji: '🪶', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 500 },
+    { id: 'fish_roe', name: 'Trứng cá', emoji: '🟠', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 100 },
+    { id: 'snail_shell', name: 'Vỏ ốc', emoji: '🐚', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 60 },
+    { id: 'bone', name: 'Xương', emoji: '🦴', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 50 },
+    { id: 'yarn_ball', name: 'Cuộn len mèo', emoji: '🧶', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 150 },
+    { id: 'yak_milk', name: 'Sữa bò Yak', emoji: '🥛', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 250 },
+    { id: 'antler', name: 'Gạc hươu', emoji: '🦌', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 600 },
+    { id: 'guano', name: 'Phân dơi', emoji: '💩', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 200 },
+    { id: 'frog_leg', name: 'Đùi ếch', emoji: '🍗', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 80 },
+    { id: 'crab_meat', name: 'Thịt cua', emoji: '🦀', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 180 },
+    { id: 'lobster_tail', name: 'Đuôi tôm hùm', emoji: '🦞', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 450 },
+    { id: 'shrimp_meat', name: 'Tôm tươi', emoji: '🦐', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 120 },
+    { id: 'ink_sac', name: 'Túi mực', emoji: '⚫', type: 'PRODUCT', currency: 'COIN', cost: 0, sellPrice: 150 },
+
     // Processed Food - Bakery
     { id: 'bread', name: 'Bánh mì', emoji: '🍞', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 100 },
     { id: 'cookie', name: 'Bánh quy', emoji: '🍪', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 120 },
@@ -152,17 +170,23 @@ export const PRODUCTS: Product[] = [
     { id: 'sweater', name: 'Áo len', emoji: '🧥', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 600 },
     { id: 'hat', name: 'Mũ rơm', emoji: '👒', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 250 },
     { id: 'scarf', name: 'Khăn quàng', emoji: '🧣', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 400 },
+    { id: 'shirt', name: 'Áo sơ mi', emoji: '👔', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 350 },
     // Snacks
     { id: 'popcorn', name: 'Bắp rang', emoji: '🍿', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 120 },
     { id: 'fries', name: 'Khoai tây chiên', emoji: '🍟', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 180 },
     { id: 'chips', name: 'Bim bim', emoji: '🍘', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 150 },
     { id: 'salad', name: 'Salad', emoji: '🥗', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 220 },
     { id: 'sushi', name: 'Sushi', emoji: '🍣', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 450 },
+    { id: 'grilled_corn', name: 'Ngô nướng', emoji: '🌽', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 100 },
+    { id: 'grilled_meat', name: 'Thịt nướng', emoji: '🥩', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 300 },
     // Luxury/Misc
     { id: 'perfume', name: 'Nước hoa', emoji: '🧴', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 600 },
+    { id: 'floral_scent', name: 'Hương hoa', emoji: '🌸', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 350 },
     { id: 'bouquet', name: 'Bó hoa', emoji: '💐', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 400 },
+    { id: 'sunflower_bouquet', name: 'Bó hướng dương', emoji: '🌻', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 300 },
     { id: 'jam_strawberry', name: 'Mứt dâu', emoji: '🍯', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 250 },
     { id: 'jam_grape', name: 'Mứt nho', emoji: '🍇', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 280 },
+    { id: 'apple_jam', name: 'Mứt táo', emoji: '🍎', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 260 },
     { id: 'candle', name: 'Nến thơm', emoji: '🕯️', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 350 },
 ];
 
@@ -190,7 +214,7 @@ export const MACHINES: MachineItem[] = [
     { id: 'chocolatier', name: 'Máy Sô Cô La', emoji: '🍫', type: 'MACHINE', currency: 'COIN', cost: 3500, unlockPrice: 3500, description: 'Làm sô cô la', minLevel: 11 },
 ];
 
-// --- RECIPES (Sample of logic) ---
+// --- RECIPES ---
 export const RECIPES: ProcessingRecipe[] = [
     // Bakery
     { id: 'r_bread', machineId: 'bakery', name: 'Bánh mì', input: [{id: 'wheat', amount: 2}, {id: 'egg', amount: 1}], outputId: 'bread', duration: 30, exp: 20 },
@@ -206,6 +230,7 @@ export const RECIPES: ProcessingRecipe[] = [
     // Snack
     { id: 'r_popcorn', machineId: 'popcorn_pot', name: 'Bắp rang', input: [{id: 'corn', amount: 2}], outputId: 'popcorn', duration: 30, exp: 15 },
     { id: 'r_fries', machineId: 'snack_machine', name: 'Khoai tây chiên', input: [{id: 'potato', amount: 2}], outputId: 'fries', duration: 45, exp: 25 },
+    { id: 'r_chips', machineId: 'snack_machine', name: 'Bim bim', input: [{id: 'potato', amount: 1}, {id: 'corn', amount: 1}], outputId: 'chips', duration: 40, exp: 20 },
     // Loom
     { id: 'r_fabric', machineId: 'loom', name: 'Vải cotton', input: [{id: 'cotton', amount: 2}], outputId: 'cotton_fabric', duration: 60, exp: 30 },
     { id: 'r_yarn', machineId: 'loom', name: 'Cuộn len', input: [{id: 'wool', amount: 2}], outputId: 'wool_yarn', duration: 60, exp: 35 },
@@ -214,13 +239,44 @@ export const RECIPES: ProcessingRecipe[] = [
     { id: 'r_apple_juice', machineId: 'juice_press', name: 'Nước táo', input: [{id: 'apple_fruit', amount: 2}], outputId: 'apple_juice', duration: 45, exp: 25 },
     { id: 'r_carrot_juice', machineId: 'juice_press', name: 'Nước cà rốt', input: [{id: 'carrot', amount: 3}], outputId: 'carrot_juice', duration: 40, exp: 20 },
     { id: 'r_orange_juice', machineId: 'juice_press', name: 'Nước cam', input: [{id: 'orange_fruit', amount: 2}], outputId: 'orange_juice', duration: 45, exp: 25 },
+    { id: 'r_grape_juice', machineId: 'juice_press', name: 'Nước nho', input: [{id: 'grape', amount: 2}], outputId: 'grape_juice', duration: 50, exp: 30 },
+    { id: 'r_tomato_juice', machineId: 'juice_press', name: 'Nước cà chua', input: [{id: 'tomato', amount: 3}], outputId: 'tomato_juice', duration: 40, exp: 20 },
     // Sewing
     { id: 'r_shirt', machineId: 'sewing_machine', name: 'Áo sơ mi', input: [{id: 'cotton_fabric', amount: 2}], outputId: 'shirt', duration: 120, exp: 60 },
     { id: 'r_sweater', machineId: 'sewing_machine', name: 'Áo len', input: [{id: 'wool_yarn', amount: 3}], outputId: 'sweater', duration: 150, exp: 80 },
+    { id: 'r_scarf', machineId: 'sewing_machine', name: 'Khăn quàng', input: [{id: 'wool_yarn', amount: 2}], outputId: 'scarf', duration: 90, exp: 40 },
+    { id: 'r_hat', machineId: 'sewing_machine', name: 'Mũ rơm', input: [{id: 'wheat', amount: 5}], outputId: 'hat', duration: 60, exp: 30 },
     // Ice Cream
     { id: 'r_vanilla_ice', machineId: 'ice_cream_maker', name: 'Kem vani', input: [{id: 'cream', amount: 1}, {id: 'milk', amount: 1}, {id: 'sugar', amount: 1}], outputId: 'ice_cream', duration: 60, exp: 40 },
     // Candy
     { id: 'r_lollipop', machineId: 'candy_machine', name: 'Kẹo mút', input: [{id: 'sugar', amount: 2}, {id: 'strawberry', amount: 1}], outputId: 'candy', duration: 40, exp: 20 },
+    // Grill
+    { id: 'r_grilled_corn', machineId: 'grill', name: 'Ngô nướng', input: [{id: 'corn', amount: 2}], outputId: 'grilled_corn', duration: 30, exp: 15 },
+    { id: 'r_grilled_meat', machineId: 'grill', name: 'Thịt nướng', input: [{id: 'bacon', amount: 1}], outputId: 'grilled_meat', duration: 45, exp: 30 },
+    // Jam Maker
+    { id: 'r_jam_straw', machineId: 'jam_maker', name: 'Mứt dâu', input: [{id: 'strawberry', amount: 2}, {id: 'sugar', amount: 1}], outputId: 'jam_strawberry', duration: 60, exp: 35 },
+    { id: 'r_jam_grape', machineId: 'jam_maker', name: 'Mứt nho', input: [{id: 'grape', amount: 2}, {id: 'sugar', amount: 1}], outputId: 'jam_grape', duration: 60, exp: 35 },
+    { id: 'r_jam_apple', machineId: 'jam_maker', name: 'Mứt táo', input: [{id: 'apple_fruit', amount: 2}, {id: 'sugar', amount: 1}], outputId: 'apple_jam', duration: 60, exp: 35 },
+    // Coffee Kiosk
+    { id: 'r_coffee', machineId: 'coffee_kiosk', name: 'Cà phê sữa', input: [{id: 'coffee_bean', amount: 2}, {id: 'milk', amount: 1}, {id: 'sugar', amount: 1}], outputId: 'coffee', duration: 40, exp: 30 },
+    { id: 'r_tea', machineId: 'coffee_kiosk', name: 'Trà nóng', input: [{id: 'tea_leaf', amount: 2}, {id: 'sugar', amount: 1}], outputId: 'tea', duration: 30, exp: 20 },
+    // Salad Bar
+    { id: 'r_salad', machineId: 'salad_bar', name: 'Salad', input: [{id: 'leafy_green', amount: 2}, {id: 'tomato', amount: 1}, {id: 'cucumber', amount: 1}], outputId: 'salad', duration: 20, exp: 15 },
+    // Pizza Oven
+    { id: 'r_pizza', machineId: 'pizza_oven', name: 'Pizza', input: [{id: 'wheat', amount: 2}, {id: 'cheese', amount: 1}, {id: 'tomato', amount: 2}], outputId: 'pizza', duration: 90, exp: 70 },
+    // Smoothie Blender
+    { id: 'r_green_smoothie', machineId: 'smoothie_blender', name: 'Sinh tố xanh', input: [{id: 'leafy_green', amount: 2}, {id: 'apple_fruit', amount: 1}], outputId: 'green_smoothie', duration: 30, exp: 25 },
+    { id: 'r_strawberry_milk', machineId: 'smoothie_blender', name: 'Sữa dâu', input: [{id: 'strawberry', amount: 2}, {id: 'milk', amount: 1}], outputId: 'strawberry_milk', duration: 30, exp: 25 },
+    // Sushi Bar
+    { id: 'r_sushi', machineId: 'sushi_bar', name: 'Sushi', input: [{id: 'rice', amount: 2}, {id: 'fish_roe', amount: 1}], outputId: 'sushi', duration: 60, exp: 50 },
+    // Flower Shop
+    { id: 'r_bouquet', machineId: 'flower_shop', name: 'Bó hoa', input: [{id: 'rose', amount: 2}, {id: 'tulip', amount: 1}], outputId: 'bouquet', duration: 40, exp: 30 },
+    { id: 'r_sunflower_bouquet', machineId: 'flower_shop', name: 'Bó hướng dương', input: [{id: 'sunflower', amount: 3}], outputId: 'sunflower_bouquet', duration: 40, exp: 30 },
+    // Perfume Lab
+    { id: 'r_perfume', machineId: 'perfume_lab', name: 'Nước hoa', input: [{id: 'rose', amount: 3}], outputId: 'perfume', duration: 120, exp: 80 },
+    { id: 'r_floral_scent', machineId: 'perfume_lab', name: 'Hương hoa', input: [{id: 'tulip', amount: 3}], outputId: 'floral_scent', duration: 120, exp: 80 },
+    // Chocolatier
+    { id: 'r_chocolate', machineId: 'chocolatier', name: 'Sô cô la', input: [{id: 'cocoa', amount: 2}, {id: 'sugar', amount: 1}, {id: 'milk', amount: 1}], outputId: 'chocolate', duration: 90, exp: 60 },
 ];
 
 // --- DECORATIONS ---
