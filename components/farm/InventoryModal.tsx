@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem } from '../../types';
-import { Package, X, Sprout, Egg, Hammer, Coins, Sparkles, ArrowRight } from 'lucide-react';
+import { Package, X, Sprout, Egg, Hammer, Coins, Sparkles, ArrowRight, ShoppingBasket } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 
 interface InventoryModalProps {
@@ -28,7 +28,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   // Helper to render an item row
   const renderItemRow = (item: FarmItem, count: number, isSeed: boolean) => {
       // In select mode, show seeds even if 0 count to prompt buying
-      if (mode === 'SELECT_SEED' && !isSeed) return null;
+      // In VIEW mode, only show owned items
       if (mode === 'VIEW' && count <= 0) return null; 
 
       return (
@@ -80,7 +80,14 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     <Package size={24} className="text-slate-600"/>
                     <h2 className="text-xl font-black text-slate-700 uppercase tracking-tight">Túi Đồ</h2>
                 </div>
-                <button onClick={onClose} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm"><X size={20}/></button>
+                <div className="flex gap-2">
+                    {onGoToShop && (
+                        <button onClick={onGoToShop} className="bg-pink-500 text-white px-3 py-1.5 rounded-xl font-bold text-xs shadow-sm active:scale-95 flex items-center gap-1">
+                            <ShoppingBasket size={14}/> Shop
+                        </button>
+                    )}
+                    <button onClick={onClose} className="p-2 bg-white rounded-full text-slate-400 hover:text-slate-600 shadow-sm"><X size={20}/></button>
+                </div>
             </div>
 
             {/* Tabs */}

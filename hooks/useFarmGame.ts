@@ -10,18 +10,26 @@ export const useFarmGame = (
 ) => {
   const [now, setNow] = useState(Date.now());
   
-  // Helper: Create a single order
+  // Helper: Create a single order (Updated for new ecosystem)
   const createSingleOrder = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
       const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa", "Chị Ong Vàng", "Anh Kiến", "Cụ Voi"];
-      const unlockedCrops = CROPS.filter(c => !c.isMagic && (completedCount || 0) >= (c.unlockReq || 0));
       
-      const ownedAnimalIds = currentLivestock ? currentLivestock.map(s => s.animalId).filter(Boolean) : [];
-      const availableProducts = PRODUCTS.filter(p => {
-          const producer = ANIMALS.find(a => a.produceId === p.id);
-          return producer && ownedAnimalIds.includes(producer.id);
-      });
+      // Filter unlocked items
+      const level = userState.farmLevel || 1;
+      const unlockedCrops = CROPS.filter(c => !c.isMagic && level >= (c.unlockReq || 0));
+      
+      // Products available from machines or animals that user MIGHT have access to based on level
+      const unlockedAnimals = ANIMALS.filter(a => level >= (a.minLevel || 0));
+      const unlockedMachines = MACHINES.filter(m => level >= (m.minLevel || 0));
+      
+      const availableRawProducts = PRODUCTS.filter(p => 
+          p.type === 'PRODUCT' && unlockedAnimals.some(a => a.produceId === p.id)
+      );
+      const availableProcessed = PRODUCTS.filter(p =>
+          p.type === 'PROCESSED' && unlockedMachines.some(m => RECIPES.some(r => r.machineId === m.id && r.outputId === p.id))
+      );
 
-      const pool = [...unlockedCrops, ...availableProducts];
+      const pool = [...unlockedCrops, ...availableRawProducts, ...availableProcessed];
       const safePool = pool.length > 0 ? pool : [CROPS[0]]; // Fallback
 
       const count = Math.floor(Math.random() * 2) + 1; // 1 or 2 items per order
@@ -42,8 +50,8 @@ export const useFarmGame = (
           const itemData = [...CROPS, ...PRODUCTS].find(x => x.id === itemId);
           if (itemData) {
               totalValue += itemData.sellPrice * amount;
-              const expBase = itemData.type === 'PRODUCT' ? 20 : (itemData as Crop).exp || 10;
-              totalExp += expBase * amount * 6.0; 
+              const expBase = itemData.type === 'CROP' ? (itemData as Crop).exp : 20;
+              totalExp += expBase * amount * 3.0; // Balanced XP
           }
       }
 
@@ -53,7 +61,7 @@ export const useFarmGame = (
           requirements,
           rewardCoins: Math.ceil((totalValue * 1.5) / 10) * 10,
           rewardExp: Math.ceil(totalExp / 5) * 5,
-          expiresAt: Date.now() + (Math.random() * 5 + 5) * 60 * 1000 // 5-10 minutes
+          expiresAt: Date.now() + (Math.random() * 10 + 5) * 60 * 1000 // 5-15 minutes
       };
   };
 
@@ -84,6 +92,9 @@ export const useFarmGame = (
               
               newState.missions = [...currentAchievements, ...dailies];
               newState.lastMissionUpdate = todayStr;
+              // Reset Well Count on new day
+              newState.wellUsageCount = 0; 
+              newState.lastWellDate = todayStr;
               changed = true;
           }
 
@@ -126,7 +137,6 @@ export const useFarmGame = (
 
             // 2. Bugs & Weeds Spawn
             if (Math.random() < 0.01) { // 1% chance per second
-                // Prioritize finding plot without weed/bug
                 const cleanPlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
                 if (cleanPlots.length > 0) {
                     const target = cleanPlots[Math.floor(Math.random() * cleanPlots.length)];
@@ -197,6 +207,27 @@ export const useFarmGame = (
 
   // --- ACTIONS ---
 
+  const checkWellUsage = () => {
+      // 5 times per day max
+      if ((userState.wellUsageCount || 0) >= 5) {
+          return { allowed: false, msg: "Bé đã lấy nước 5 lần hôm nay rồi. Mai quay lại nhé!" };
+      }
+      return { allowed: true };
+  };
+
+  const useWell = () => {
+      onUpdateState(prev => {
+          const drops = Math.random() < 0.2 ? 5 : 3; // 20% chance for 5 drops, else 3
+          return {
+              ...prev,
+              waterDrops: prev.waterDrops + drops,
+              wellUsageCount: (prev.wellUsageCount || 0) + 1
+          };
+      });
+      playSFX('water');
+      return true; // Used successfully
+  };
+
   const plantSeed = (plotId: number, seedId: string) => {
       const currentInventory = userState.inventory || {};
       const count = currentInventory[seedId] || 0;
@@ -237,7 +268,6 @@ export const useFarmGame = (
   // Resolve Pest/Weed via Quiz
   const resolvePest = (plotId: number) => {
       onUpdateState(prev => {
-          // Grant some EXP for learning
           let newExp = (prev.farmExp || 0) + 10;
           let newLevel = prev.farmLevel || 1;
           if (newExp >= newLevel * 100) { newLevel += 1; newExp -= newLevel * 100; }
@@ -535,5 +565,5 @@ export const useFarmGame = (
       }));
   };
 
-  return { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, deliverOrder, generateOrders, addReward, canAfford, updateMissionProgress };
+  return { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, deliverOrder, generateOrders, addReward, canAfford, updateMissionProgress, checkWellUsage, useWell };
 };

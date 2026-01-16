@@ -12,6 +12,7 @@ import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
 import { SpeakingGame } from './components/SpeakingGame';
+import { ConfirmModal } from './components/ui/ConfirmModal'; // Import ConfirmModal
 import { getLevels, LEVELS, TEXTBOOKS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
@@ -21,7 +22,7 @@ const DEFAULT_USER_STATE: UserState = {
   grade: null,
   textbook: null,
   coins: 200, 
-  stars: 5, // Start with some stars
+  stars: 5, 
   currentAvatarId: 'bunny',
   completedLevels: [],
   levelStars: {},
@@ -36,8 +37,15 @@ const DEFAULT_USER_STATE: UserState = {
       { id: 3, isUnlocked: false, cropId: null, plantedAt: null },
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
   ],
-  livestockSlots: [],
-  machineSlots: [],
+  // Unlock first 2 slots by default for animals and machines
+  livestockSlots: [
+      { id: 1, isUnlocked: true, animalId: null, fedAt: null },
+      { id: 2, isUnlocked: true, animalId: null, fedAt: null },
+  ],
+  machineSlots: [
+      { id: 1, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null },
+      { id: 2, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null },
+  ],
   inventory: { 'carrot': 2, 'wheat': 2 }, 
   harvestedCrops: {},
   fertilizers: 3,
@@ -46,6 +54,8 @@ const DEFAULT_USER_STATE: UserState = {
   farmExp: 0,
   missions: FARM_ACHIEVEMENTS_DATA, 
   activeOrders: [], 
+  wellUsageCount: 0,
+  lastWellDate: '',
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
@@ -56,7 +66,7 @@ const DEFAULT_USER_STATE: UserState = {
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state_v7'); // Bump version
+        const saved = localStorage.getItem('turtle_english_state_v8'); // Bump version
         return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
       } catch (e) {
         return DEFAULT_USER_STATE;
@@ -70,9 +80,10 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [showConfirmBook, setShowConfirmBook] = useState(false); // State for confirm modal
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state_v7', JSON.stringify(userState));
+      localStorage.setItem('turtle_english_state_v8', JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
@@ -102,10 +113,9 @@ export default function App() {
     playSFX('success');
   };
 
-  const handleChangeBook = () => {
-      if (window.confirm("Bé có chắc muốn chọn lại Lớp và Sách không?")) {
-          setScreen(Screen.ONBOARDING);
-      }
+  const confirmChangeBook = () => {
+      setScreen(Screen.ONBOARDING);
+      setShowConfirmBook(false);
   };
 
   const handleToggleMute = () => {
@@ -182,7 +192,7 @@ export default function App() {
                           <button onClick={handleToggleMute} className={`p-2 rounded-full transition-colors border ${isMuted ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
                               {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                           </button>
-                          <button onClick={handleChangeBook} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors border border-blue-200" title="Chọn lại sách">
+                          <button onClick={() => setShowConfirmBook(true)} className="p-2 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition-colors border border-blue-200" title="Chọn lại sách">
                               <PenLine size={18} />
                           </button>
                           <button onClick={() => setShowSettings(true)} className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors border border-slate-200">
@@ -221,6 +231,7 @@ export default function App() {
               />
           )}
 
+          {/* ... Other Screens (CHAT, TIME_ATTACK, GAME) remain same ... */}
           {screen === Screen.CHAT && (
               <div className="h-full flex flex-col bg-white">
                   <div className="p-4 bg-white shadow-sm flex items-center gap-2 border-b border-slate-100">
@@ -297,7 +308,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem('turtle_english_state_v7');
+                      localStorage.removeItem('turtle_english_state_v8');
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
@@ -309,6 +320,17 @@ export default function App() {
                   <GeneralAchievements userState={userState} onClose={() => setShowAchievements(false)} />
               </div>
           )}
+
+          {/* Confirm Modal for Book Change */}
+          <ConfirmModal 
+              isOpen={showConfirmBook}
+              message="Bé có chắc muốn chọn lại Lớp và Sách không?"
+              onConfirm={confirmChangeBook}
+              onCancel={() => setShowConfirmBook(false)}
+              confirmText="Chọn lại"
+              cancelText="Hủy"
+              type="INFO"
+          />
       </div>
   );
 }

@@ -196,6 +196,10 @@ export interface UserState {
   farmLevel?: number;
   farmExp?: number;
 
+  // Well System
+  lastWellDate?: string;
+  wellUsageCount?: number;
+
   missions?: Mission[];
   lastMissionUpdate?: string; // Track day for daily reset
   activeOrders?: FarmOrder[]; 

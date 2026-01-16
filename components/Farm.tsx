@@ -24,7 +24,7 @@ interface FarmProps {
 type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES';
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, waterPlot, resolvePest, harvestPlot, harvestAll, buyAnimal, feedAnimal, collectProduct, buyMachine, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'QUIZ'>('NONE');
@@ -97,14 +97,19 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   const handleWellClick = () => {
+      const status = checkWellUsage();
+      if (!status.allowed) {
+          playSFX('wrong');
+          alert(status.msg);
+          return;
+      }
       setQuizContext({ type: 'WATER' });
       setActiveModal('QUIZ');
   };
 
   const onQuizSuccess = () => {
       if (quizContext?.type === 'WATER') {
-          addReward('WATER', 5);
-          playSFX('water');
+          useWell();
       } else if (quizContext?.type === 'PEST' && quizContext.plotId) {
           resolvePest(quizContext.plotId);
       }
@@ -115,12 +120,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   // --- RENDERERS ---
 
   const renderSectionTabs = () => (
-      <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-sm border-2 border-white sticky top-0 z-20 gap-1">
+      <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1">
           {[
-              { id: 'CROPS', label: 'Trồng Trọt', icon: <Tractor size={18}/>, color: 'text-green-600 bg-green-50' },
-              { id: 'ANIMALS', label: 'Chăn Nuôi', icon: <Bird size={18}/>, color: 'text-orange-600 bg-orange-50' },
-              { id: 'MACHINES', label: 'Chế Biến', icon: <Factory size={18}/>, color: 'text-blue-600 bg-blue-50' },
-              { id: 'SHOP', label: 'Cửa Hàng', icon: <ShoppingBasket size={18}/>, color: 'text-pink-600 bg-pink-50' },
+              { id: 'CROPS', label: 'Trồng Trọt', icon: <Tractor size={20}/>, color: 'text-green-600 bg-green-50' },
+              { id: 'ANIMALS', label: 'Chăn Nuôi', icon: <Bird size={20}/>, color: 'text-orange-600 bg-orange-50' },
+              { id: 'MACHINES', label: 'Chế Biến', icon: <Factory size={20}/>, color: 'text-blue-600 bg-blue-50' },
+              { id: 'SHOP', label: 'Cửa Hàng', icon: <ShoppingBasket size={20}/>, color: 'text-pink-600 bg-pink-50' },
           ].map(tab => (
               <button
                   key={tab.id}
@@ -128,7 +133,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       if (tab.id === 'SHOP') setActiveModal('SHOP');
                       else setActiveSection(tab.id as FarmSection);
                   }}
-                  className={`flex-1 py-2.5 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
+                  className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
                       (activeSection as string) === tab.id && tab.id !== 'SHOP'
                       ? `${tab.color.replace('text', 'bg').replace('bg', 'text-white').replace('50', '500')} shadow-md scale-105 border-b-4 border-black/10` 
                       : 'text-slate-400 hover:bg-slate-100'
@@ -142,14 +147,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   );
 
   const renderHUD = () => (
-      <div className="px-4 mb-4 flex gap-2 justify-center">
-          <button onClick={() => setActiveModal('MISSIONS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-indigo-100 text-indigo-600 font-black text-xs active:scale-95 transition-all relative">
+      <div className="px-4 py-2 flex gap-2 justify-center sticky top-[60px] z-30 pointer-events-auto">
+          <button onClick={() => setActiveModal('MISSIONS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-md border-2 border-indigo-100 text-indigo-600 font-black text-xs active:scale-95 transition-all relative">
               <Scroll size={16} /> Nhiệm Vụ
-              {/* Notification Dot if tasks available */}
+              {/* Notification Dot */}
               {userState.missions?.some(m => m.completed && !m.claimed) && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
           </button>
-          <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-sm border-b-4 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all">
+          <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-md border-2 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all">
               <Truck size={16} /> Đơn Hàng
+          </button>
+          {/* WELL ICON */}
+          <button onClick={handleWellClick} className="w-10 h-10 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
+              <Droplets size={20} />
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 rounded-full border border-white font-bold">
+                  {5 - (userState.wellUsageCount || 0)}
+              </span>
           </button>
       </div>
   );
@@ -175,24 +187,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   );
 
   const renderCrops = () => (
-      <div className="grid grid-cols-2 gap-4 px-4 pb-32 animate-fadeIn">
-          {/* Wisdom Well */}
-          <button 
-            onClick={handleWellClick}
-            className="col-span-2 bg-blue-100 rounded-[2rem] p-4 flex items-center justify-between border-4 border-blue-200 shadow-sm active:scale-95 transition-transform"
-          >
-              <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center text-2xl border-2 border-blue-200">🚰</div>
-                  <div className="text-left">
-                      <div className="font-black text-blue-700 text-sm uppercase">Giếng Thần</div>
-                      <div className="text-[10px] font-bold text-blue-400">Trả lời câu hỏi lấy nước</div>
-                  </div>
-              </div>
-              <div className="bg-white px-3 py-1 rounded-full text-blue-600 font-black text-xs border border-blue-200 flex items-center gap-1">
-                  <Droplets size={12} fill="currentColor"/> {userState.waterDrops}
-              </div>
-          </button>
-
+      <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
           {userState.farmPlots.map(plot => {
               const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
               const elapsed = crop && plot.plantedAt ? (now - plot.plantedAt) / 1000 : 0;
@@ -218,10 +213,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                           </div>
                       ) : crop ? (
                           <>
-                              {hasPest && !isReady && (
-                                  <div className="absolute inset-0 bg-black/40 z-20 flex flex-col items-center justify-center animate-pulse">
-                                      {plot.hasBug ? <Bug className="text-red-400 mb-1" size={32}/> : <div className="text-3xl">🌿</div>}
-                                      <span className="text-[8px] font-black text-white bg-red-500 px-2 py-1 rounded-full uppercase">Dọn dẹp ngay!</span>
+                              {/* Visual Pest Indicator Overlay */}
+                              {hasPest && (
+                                  <div className="absolute top-2 right-2 z-30 animate-bounce">
+                                      {plot.hasBug ? 
+                                        <div className="bg-red-500 text-white p-1 rounded-full border-2 border-white shadow-sm"><Bug size={16}/></div> : 
+                                        <div className="bg-green-600 text-white p-1 rounded-full border-2 border-white shadow-sm"><AlertTriangle size={16}/></div>
+                                      }
                                   </div>
                               )}
                               
@@ -254,7 +252,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const renderAnimals = () => {
       const slots = userState.livestockSlots || [];
       return (
-          <div className="grid grid-cols-2 gap-4 px-4 pb-32 animate-fadeIn">
+          <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
               {slots.map(slot => {
                   const animal = slot.animalId ? ANIMALS.find(a => a.id === slot.animalId) : null;
                   const isFed = !!slot.fedAt;
@@ -307,7 +305,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const renderMachines = () => {
       const slots = userState.machineSlots || [];
       return (
-          <div className="grid grid-cols-2 gap-4 px-4 pb-32 animate-fadeIn">
+          <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
               {slots.map(slot => {
                   const machine = slot.machineId ? MACHINES.find(m => m.id === slot.machineId) : null;
                   const recipe = slot.activeRecipeId ? RECIPES.find(r => r.id === slot.activeRecipeId) : null;
@@ -402,15 +400,19 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             </div>
         </div>
 
-        <div className="flex-1 relative">
-            {renderSectionTabs()}
-            {renderHUD()}
+        {/* TOP HUD AREA */}
+        {renderHUD()}
 
-            <div className="relative z-10 pb-32">
-                {activeSection === 'CROPS' && renderCrops()}
-                {activeSection === 'ANIMALS' && renderAnimals()}
-                {activeSection === 'MACHINES' && renderMachines()}
-            </div>
+        {/* MAIN SCROLLABLE AREA */}
+        <div className="flex-1 relative z-10 pb-4">
+            {activeSection === 'CROPS' && renderCrops()}
+            {activeSection === 'ANIMALS' && renderAnimals()}
+            {activeSection === 'MACHINES' && renderMachines()}
+        </div>
+
+        {/* BOTTOM TABS */}
+        <div className="sticky bottom-0 z-50">
+            {renderSectionTabs()}
         </div>
 
         {/* Harvest All Button - Floating */}
@@ -450,10 +452,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         setActiveModal('NONE');
                     }
                     if (action === 'UNLOCK') {
-                        // Redirect logic for unlock to button inside modal is redundant if modal handles it, 
-                        // but handleExpand is cleaner. Re-using handleExpand logic inside modal might be needed or close and confirm.
-                        // For simplicity, PlotModal's unlock button calls handleExpand via prop or we close and call it here.
-                        // Let's close and call expand.
                         setActiveModal('NONE');
                         handleExpand('PLOT');
                     }
