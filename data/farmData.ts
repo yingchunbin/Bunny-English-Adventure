@@ -1,10 +1,10 @@
 
 import { Crop, Decor, AnimalItem, Product, ProcessingRecipe, MachineItem, Mission } from '../types';
 
-// ... (Keep existing CROPS, ANIMALS, PRODUCTS, MACHINES, RECIPES, DECORATIONS arrays as they are - re-exporting minimal context or assuming previous content exists. 
-// Since I must provide full content, I will include the previous data and append the new Missions at the end) ...
+// ... (Keep existing CROPS, ANIMALS, PRODUCTS, MACHINES, RECIPES, DECORATIONS arrays as they are) ...
+// Since I need to output full content, I will include the existing data and append the new Missions.
 
-// --- CROPS (50 Types) ---
+// --- CROPS ---
 export const CROPS: Crop[] = [
   // Basics
   { id: 'carrot', name: 'Cà rốt', emoji: '🥕', type: 'CROP', currency: 'COIN', cost: 10, sellPrice: 20, growthTime: 10, exp: 5, unlockReq: 0 }, 
