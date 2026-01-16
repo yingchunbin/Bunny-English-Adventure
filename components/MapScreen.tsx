@@ -1,7 +1,7 @@
 
 import React, { memo, useMemo, useEffect, useRef } from 'react';
 import { LessonLevel } from '../types';
-import { Lock, Star, Play, Flag } from 'lucide-react';
+import { Lock, Star, Flag } from 'lucide-react';
 
 interface MapScreenProps {
   levels: LessonLevel[];
@@ -12,7 +12,6 @@ interface MapScreenProps {
 }
 
 export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevels, completedLevels, levelStars, onStartLevel }) => {
-  
   const currentLevelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,12 +22,10 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
     }
   }, []);
 
-  // Generate a winding SVG path
   const pathCoordinates = useMemo(() => {
       return levels.map((_, index) => {
-          const y = index * 120 + 50;
-          // Sine wave x position
-          const x = 50 + 35 * Math.sin(index * 0.8); 
+          const y = index * 140 + 80;
+          const x = 50 + 35 * Math.sin(index * 0.9); 
           return { x, y };
       });
   }, [levels]);
@@ -46,44 +43,34 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
   }, [pathCoordinates]);
 
   return (
-    <div className="w-full h-full overflow-y-auto no-scrollbar relative pb-32">
+    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#6AB04C]">
       
-      {/* Background World */}
-      <div className="absolute inset-0 w-full h-full pointer-events-none">
-          {/* Creating a long scrolling background */}
-          <div className="w-full" style={{ height: `${levels.length * 120 + 200}px` }}>
-              {/* Dirt Path */}
-              <svg className="absolute top-0 left-0 w-full h-full z-0" style={{ pointerEvents: 'none' }}>
-                  <path 
-                    d={svgPath} 
-                    fill="none" 
-                    stroke="#eecfa1" 
-                    strokeWidth="40" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                    style={{ filter: 'drop-shadow(0px 2px 0px rgba(0,0,0,0.1))' }}
-                  />
-                  <path 
-                    d={svgPath} 
-                    fill="none" 
-                    stroke="#deb887" 
-                    strokeWidth="34" 
-                    strokeDasharray="10 15"
-                    strokeLinecap="round"
-                  />
-              </svg>
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#FFF 2px, transparent 2px)', backgroundSize: '30px 30px' }}></div>
 
-              {/* Decor */}
-              {levels.map((_, i) => {
-                  if (i % 3 === 0) return <div key={`tree-${i}`} className="absolute text-6xl" style={{ top: `${i*120}px`, left: '10%' }}>🌲</div>
-                  if (i % 5 === 0) return <div key={`rock-${i}`} className="absolute text-4xl" style={{ top: `${i*120 + 50}px`, left: '80%' }}>🪨</div>
-                  return null;
-              })}
-          </div>
-      </div>
+      <div className="w-full relative" style={{ height: `${levels.length * 140 + 300}px` }}>
+          
+          {/* The Path (Stitched style) */}
+          <svg className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none">
+              <path 
+                d={svgPath} 
+                fill="none" 
+                stroke="#558C3D" 
+                strokeWidth="24" 
+                strokeLinecap="round" 
+              />
+              <path 
+                d={svgPath} 
+                fill="none" 
+                stroke="#FFFFFF" 
+                strokeWidth="4" 
+                strokeDasharray="10 15"
+                strokeLinecap="round"
+                opacity="0.6"
+              />
+          </svg>
 
-      {/* Level Nodes */}
-      <div className="relative w-full z-10" style={{ height: `${levels.length * 120 + 200}px` }}>
+          {/* Level Nodes */}
           {levels.map((level, idx) => {
               const pos = pathCoordinates[idx];
               const isUnlocked = unlockedLevels.includes(level.id);
@@ -95,33 +82,37 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
                   <div 
                     key={level.id}
                     ref={isCurrent ? currentLevelRef : null}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
                     style={{ left: `${pos.x}%`, top: `${pos.y}px` }}
                   >
-                      {/* Interaction Button */}
+                      {/* 3D Button Node */}
                       <button 
                         onClick={() => onStartLevel(level.id)}
                         disabled={!isUnlocked}
-                        className={`w-20 h-20 rounded-full flex items-center justify-center transition-transform active:scale-95 relative group ${
-                            isCompleted ? 'bg-green-500 border-b-8 border-green-700' :
-                            isCurrent ? 'bg-orange-500 border-b-8 border-orange-700 animate-bounce' :
-                            'bg-slate-400 border-b-8 border-slate-600 grayscale'
-                        } shadow-xl`}
+                        className={`
+                            w-20 h-20 rounded-full flex items-center justify-center transition-transform active:translate-y-2 relative
+                            ${isCompleted 
+                                ? 'bg-[#2ECC71] shadow-[0_6px_0_#27AE60,0_10px_10px_rgba(0,0,0,0.2)]' 
+                                : isCurrent 
+                                    ? 'bg-[#FF9F43] shadow-[0_6px_0_#E67E22,0_10px_10px_rgba(0,0,0,0.2)] animate-float' 
+                                    : 'bg-[#95A5A6] shadow-[0_6px_0_#7F8C8D,0_10px_10px_rgba(0,0,0,0.2)]'
+                            }
+                        `}
                       >
-                          {/* Inner Icon */}
-                          <div className="w-16 h-16 rounded-full border-4 border-white/30 flex items-center justify-center bg-black/10">
+                          {/* Inner Circle Highlight */}
+                          <div className="w-16 h-16 rounded-full border-4 border-white/20 flex items-center justify-center">
                               {isUnlocked ? (
-                                  <span className="text-2xl font-black text-white drop-shadow-md">{idx + 1}</span>
+                                  <span className="text-2xl font-black text-white text-sticker">{idx + 1}</span>
                               ) : (
                                   <Lock className="text-white/50" />
                               )}
                           </div>
 
-                          {/* Stars */}
+                          {/* Stars Ribbon */}
                           {isCompleted && (
-                              <div className="absolute -bottom-2 flex gap-0.5">
+                              <div className="absolute -bottom-3 bg-white px-2 py-1 rounded-full flex gap-0.5 shadow-sm border border-slate-100">
                                   {[1,2,3].map(s => (
-                                      <Star key={s} size={12} fill={s <= stars ? "#fbbf24" : "#4b5563"} className={s <= stars ? "text-yellow-300" : "text-slate-600"} />
+                                      <Star key={s} size={10} fill={s <= stars ? "#F1C40F" : "#ECF0F1"} className={s <= stars ? "text-yellow-400" : "text-slate-200"} />
                                   ))}
                               </div>
                           )}
@@ -129,19 +120,17 @@ export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevel
 
                       {/* Tooltip Label */}
                       {isCurrent && (
-                          <div className="absolute -top-12 bg-white px-3 py-1 rounded-xl shadow-lg border-2 border-orange-100 whitespace-nowrap animate-pop">
-                              <span className="text-xs font-black text-orange-600 uppercase">Học ngay!</span>
-                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45 border-r-2 border-b-2 border-orange-100"></div>
+                          <div className="absolute -top-12 bg-white px-4 py-2 rounded-xl shadow-xl animate-bounce">
+                              <span className="text-xs font-black text-slate-800 uppercase">Bắt đầu!</span>
+                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45"></div>
                           </div>
                       )}
                   </div>
               );
           })}
           
-          {/* Finish Line */}
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center">
-              <Flag size={48} className="text-red-500 fill-current animate-pulse"/>
-              <span className="wood-texture px-4 py-1 rounded text-white font-black text-xs uppercase shadow-md">Đích đến</span>
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center">
+              <Flag size={48} className="text-white fill-red-500 filter drop-shadow-lg"/>
           </div>
       </div>
     </div>
