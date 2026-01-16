@@ -58,7 +58,7 @@ export interface Achievement {
   isUnlocked: boolean; 
 }
 
-export type ItemType = 'CROP' | 'DECOR' | 'TOOL' | 'ANIMAL' | 'PRODUCT' | 'PROCESSED' | 'MACHINE' | 'PET_FOOD';
+export type ItemType = 'CROP' | 'DECOR' | 'TOOL' | 'ANIMAL' | 'PRODUCT' | 'PROCESSED' | 'MACHINE';
 
 export interface FarmItem {
   id: string;
@@ -190,7 +190,6 @@ export interface UserState {
   fertilizers: number; 
   waterDrops: number; 
   weather?: 'SUNNY' | 'RAINY'; 
-  season?: 'SPRING' | 'SUMMER' | 'AUTUMN' | 'WINTER';
   lastWeatherUpdate?: number; 
   decorations?: string[]; 
   petLevel?: number; 

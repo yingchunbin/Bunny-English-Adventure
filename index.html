@@ -4,77 +4,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Bunny English Adventure</title>
+    <title>Bunny English - Tiếng Anh Tiểu Học</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-      :root {
-        --color-bg: #F0F9FF; /* Brighter Sky Blue */
-        --color-primary: #0EA5E9;
-      }
-
       body {
         font-family: 'Nunito', sans-serif;
-        background-color: var(--color-bg);
-        color: #334155;
-        overscroll-behavior: none;
-        user-select: none;
+        overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
+        user-select: none; /* Prevent text selection */
         -webkit-tap-highlight-color: transparent;
-        overflow: hidden;
       }
-
-      h1, h2, h3, h4, h5, h6, .font-display, .btn-text {
-        font-family: 'Baloo 2', cursive;
+      /* Custom utility for 3D flip card */
+      .perspective-1000 {
+        perspective: 1000px;
       }
-      
-      /* --- JELLY BUTTONS --- */
-      .btn-jelly {
-        transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-        border-bottom-width: 4px;
-        transform: translateY(0);
+      .transform-style-3d {
+        transform-style: preserve-3d;
       }
-      .btn-jelly:active {
-        transform: translateY(4px);
-        border-bottom-width: 0px;
-        margin-top: 4px;
+      .backface-hidden {
+        backface-visibility: hidden;
       }
-      
-      .card-pop {
-        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      .rotate-y-180 {
+        transform: rotateY(180deg);
       }
-      .card-pop:active {
-        transform: scale(0.95);
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
-
-      /* Custom Scrollbar hide */
-      .no-scrollbar::-webkit-scrollbar { display: none; }
-      .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-      /* Animation for Floating Clouds */
-      @keyframes float-cloud {
-        0% { transform: translateX(0px) translateY(0px); }
-        50% { transform: translateX(10px) translateY(-5px); }
-        100% { transform: translateX(0px) translateY(0px); }
+      .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out forwards;
       }
-      .cloud-anim { animation: float-cloud 6s ease-in-out infinite; }
-
-      /* Animation for Walking Pets */
-      @keyframes walk-cycle {
-        0% { transform: translateX(0) scaleX(1); }
-        45% { transform: translateX(10px) scaleX(1); }
-        50% { transform: translateX(10px) scaleX(-1); }
-        95% { transform: translateX(0) scaleX(-1); }
-        100% { transform: translateX(0) scaleX(1); }
+      /* Hide scrollbar but keep functionality */
+      .no-scrollbar::-webkit-scrollbar {
+          display: none;
       }
-      .animate-walk {
-        animation: walk-cycle 10s infinite linear;
+      .no-scrollbar {
+          -ms-overflow-style: none;  /* IE and Edge */
+          scrollbar-width: none;  /* Firefox */
       }
-      
-      .glass-panel {
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 2px solid rgba(255, 255, 255, 0.8);
+      /* Bounce X animation for arrows */
+      @keyframes bounce-x {
+        0%, 100% { transform: translateX(0); }
+        50% { transform: translateX(5px); }
+      }
+      .animate-bounce-x {
+        animation: bounce-x 1s infinite;
       }
     </style>
   <script type="importmap">

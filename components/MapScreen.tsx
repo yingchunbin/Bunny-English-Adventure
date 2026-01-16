@@ -1,8 +1,7 @@
 
-import React, { memo, useMemo, useEffect, useRef, useState } from 'react';
+import React, { memo, useMemo, useEffect, useRef } from 'react';
 import { LessonLevel } from '../types';
-import { Lock, Star, Flag, Trophy } from 'lucide-react';
-import { Achievements } from './Achievements';
+import { Map, Star, Skull, Gamepad2, Lock, Play } from 'lucide-react';
 
 interface MapScreenProps {
   levels: LessonLevel[];
@@ -13,184 +12,170 @@ interface MapScreenProps {
 }
 
 export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevels, completedLevels, levelStars, onStartLevel }) => {
+  
   const currentLevelRef = useRef<HTMLDivElement>(null);
-  const [showAchievements, setShowAchievements] = useState(false);
 
-  // Auto-scroll to current level
+  // Auto-scroll to the latest unlocked level
   useEffect(() => {
     if (currentLevelRef.current) {
         setTimeout(() => {
             currentLevelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 300);
+        }, 500);
     }
-  }, [levels]);
+  }, []);
 
-  // Generate snake path
-  const pathCoordinates = useMemo(() => {
-      return levels.map((_, index) => {
-          // Snake pattern: x goes 20% -> 80% -> 20%
-          const y = index * 160 + 100; // Vertical spacing
-          const direction = Math.floor(index / 2) % 2 === 0 ? 1 : -1; // Zigzag direction
-          const offset = (index % 2 === 0) ? 0 : 30 * direction;
-          const x = 50 + offset; 
-          return { x, y };
-      });
-  }, [levels]);
+  // Calculate SVG Path for the road connecting the levels
+  const pathData = useMemo(() => {
+    if (levels.length === 0) return '';
+    
+    const nodeHeight = 180; // Increased spacing slightly for better text fit
+    const centerX = 50; // Percentage
+    const xOffset = 30; // Percentage swing left/right
 
-  const svgPath = useMemo(() => {
-      if (pathCoordinates.length === 0) return '';
-      let d = `M ${pathCoordinates[0].x}% ${pathCoordinates[0].y}px`;
-      for (let i = 1; i < pathCoordinates.length; i++) {
-          const prev = pathCoordinates[i-1];
-          const curr = pathCoordinates[i];
-          // Cubic bezier curve for smooth path
-          const cpY = (prev.y + curr.y) / 2;
-          d += ` C ${prev.x}% ${cpY}px, ${curr.x}% ${cpY}px, ${curr.x}% ${curr.y}px`;
-      }
-      return d;
-  }, [pathCoordinates]);
+    let d = `M ${centerX} 60`; 
+
+    levels.forEach((_, i) => {
+        if (i === levels.length - 1) return;
+        
+        const currentX = i % 2 === 0 ? centerX - xOffset : centerX + xOffset;
+        const currentY = (i * nodeHeight) + 60; 
+
+        const nextX = (i + 1) % 2 === 0 ? centerX - xOffset : centerX + xOffset;
+        const nextY = ((i + 1) * nodeHeight) + 60;
+
+        const cp1x = currentX;
+        const cp1y = currentY + (nodeHeight / 2);
+        const cp2x = nextX;
+        const cp2y = nextY - (nodeHeight / 2);
+
+        if (i === 0) {
+             d = `M ${currentX} ${currentY}`;
+        }
+        
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${nextX} ${nextY}`;
+    });
+
+    return d;
+  }, [levels.length]);
 
   return (
-    <div className="w-full h-full overflow-y-auto no-scrollbar relative bg-[#E0F7FA] pb-32">
+    <div className="flex flex-col items-center w-full min-h-full py-8 animate-fadeIn relative">
       
-      {/* Decorative Clouds */}
-      <div className="absolute top-20 left-10 text-6xl opacity-40 cloud-anim pointer-events-none">☁️</div>
-      <div className="absolute top-60 right-5 text-5xl opacity-30 cloud-anim pointer-events-none" style={{ animationDelay: '2s' }}>☁️</div>
-      <div className="absolute top-[500px] left-[-20px] text-6xl opacity-40 cloud-anim pointer-events-none" style={{ animationDelay: '1s' }}>☁️</div>
-
-      {/* Start Flag */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
-          <div className="bg-sky-500 text-white px-4 py-1 rounded-full text-xs font-black uppercase shadow-md mb-2">Bắt đầu</div>
-          <Flag size={32} className="text-red-500 fill-red-500 filter drop-shadow-md"/>
+      {/* Background Decor */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none z-0 overflow-hidden">
+          <div className="absolute top-20 left-10 text-6xl opacity-20 animate-pulse">☁️</div>
+          <div className="absolute top-60 right-10 text-6xl opacity-20 animate-pulse delay-700">☁️</div>
+          <div className="absolute bottom-40 left-20 text-6xl opacity-20 animate-pulse delay-1000">☁️</div>
       </div>
 
-      {/* Achievements Button (Floating - Static now) */}
-      <button 
-        className="fixed top-24 right-4 z-40 w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:scale-110 transition-transform active:scale-95"
-        onClick={() => setShowAchievements(true)} 
-      >
-          <Trophy size={24} className="text-white" fill="currentColor" />
-      </button>
-
-      <div className="w-full relative" style={{ height: `${levels.length * 160 + 200}px` }}>
-          
-          {/* Path Line */}
-          <svg className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none overflow-visible">
-              {/* Shadow Path */}
-              <path 
-                d={svgPath} 
+      <h2 className="text-2xl font-black text-blue-900 mb-8 flex items-center gap-2 z-10 bg-white/90 px-6 py-3 rounded-full shadow-lg border-2 border-blue-100 sticky top-4 backdrop-blur-md">
+        <Map className="text-blue-500" /> Bản đồ học tập
+      </h2>
+      
+      <div className="relative w-full max-w-md px-6 pb-32">
+        
+        {/* The Road */}
+        <svg className="absolute top-0 left-0 w-full h-full -z-10 pointer-events-none" style={{ minHeight: `${levels.length * 180}px` }}>
+            <path 
+                d={pathData} 
                 fill="none" 
-                stroke="#B2EBF2" 
-                strokeWidth="24" 
+                stroke="#cbd5e1" 
+                strokeWidth="16" 
                 strokeLinecap="round" 
-              />
-              {/* Dotted Line */}
-              <path 
-                d={svgPath} 
-                fill="none" 
-                stroke="#4DD0E1" 
-                strokeWidth="6" 
-                strokeDasharray="15 15"
-                strokeLinecap="round" 
-              />
-          </svg>
+                strokeDasharray="20 30"
+                className="drop-shadow-sm opacity-60"
+            />
+        </svg>
 
-          {/* Level Nodes */}
-          {levels.map((level, idx) => {
-              const pos = pathCoordinates[idx];
-              const isUnlocked = idx === 0 || unlockedLevels.includes(level.id); 
-              const isCompleted = completedLevels.includes(level.id);
-              const isCurrent = isUnlocked && !isCompleted;
-              const stars = levelStars[level.id] || 0;
+        <div className="flex flex-col items-center gap-[88px] w-full mt-4">
+            {levels.map((level, idx) => {
+                const isUnlocked = unlockedLevels.includes(level.id);
+                const isCompleted = completedLevels.includes(level.id);
+                const stars = levelStars?.[level.id] || 0;
+                
+                // Determine if this is the "current" level (unlocked but not completed, OR the last unlocked one)
+                // Simplified: It's current if unlocked and not completed.
+                const isCurrent = isUnlocked && !isCompleted;
+                
+                // Zig-zag layout
+                const translateX = idx % 2 === 0 ? '-translate-x-14' : 'translate-x-14';
 
-              return (
-                  <div 
-                    key={level.id}
+                return (
+                <div 
+                    key={level.id} 
                     ref={isCurrent ? currentLevelRef : null}
-                    className="absolute transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center z-10"
-                    style={{ left: `${pos.x}%`, top: `${pos.y}px` }}
-                  >
-                      {/* Button */}
-                      <button 
-                        onClick={() => isUnlocked ? onStartLevel(level.id) : null}
-                        disabled={!isUnlocked}
-                        className={`
-                            w-20 h-20 rounded-[2.5rem] flex items-center justify-center transition-all duration-200 relative btn-jelly
-                            ${isCompleted 
-                                ? 'bg-emerald-400 border-emerald-600' // Green for completed
-                                : isCurrent 
-                                    ? 'bg-sky-500 border-sky-700' // Blue for current
-                                    : 'bg-slate-200 border-slate-300' // Gray for locked
-                            }
-                            shadow-lg
-                        `}
-                      >
-                          {/* Inner Content */}
-                          <div className="flex flex-col items-center justify-center">
-                              {isUnlocked ? (
-                                  <>
-                                    <span className={`text-2xl font-black text-white drop-shadow-md`}>{idx + 1}</span>
-                                    {isCompleted && (
-                                        <div className="flex -space-x-1 mt-1">
-                                            {[1,2,3].map(s => (
-                                                <Star key={s} size={10} fill={s <= stars ? "#FDE047" : "#CBD5E1"} className={s <= stars ? "text-yellow-300" : "text-slate-300"} />
-                                            ))}
-                                        </div>
-                                    )}
-                                  </>
-                              ) : (
-                                  <Lock className="text-slate-400" size={24} />
-                              )}
-                          </div>
-                      </button>
+                    className={`relative flex flex-col items-center group transition-transform duration-500 ${translateX}`}
+                >
+                    {/* Level Button */}
+                    <button 
+                    onClick={() => onStartLevel(level.id)} 
+                    disabled={!isUnlocked} 
+                    className={`
+                        relative w-24 h-24 rounded-[2.5rem] flex items-center justify-center border-b-[6px] shadow-xl transition-all z-10 
+                        ${!isUnlocked 
+                            ? "bg-slate-100 border-slate-300 text-slate-300 cursor-not-allowed" 
+                            : "hover:scale-110 active:scale-95 cursor-pointer hover:-translate-y-1"
+                        }
+                        ${level.type === 'EXAM' 
+                            ? "bg-gradient-to-b from-red-400 to-red-500 border-red-700 ring-4 ring-red-100" 
+                            : level.type === 'GAME' 
+                                ? "bg-gradient-to-b from-purple-400 to-purple-500 border-purple-700 ring-4 ring-purple-100" 
+                                : isCompleted 
+                                    ? "bg-gradient-to-b from-green-400 to-green-500 border-green-700" 
+                                    : "bg-gradient-to-b from-blue-400 to-blue-500 border-blue-700"
+                        }
+                    `}
+                    >
+                        <span className="text-3xl font-black text-white drop-shadow-md">
+                            {level.type === 'EXAM' ? <Skull size={32}/> : level.type === 'GAME' ? <Gamepad2 size={32}/> : idx + 1}
+                        </span>
+                        
+                        {/* Lock Icon */}
+                        {!isUnlocked && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-white/40 rounded-[2.5rem] backdrop-blur-[1px]">
+                                <Lock className="text-slate-500" size={24} />
+                            </div>
+                        )}
 
-                      {/* Tooltip Label for Current Level */}
-                      {isCurrent && (
-                          <div className="absolute -top-14 bg-white px-4 py-2 rounded-xl shadow-xl animate-bounce z-20 whitespace-nowrap text-center">
-                              <span className="text-xs font-black text-sky-600 uppercase tracking-wide block">Học ngay!</span>
-                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rotate-45"></div>
-                          </div>
-                      )}
-                      
-                      {/* Level Title */}
-                      {isUnlocked && (
-                          <div className="mt-3 bg-white/60 px-3 py-1.5 rounded-xl backdrop-blur-sm shadow-sm border border-white/50">
-                              <span className="text-[10px] font-bold text-slate-600 truncate max-w-[120px] block text-center">{level.title.split(':')[0]}</span>
-                          </div>
-                      )}
-                  </div>
-              );
-          })}
+                        {/* "Start Here" Indicator */}
+                        {isCurrent && (
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center z-20 animate-bounce">
+                                <div className="bg-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg border-2 border-white whitespace-nowrap flex items-center gap-1">
+                                    <Play size={10} fill="currentColor" /> HỌC NGAY
+                                </div>
+                                <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-orange-500"></div>
+                            </div>
+                        )}
+                    </button>
+
+                    {/* Stars */}
+                    {isUnlocked && (
+                        <div className="absolute -bottom-4 flex gap-0.5 bg-white/90 px-2 py-1 rounded-full shadow-sm border border-slate-100 transform z-20">
+                            {[1,2,3].map(s => (
+                                <Star 
+                                    key={s} 
+                                    size={14} 
+                                    fill={s <= stars ? "#FACC15" : "#E2E8F0"}
+                                    strokeWidth={0}
+                                    className={s <= stars ? "scale-110" : ""} 
+                                />
+                            ))}
+                        </div>
+                    )}
+                    
+                    {/* Unit Title - Fixed Truncation */}
+                    <div className="absolute top-28 w-40 flex flex-col items-center z-0">
+                        <div className="bg-white/95 px-3 py-2 rounded-xl shadow-sm border-2 border-slate-100 text-center backdrop-blur-sm">
+                            <p className="text-[11px] font-bold text-slate-700 leading-tight line-clamp-2">
+                                {level.title}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                );
+            })}
+        </div>
       </div>
-
-      {/* Learning Achievements Modal */}
-      {showAchievements && (
-          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
-              <div className="w-full max-w-md h-[80vh] bg-white rounded-3xl shadow-2xl overflow-hidden">
-                  {/* We reuse the Achievements component but pass userState and onClose */}
-                  {/* Note: In a real app we'd pass userState via props or context. Assuming parent passes it. 
-                      Since MapScreen doesn't have full userState in props, we might need to mock or lift state. 
-                      Ideally, MapScreen should receive userState or just the achievement data. 
-                      
-                      FIX: MapScreen props updated to assume we can access achievements data or we lift this modal to App.tsx. 
-                      For now, to fix the jumping trophy, I'm putting the modal trigger here. 
-                      However, `userState` is missing in `MapScreenProps`. 
-                      I will pass `userState` to `MapScreen` in `App.tsx`.
-                  */}
-                  {/* Placeholder until parent passes state - effectively handled in App.tsx generally, 
-                      but if we want it here, we need to update the Interface. 
-                      
-                      Let's assume for this specific file update, we will lift the modal to App.tsx or pass userState.
-                      I will render a simple view here if props are missing or update App.tsx to pass it.
-                  */}
-                  <div className="p-6 text-center">
-                      <h3 className="text-xl font-black mb-4">Bảng Thành Tích</h3>
-                      <p className="text-slate-500 mb-6">Bạn cần hoàn thành các bài học để mở khóa!</p>
-                      <button onClick={() => setShowAchievements(false)} className="bg-slate-200 px-6 py-3 rounded-xl font-bold">Đóng</button>
-                  </div>
-              </div>
-          </div>
-      )}
     </div>
   );
 });
