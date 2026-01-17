@@ -151,6 +151,7 @@ export interface FarmOrder {
   requirements: { cropId: string; amount: number }[];
   rewardCoins: number;
   rewardExp: number;
+  rewardStars?: number; // Added stars reward
   expiresAt: number; 
 }
 

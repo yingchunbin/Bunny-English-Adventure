@@ -629,7 +629,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                           )}
 
                           {/* SPEED UP - Only if working and not finished */}
-                          {machine && recipe && renderSpeedUpButton('MACHINE', slot.id)}
+                          {/* FIX: Moved to bottom-left to avoid overlap with Queue */}
+                          {machine && recipe && renderSpeedUpButton('MACHINE', slot.id, 'absolute bottom-2 left-2')}
 
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />

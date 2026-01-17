@@ -99,12 +99,19 @@ export const useFarmGame = (
       // Factor: 3x production time to be safe and relaxed for kids.
       const durationMinutes = Math.max(15, maxProductionTime * 3);
 
+      // Economy & Reward Calculation
+      // Multiplier increased to 2.5 to ensure profit
+      const finalCoins = Math.ceil((totalValue * 2.5) / 10) * 10;
+      // 30% Chance to get 1-3 Stars
+      const rewardStars = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0;
+
       return {
           id: Math.random().toString(36).substr(2, 9),
           npcName: npcs[Math.floor(Math.random() * npcs.length)],
           requirements,
-          rewardCoins: Math.ceil((totalValue * 1.5) / 10) * 10,
+          rewardCoins: finalCoins,
           rewardExp: Math.ceil(totalExp / 5) * 5,
+          rewardStars: rewardStars,
           expiresAt: Date.now() + (durationMinutes * 60 * 1000)
       };
   };
@@ -772,6 +779,7 @@ export const useFarmGame = (
           return {
               ...prev,
               coins: prev.coins + order.rewardCoins,
+              stars: prev.stars + (order.rewardStars || 0), // Award stars
               harvestedCrops: newHarvested,
               farmLevel: newLevel,
               farmExp: newExp,
