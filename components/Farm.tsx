@@ -891,6 +891,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     setProductionConfig(null);
                 }}
                 queueLength={userState.machineSlots?.find(s => s.id === productionConfig.slotId)?.queue?.length || 0}
+                onShowAlert={handleShowAlert}
             />
         )}
 

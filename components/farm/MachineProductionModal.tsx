@@ -1,8 +1,9 @@
 
 import React from 'react';
-import { MachineItem, ProcessingRecipe, Crop, Product } from '../../types';
-import { X, Clock, Zap, ArrowRight, AlertCircle, ChefHat, Layers } from 'lucide-react';
+import { MachineItem, ProcessingRecipe, Crop, Product, FarmItem } from '../../types';
+import { X, Clock, Zap, ArrowRight, AlertCircle, ChefHat, Layers, Info } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
+import { CROPS, ANIMALS, MACHINES, RECIPES } from '../../data/farmData';
 
 interface MachineProductionModalProps {
   machine: MachineItem;
@@ -11,16 +12,49 @@ interface MachineProductionModalProps {
   allItems: (Crop | Product)[];
   onProduce: (recipeId: string) => void;
   onClose: () => void;
-  queueLength: number; // New prop
+  queueLength: number; 
+  onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
 }
 
 export const MachineProductionModal: React.FC<MachineProductionModalProps> = ({ 
-    machine, recipes, inventory, allItems, onProduce, onClose, queueLength
+    machine, recipes, inventory, allItems, onProduce, onClose, queueLength, onShowAlert
 }) => {
 
   const handleStart = (recipeId: string) => {
       playSFX('click');
       onProduce(recipeId);
+  };
+
+  const handleIngredientClick = (item: FarmItem) => {
+      playSFX('click');
+      let msg = "";
+      
+      // 1. Check Crop
+      const crop = CROPS.find(c => c.id === item.id);
+      if (crop) {
+          msg = `🌱 ${item.name} là Nông sản. Bé hãy trồng cây nhé!`;
+      } else {
+          // 2. Check Animal Product
+          const animal = ANIMALS.find(a => a.produceId === item.id);
+          if (animal) {
+              msg = `🐮 ${item.name} lấy từ ${animal.name}. Bé hãy nuôi nó nhé!`;
+          } else {
+              // 3. Check Machine Product
+              const recipe = RECIPES.find(r => r.outputId === item.id);
+              if (recipe) {
+                  const machine = MACHINES.find(m => m.id === recipe.machineId);
+                  if (machine) {
+                      msg = `🏭 ${item.name} làm từ máy ${machine.name}.`;
+                  }
+              }
+          }
+      }
+
+      if (msg) {
+          onShowAlert(msg, 'INFO');
+      } else {
+          onShowAlert(`Bé hãy tìm ${item.name} trong Nông trại nhé!`, 'INFO');
+      }
   };
 
   const MAX_QUEUE = 3;
@@ -99,7 +133,12 @@ export const MachineProductionModal: React.FC<MachineProductionModalProps> = ({
                                     {/* Ingredients Grid */}
                                     <div className="flex flex-wrap gap-2">
                                         {ingredientsList.map((ing, idx) => (
-                                            <div key={idx} className={`flex flex-col items-center p-1.5 rounded-xl border-2 min-w-[50px] ${ing.enough ? 'bg-slate-50 border-slate-100' : 'bg-red-50 border-red-100'}`}>
+                                            <div 
+                                                key={idx} 
+                                                onClick={() => ing.item && handleIngredientClick(ing.item)}
+                                                className={`relative group flex flex-col items-center p-1.5 rounded-xl border-2 min-w-[50px] cursor-pointer hover:scale-105 transition-transform ${ing.enough ? 'bg-slate-50 border-slate-100' : 'bg-red-50 border-red-100'}`}
+                                            >
+                                                <Info size={10} className="absolute top-0 right-0 text-blue-400 opacity-0 group-hover:opacity-100" />
                                                 <span className="text-xl leading-none mb-1">{ing.item?.emoji}</span>
                                                 <span className={`text-[9px] font-black ${ing.enough ? 'text-slate-600' : 'text-red-500'}`}>
                                                     {ing.has}/{ing.amount}
