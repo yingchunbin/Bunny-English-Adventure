@@ -129,13 +129,20 @@ export const useFarmGame = (
           let newState = { ...prev };
           let changed = false;
 
-          const hasAchievements = prev.missions?.some(m => m.category === 'ACHIEVEMENT');
-          if (!hasAchievements) {
-              const achievements = FARM_ACHIEVEMENTS_DATA;
-              newState.missions = [...(prev.missions || []), ...achievements];
+          // --- FIX: MERGE MISSING ACHIEVEMENTS ---
+          // Identify existing achievement IDs in user state
+          const currentMissionIds = new Set(prev.missions?.map(m => m.id) || []);
+          
+          // Find achievements in MASTER DATA that are NOT in user state
+          const missingAchievements = FARM_ACHIEVEMENTS_DATA.filter(ach => !currentMissionIds.has(ach.id));
+
+          if (missingAchievements.length > 0) {
+              // Append missing achievements
+              newState.missions = [...(prev.missions || []), ...missingAchievements];
               changed = true;
           }
 
+          // Daily Mission Reset Logic
           if (prev.lastMissionUpdate !== todayStr) {
               const currentAchievements = newState.missions?.filter(m => m.category === 'ACHIEVEMENT') || [];
               const dailies = [...DAILY_MISSION_POOL]

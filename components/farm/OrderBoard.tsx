@@ -106,7 +106,7 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                     </div>
                                     <div className="flex gap-2">
                                         <div className="flex items-center gap-1 text-[10px] font-black text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200"><Coins size={12} fill="currentColor"/> {order.rewardCoins}</div>
-                                        {order.rewardStars && order.rewardStars > 0 && (
+                                        {(order.rewardStars || 0) > 0 && (
                                             <div className="flex items-center gap-1 text-[10px] font-black text-purple-700 bg-purple-100 px-3 py-1.5 rounded-full border border-purple-200"><Star size={12} fill="currentColor"/> {order.rewardStars}</div>
                                         )}
                                         <div className="flex items-center gap-1 text-[10px] font-black text-blue-700 bg-blue-100 px-3 py-1.5 rounded-full border border-blue-200"><Zap size={12} fill="currentColor"/> {order.rewardExp}</div>

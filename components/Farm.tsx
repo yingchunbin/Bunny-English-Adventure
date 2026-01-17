@@ -589,7 +589,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
                   // Determine possible outputs for this machine (to display icons above)
                   const possibleOutputs = machine ? RECIPES.filter(r => r.machineId === machine.id).map(r => r.outputId) : [];
-                  const uniqueOutputs = [...new Set(possibleOutputs)].slice(0, 3); // Max 3 icons
+                  const uniqueOutputs = [...new Set(possibleOutputs)]; // No slice, show all
                   const outputProducts = uniqueOutputs.map(oid => PRODUCTS.find(p => p.id === oid)).filter(Boolean);
 
                   return (
@@ -643,14 +643,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               <>
                                   {/* PRODUCT PREVIEW ICONS (Floating Above) */}
                                   {!recipe && !hasStorage && (
-                                      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1 z-10 bg-white/80 px-2 py-1 rounded-full shadow-sm border border-slate-100 animate-bounce-slight">
+                                      <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-0.5 z-10 bg-white/80 px-2 py-1 rounded-xl shadow-sm border border-slate-100 animate-bounce-slight max-w-[80%]">
                                           {outputProducts.map(p => (
-                                              <span key={p?.id} className="text-lg leading-none filter drop-shadow-sm">{p?.emoji}</span>
+                                              <span key={p?.id} className="text-sm leading-none filter drop-shadow-sm">{p?.emoji}</span>
                                           ))}
                                       </div>
                                   )}
 
-                                  <div className={`text-6xl z-10 relative drop-shadow-md transition-all mt-4 ${recipe ? 'animate-bounce-slight' : ''}`}>
+                                  <div className={`text-6xl z-10 relative drop-shadow-md transition-all mt-6 ${recipe ? 'animate-bounce-slight' : ''}`}>
                                       {machine.emoji}
                                   </div>
                                   
