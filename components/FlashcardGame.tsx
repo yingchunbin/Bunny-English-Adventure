@@ -171,7 +171,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
   if (mode === 'LEARN') {
     return (
-      <div className="flex flex-col items-center w-full max-w-md mx-auto p-4 animate-fadeIn relative h-full max-h-[600px]">
+      <div className="flex flex-col items-center w-full max-w-md mx-auto p-4 animate-fadeIn h-full">
         {/* Progress Dots */}
         <div className="w-full flex items-center justify-between mb-4 flex-shrink-0">
             <h2 className="text-xs font-black text-blue-600 bg-blue-100 px-3 py-1 rounded-full border border-blue-200">
@@ -184,8 +184,8 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
             </div>
         </div>
         
-        {/* FLASHCARD CONTAINER */}
-        <div className="relative w-full flex-1 perspective-1000 group z-10 mb-4 min-h-[350px]">
+        {/* FLASHCARD CONTAINER - Fixed Aspect Ratio to prevent layout jumping */}
+        <div className="relative w-full max-w-sm aspect-[3/4] max-h-[60vh] perspective-1000 group z-10 mb-6 flex-shrink-0">
           <div className={`relative w-full h-full duration-500 transform-style-3d transition-transform cursor-pointer ${isFlipped ? 'rotate-y-180' : ''}`} onClick={handleFlip}>
             
             {/* FRONT CARD (EN + VI) */}
@@ -196,7 +196,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
                 
                 <div className="z-10 text-center flex flex-col items-center gap-6">
                     <div>
-                        <h3 className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tight mb-2 drop-shadow-sm">
+                        <h3 className="text-4xl sm:text-5xl font-black text-blue-600 tracking-tight mb-2 drop-shadow-sm break-words px-2">
                             {currentWord.english}
                         </h3>
                         <div className="w-16 h-1 bg-gray-100 mx-auto rounded-full"></div>
@@ -225,34 +225,36 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
             {/* BACK CARD (EN + IPA + EXAMPLE) */}
             <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white border-4 border-orange-100 rounded-[2rem] shadow-xl flex flex-col overflow-hidden">
-                {/* Header Section */}
-                <div className="bg-orange-50/50 p-6 flex flex-col items-center justify-center border-b border-orange-100">
-                     <h3 className="text-3xl font-black text-slate-800">
+                {/* Header Section (Fixed Height) */}
+                <div className="h-1/3 min-h-[100px] bg-orange-50/50 p-4 flex flex-col items-center justify-center border-b border-orange-100">
+                     <h3 className="text-3xl font-black text-slate-800 text-center leading-tight">
                         {currentWord.english}
                      </h3>
                      <span className="text-gray-400 font-mono text-lg italic mt-1">/{currentWord.pronunciation}/</span>
                 </div>
 
-                {/* Example Section */}
-                <div className="flex-1 p-6 flex flex-col justify-center items-center bg-white">
-                    <div className="w-full bg-blue-50 p-5 rounded-2xl border border-blue-100 relative text-center">
+                {/* Example Section (Fills remaining space) */}
+                <div className="flex-1 p-4 flex flex-col items-center justify-center bg-white">
+                    <div className="w-full bg-blue-50 p-4 rounded-2xl border border-blue-100 relative text-center flex flex-col items-center gap-3">
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 text-blue-600 text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-wider shadow-sm border border-blue-200">
                             Ví dụ
                         </div>
                         
-                        <p className="text-xl font-bold text-slate-700 mt-2 mb-2 leading-snug">
-                            "{currentWord.exampleEn}"
-                        </p>
-                        <p className="text-sm font-medium text-slate-500 italic mb-4">
-                            {currentWord.exampleVi}
-                        </p>
+                        <div className="mt-2 flex-1 flex flex-col justify-center">
+                            <p className="text-lg font-bold text-slate-700 leading-snug">
+                                "{currentWord.exampleEn}"
+                            </p>
+                            <p className="text-sm font-medium text-slate-500 italic mt-1">
+                                {currentWord.exampleVi}
+                            </p>
+                        </div>
 
                         <button 
                             onClick={(e) => {
                                 e.stopPropagation();
                                 playAudio(currentWord.exampleEn, 0.85); // Slower for sentences
                             }}
-                            className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 text-blue-500 font-bold text-xs hover:bg-blue-50 active:scale-95 transition-all"
+                            className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 text-blue-500 font-bold text-xs hover:bg-blue-50 active:scale-95 transition-all mt-auto"
                         >
                             <Headphones size={14} /> Nghe cả câu
                         </button>
@@ -262,8 +264,8 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
           </div>
         </div>
 
-        {/* Navigation Button */}
-        <div className="w-full px-1 flex-shrink-0">
+        {/* Navigation Button - Pushed to bottom properly */}
+        <div className="w-full px-1 mt-auto pb-4">
           <button onClick={handleNextLearn} className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-bold text-xl shadow-lg shadow-green-200 active:translate-y-1 transition-all flex items-center justify-center gap-3">
             {currentIndex < words.length - 1 ? "Tiếp theo" : "Làm bài tập"} <ArrowRight size={24} />
           </button>
