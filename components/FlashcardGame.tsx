@@ -184,15 +184,16 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
             </div>
         </div>
         
-        {/* FLASHCARD CONTAINER - Fixed Aspect Ratio to prevent layout jumping */}
-        <div className="relative w-full max-w-sm aspect-[3/4] max-h-[60vh] perspective-1000 group z-10 mb-6 flex-shrink-0">
+        {/* FLASHCARD CONTAINER - Fixed Aspect Ratio & Stable Layout */}
+        <div className="relative w-full max-w-sm aspect-[3/4] max-h-[55vh] perspective-1000 group z-10 mb-6 flex-shrink-0">
           <div className={`relative w-full h-full duration-500 transform-style-3d transition-transform cursor-pointer ${isFlipped ? 'rotate-y-180' : ''}`} onClick={handleFlip}>
             
             {/* FRONT CARD (EN + VI) */}
-            <div className="absolute w-full h-full backface-hidden bg-white border-4 border-blue-100 rounded-[2rem] shadow-xl flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                {/* Decoration Circles */}
-                <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full z-0 opacity-50"></div>
-                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-orange-50 rounded-full z-0 opacity-50"></div>
+            {/* Removed 'relative' to ensure absolute positioning takes precedence and prevents flow layout jumping */}
+            <div className="absolute inset-0 w-full h-full backface-hidden bg-white border-4 border-blue-100 rounded-[2rem] shadow-xl flex flex-col items-center justify-center p-6 overflow-hidden">
+                {/* Decoration Circles - positioned strictly */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full z-0 opacity-50 pointer-events-none"></div>
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-orange-50 rounded-full z-0 opacity-50 pointer-events-none"></div>
                 
                 <div className="z-10 text-center flex flex-col items-center gap-6">
                     <div>
@@ -218,33 +219,33 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
                     </button>
                 </div>
 
-                <div className="absolute bottom-4 right-4 text-gray-300 flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest">
+                <div className="absolute bottom-4 right-4 text-gray-300 flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest pointer-events-none">
                     <RotateCw size={14} /> Lật thẻ
                 </div>
             </div>
 
             {/* BACK CARD (EN + IPA + EXAMPLE) */}
-            <div className="absolute w-full h-full backface-hidden rotate-y-180 bg-white border-4 border-orange-100 rounded-[2rem] shadow-xl flex flex-col overflow-hidden">
+            <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-white border-4 border-orange-100 rounded-[2rem] shadow-xl flex flex-col overflow-hidden">
                 {/* Header Section (Fixed Height) */}
-                <div className="h-1/3 min-h-[100px] bg-orange-50/50 p-4 flex flex-col items-center justify-center border-b border-orange-100">
-                     <h3 className="text-3xl font-black text-slate-800 text-center leading-tight">
+                <div className="h-1/4 min-h-[90px] bg-orange-50/50 p-4 flex flex-col items-center justify-center border-b border-orange-100 flex-shrink-0">
+                     <h3 className="text-3xl font-black text-slate-800 text-center leading-tight truncate w-full">
                         {currentWord.english}
                      </h3>
-                     <span className="text-gray-400 font-mono text-lg italic mt-1">/{currentWord.pronunciation}/</span>
+                     <span className="text-gray-400 font-mono text-lg italic mt-1 truncate">/{currentWord.pronunciation}/</span>
                 </div>
 
-                {/* Example Section (Fills remaining space) */}
-                <div className="flex-1 p-4 flex flex-col items-center justify-center bg-white">
-                    <div className="w-full bg-blue-50 p-4 rounded-2xl border border-blue-100 relative text-center flex flex-col items-center gap-3">
+                {/* Example Section (Fills remaining space, Flex col to center) */}
+                <div className="flex-1 p-4 flex flex-col items-center justify-center bg-white overflow-hidden">
+                    <div className="w-full h-full bg-blue-50 p-4 rounded-2xl border border-blue-100 relative text-center flex flex-col items-center">
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 text-blue-600 text-[10px] px-3 py-1 rounded-full font-black uppercase tracking-wider shadow-sm border border-blue-200">
                             Ví dụ
                         </div>
                         
-                        <div className="mt-2 flex-1 flex flex-col justify-center">
-                            <p className="text-lg font-bold text-slate-700 leading-snug">
+                        <div className="flex-1 flex flex-col justify-center items-center w-full mt-2 overflow-y-auto no-scrollbar">
+                            <p className="text-lg font-bold text-slate-700 leading-snug break-words w-full">
                                 "{currentWord.exampleEn}"
                             </p>
-                            <p className="text-sm font-medium text-slate-500 italic mt-1">
+                            <p className="text-sm font-medium text-slate-500 italic mt-2 break-words w-full">
                                 {currentWord.exampleVi}
                             </p>
                         </div>
@@ -254,9 +255,9 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
                                 e.stopPropagation();
                                 playAudio(currentWord.exampleEn, 0.85); // Slower for sentences
                             }}
-                            className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-xl shadow-sm border border-gray-200 text-blue-500 font-bold text-xs hover:bg-blue-50 active:scale-95 transition-all mt-auto"
+                            className="flex-shrink-0 inline-flex items-center gap-2 bg-white px-4 py-3 rounded-xl shadow-sm border border-gray-200 text-blue-500 font-bold text-xs hover:bg-blue-50 active:scale-95 transition-all mt-3"
                         >
-                            <Headphones size={14} /> Nghe cả câu
+                            <Headphones size={16} /> Nghe cả câu
                         </button>
                     </div>
                 </div>
