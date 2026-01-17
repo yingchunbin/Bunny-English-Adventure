@@ -511,7 +511,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                           ) : (
                               <>
                                   {/* NEW STORAGE VISUALIZATION - 3 Slots above animal */}
-                                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-1 bg-white/50 px-1.5 py-1 rounded-full backdrop-blur-sm border border-white/50 shadow-sm">
+                                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-1 bg-white/50 px-1.5 py-1 rounded-full backdrop-blur-sm border border-white/50 shadow-sm">
                                       {[...Array(3)].map((_, i) => (
                                           <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center border ${i < storageItems.length ? 'bg-white border-green-200 shadow-sm' : 'bg-slate-100/50 border-slate-200 border-dashed'}`}>
                                               {i < storageItems.length ? <span className="text-xs">{produce?.emoji}</span> : null}
@@ -530,26 +530,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                       {animal.emoji}
                                   </div>
                                   
-                                  {/* Harvest Overlay ONLY if storage is full or user clicks, but visual cue is top bar */}
-                                  {/* If storage > 0, make animal slightly bounce to indicate ready */}
+                                  {/* REPLACED TEXT "Thu hoạch" WITH ICON - Positioned Higher */}
                                   {hasStorage && (
-                                      <div className="absolute bottom-16 animate-bounce text-green-500 font-bold text-xs drop-shadow-md pointer-events-none">
-                                          Thu hoạch!
+                                      <div className="absolute top-12 z-30 animate-bounce bg-green-500 text-white p-1.5 rounded-full shadow-md border-2 border-white">
+                                          <Hand size={16} fill="currentColor" />
                                       </div>
                                   )}
 
+                                  {/* SIMPLIFIED FEED REQUIREMENT - MOVED TO BOTTOM */}
                                   {!isFed && !hasStorage && (
-                                      <div className="absolute bottom-6 z-20 flex flex-col items-center">
-                                          <div className={`px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border-2 border-white transition-all ${canFeed ? 'bg-green-500 text-white animate-bounce' : 'bg-white/90 text-slate-700 backdrop-blur-sm'}`}>
-                                              {canFeed ? <Zap size={10} fill="currentColor"/> : <span className="text-red-500 font-bold">Cần:</span>}
-                                              <span className="text-sm leading-none filter drop-shadow-sm">{feedItem?.emoji}</span>
-                                              <span>x{animal.feedAmount}</span>
+                                      <div className="absolute bottom-3 z-20">
+                                          <div className={`px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border-2 border-white transition-all ${canFeed ? 'bg-green-500 text-white animate-pulse' : 'bg-white/90 text-slate-600 backdrop-blur-sm'}`}>
+                                              <span className="text-xs leading-none filter drop-shadow-sm">{feedItem?.emoji}</span>
+                                              <span className={`${!canFeed ? 'text-red-500' : ''}`}>x{animal.feedAmount}</span>
                                           </div>
-                                          {!canFeed && (
-                                              <div className="mt-1 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full border border-white shadow-sm">
-                                                  Thiếu {animal.feedAmount - userHas}
-                                              </div>
-                                          )}
                                       </div>
                                   )}
                                   
