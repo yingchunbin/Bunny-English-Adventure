@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Star, SkipForward, AlertCircle, ArrowRight, Volume2, Keyboard, Check } from 'lucide-react';
+import { Mic, MicOff, Star, SkipForward, AlertCircle, ArrowRight, Keyboard, Check } from 'lucide-react';
 import { Word } from '../types';
-import { WordImage } from './WordImage';
 import { playSFX } from '../utils/sound';
 
 interface SpeakingGameProps {
@@ -57,14 +56,6 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
     setIsListening(false);
     if (isSupported && !isTypingMode) setErrorMsg(null);
   }, [currentIndex, isSupported, isTypingMode]);
-
-  const playSample = () => {
-    if (!currentWord) return;
-    const u = new SpeechSynthesisUtterance(currentWord.english);
-    u.lang = 'en-US';
-    u.rate = 0.8;
-    window.speechSynthesis.speak(u);
-  };
 
   const handleListen = () => {
     if (!isSupported) return;
@@ -175,18 +166,24 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-full shadow-2xl mb-6 relative border-4 border-pink-100 group">
-        <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-full overflow-hidden border-4 border-white shadow-inner">
-            <WordImage word={currentWord} className="w-full h-full" />
+      {/* Main Display - No Image, Huge Text, IPA */}
+      <div className="w-full bg-white p-8 rounded-[2rem] shadow-xl mb-6 border-4 border-pink-100 flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-4 bg-pink-100/50"></div>
+        
+        <h3 className="text-6xl sm:text-7xl font-black text-pink-600 tracking-tight mb-2 drop-shadow-sm text-center leading-none">
+            {currentWord.english}
+        </h3>
+        
+        <div className="bg-slate-100 px-4 py-1 rounded-xl mt-2">
+            <span className="text-2xl sm:text-3xl font-mono text-slate-500 font-bold">/{currentWord.pronunciation}/</span>
         </div>
-        <button onClick={playSample} className="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg transition-transform active:scale-95 z-10" title="Nghe mẫu">
-            <Volume2 size={28} />
-        </button>
-        <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-pink-100 text-pink-800 px-6 py-2 rounded-full font-bold text-2xl shadow-sm whitespace-nowrap border-2 border-white">
-          {currentWord.english}
-        </div>
+        
+        <p className="text-lg text-slate-400 font-bold mt-4">
+            {currentWord.vietnamese}
+        </p>
       </div>
-      <div className="h-8"></div>
+
+      <div className="h-4"></div>
 
       <div className="mb-4 text-center w-full flex flex-col items-center justify-center min-h-[4rem]">
         {!errorMsg ? (
@@ -198,7 +195,7 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
                         <p className="text-gray-500 text-xs uppercase font-bold">Kết quả:</p>
                         <p className={`font-black text-3xl ${score && score > 6 ? 'text-green-600' : 'text-red-500'}`}>"{transcript}"</p>
                     </div>
-                ) : !isTypingMode && <p className="text-gray-400 text-base font-medium">Bấm loa nghe mẫu rồi bấm Mic đọc nhé!</p>}
+                ) : !isTypingMode && <p className="text-gray-400 text-base font-medium">Bấm Mic và đọc to từ trên nhé!</p>}
             </div>
         ) : <div className="flex items-center gap-2 text-red-500 font-bold text-base bg-red-50 px-4 py-2 rounded-xl animate-fadeIn"><AlertCircle size={20} /> {errorMsg}</div>}
       </div>
@@ -232,7 +229,7 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
                 </button>
             )}
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 mt-2">
                 <button 
                     onClick={() => setIsTypingMode(!isTypingMode)} 
                     className="py-3 px-5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-xl font-bold text-sm flex items-center gap-2 transition-colors"
