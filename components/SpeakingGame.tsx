@@ -96,26 +96,36 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
 
   const evaluate = (input: string) => {
     if (!currentWord) return;
+    // Chuẩn hóa: chữ thường, bỏ dấu câu đặc biệt
     const cleanInput = input.toLowerCase().trim().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g,"");
     const cleanTarget = currentWord.english.toLowerCase().trim();
     
     let calculatedScore = 0;
     
-    // Exact match
+    // 1. Chính xác tuyệt đối (10 điểm)
     if (cleanInput === cleanTarget) {
         calculatedScore = 10;
         playSFX('correct');
     } 
-    // Partial match (Lenient for kids)
-    else if (cleanInput.includes(cleanTarget) || cleanTarget.includes(cleanInput)) {
-        calculatedScore = 8;
+    // 2. Gần đúng (Chứa từ hoặc từ chứa input) (9 điểm)
+    // Ví dụ: Target "Cat" - Input "A cat" hoặc "Cats"
+    else if (cleanInput.includes(cleanTarget) || (cleanInput.length > 2 && cleanTarget.includes(cleanInput))) {
+        calculatedScore = 9;
         playSFX('success');
     }
-    // Very lenient (first letter or significant overlap)
-    else if (cleanInput.length > 2 && cleanTarget.startsWith(cleanInput.substring(0,2))) {
-         calculatedScore = 7;
+    // 3. Chế độ "Bé Việt Nam" (8 điểm - Đậu)
+    // Các bé thường bỏ quên ending sounds (ví dụ: "Five" đọc thành "Fai", "Six" thành "Si")
+    // Logic: 
+    // - Khớp 2 ký tự đầu tiên (ví dụ: FIve - FInland)
+    // - HOẶC Khớp ký tự đầu + Độ dài từ input đạt ít nhất 50% độ dài từ gốc (tránh từ quá ngắn bị sai)
+    else if (
+        (cleanInput.length >= 2 && cleanTarget.startsWith(cleanInput.substring(0, 2))) ||
+        (cleanInput.length >= 1 && cleanTarget.startsWith(cleanInput.substring(0, 1)) && cleanInput.length >= cleanTarget.length * 0.5)
+    ) {
+         calculatedScore = 8;
          playSFX('success');
     }
+    // 4. Sai (4 điểm)
     else {
         calculatedScore = 4;
         playSFX('wrong');
@@ -131,6 +141,7 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
 
   const handleNext = () => {
     playSFX('click');
+    // Chỉ cần điểm >= 7 (mức Khá) là được cộng xu
     if (score && score >= 7) {
         setTotalCoins(prev => prev + 10);
     }
@@ -138,8 +149,7 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
     if (currentIndex < data.length - 1) {
         setCurrentIndex(prev => prev + 1);
     } else {
-        // Final completion logic
-        // Add final coin if last word was correct
+        // Cộng xu cuối cùng nếu câu cuối đúng
         const finalCoin = (score && score >= 7) ? totalCoins + 10 : totalCoins;
         onComplete(finalCoin);
     }
@@ -147,7 +157,7 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
 
   const handleSkip = () => {
       if (currentWord) setTranscript(currentWord.english);
-      setScore(0); // Give 0 score for skipping
+      setScore(0); // 0 điểm nếu bỏ qua
       playSFX('wrong');
   };
 
@@ -258,7 +268,7 @@ export const SpeakingGame: React.FC<SpeakingGameProps> = ({ word, words, onCompl
                             <Star key={i} size={40} className={`transition-all duration-500 ${i < (score > 7 ? 3 : score > 4 ? 2 : 1) ? "fill-yellow-400 text-yellow-400 scale-110" : "text-gray-200"}`} />
                         ))}
                     </div>
-                    <p className="text-xl font-bold text-yellow-500 mt-2">{score >= 7 ? "Tuyệt vời!" : "Cố lên chút nữa!"}</p>
+                    <p className="text-xl font-bold text-yellow-500 mt-2">{score >= 7 ? "Tuyệt vời!" : "Tạm ổn!"}</p>
                 </>
             )}
         </div>
