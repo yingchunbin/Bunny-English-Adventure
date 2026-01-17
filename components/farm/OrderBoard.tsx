@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { FarmOrder, FarmItem } from '../../types';
-import { Truck, X, RefreshCw, Coins, Zap, Clock } from 'lucide-react';
+import { Truck, X, RefreshCw, Coins, Zap, Clock, Info } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { Avatar } from '../Avatar';
+import { CROPS, ANIMALS, RECIPES, MACHINES, PRODUCTS } from '../../data/farmData';
 
 interface OrderBoardProps {
   orders: FarmOrder[];
@@ -32,6 +33,38 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
       
       if (hours > 0) return `${hours}h ${minutes}p`;
       return `${minutes} phút`;
+  };
+
+  const handleItemClick = (item: FarmItem) => {
+      playSFX('click');
+      let msg = "";
+      
+      // 1. Check Crop
+      const crop = CROPS.find(c => c.id === item.id);
+      if (crop) {
+          msg = `🌱 ${item.name} là Nông sản. Bé hãy mua hạt giống và trồng trên đất nhé!`;
+      } else {
+          // 2. Check Animal Product
+          const animal = ANIMALS.find(a => a.produceId === item.id);
+          if (animal) {
+              msg = `🐮 ${item.name} được thu hoạch từ ${animal.name}. Bé hãy nuôi và cho ${animal.name} ăn nhé!`;
+          } else {
+              // 3. Check Machine Product
+              const recipe = RECIPES.find(r => r.outputId === item.id);
+              if (recipe) {
+                  const machine = MACHINES.find(m => m.id === recipe.machineId);
+                  if (machine) {
+                      msg = `🏭 ${item.name} được làm từ ${machine.name}. Bé hãy lắp máy này nhé!`;
+                  }
+              }
+          }
+      }
+
+      if (msg) {
+          onShowAlert(msg, 'INFO');
+      } else {
+          onShowAlert(`Bé hãy tìm ${item.name} trong Nông trại nhé!`, 'INFO');
+      }
   };
 
   return (
@@ -83,15 +116,22 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                             const has = inventory[req.cropId] || 0;
                                             const isEnough = has >= req.amount;
                                             
+                                            if (!item) return null;
+
                                             return (
-                                                <div key={req.cropId} className="flex flex-col items-center bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[70px]">
+                                                <div 
+                                                    key={req.cropId} 
+                                                    onClick={() => handleItemClick(item)}
+                                                    className="flex flex-col items-center bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[70px] cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-colors group relative"
+                                                >
+                                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"><Info size={10} className="text-blue-400"/></div>
                                                     <div className="relative">
-                                                        <span className="text-3xl filter drop-shadow-sm select-none">{item?.emoji}</span>
+                                                        <span className="text-3xl filter drop-shadow-sm select-none">{item.emoji}</span>
                                                         <div className={`absolute -bottom-1 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border ${isEnough ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-700 border-red-300'}`}>
                                                             {has}/{req.amount}
                                                         </div>
                                                     </div>
-                                                    <span className="text-[9px] font-bold text-slate-600 mt-1 max-w-[60px] truncate">{item?.name}</span>
+                                                    <span className="text-[9px] font-bold text-slate-600 mt-1 max-w-[60px] truncate">{item.name}</span>
                                                 </div>
                                             )
                                         })}

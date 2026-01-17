@@ -587,6 +587,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const storedRecipe = storedRecipeId ? RECIPES.find(r => r.id === storedRecipeId) : null;
                   const storedProduct = storedRecipe ? PRODUCTS.find(p => p.id === storedRecipe.outputId) : null;
 
+                  // Determine possible outputs for this machine (to display icons above)
+                  const possibleOutputs = machine ? RECIPES.filter(r => r.machineId === machine.id).map(r => r.outputId) : [];
+                  const uniqueOutputs = [...new Set(possibleOutputs)].slice(0, 3); // Max 3 icons
+                  const outputProducts = uniqueOutputs.map(oid => PRODUCTS.find(p => p.id === oid)).filter(Boolean);
+
                   return (
                       <button 
                         key={slot.id}
@@ -635,8 +640,22 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  <div className={`text-7xl z-10 relative drop-shadow-md transition-all ${recipe ? 'animate-bounce-slight' : ''}`}>
+                                  {/* PRODUCT PREVIEW ICONS (Floating Above) */}
+                                  {!recipe && !hasStorage && (
+                                      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1 z-10 bg-white/80 px-2 py-1 rounded-full shadow-sm border border-slate-100 animate-bounce-slight">
+                                          {outputProducts.map(p => (
+                                              <span key={p?.id} className="text-lg leading-none filter drop-shadow-sm">{p?.emoji}</span>
+                                          ))}
+                                      </div>
+                                  )}
+
+                                  <div className={`text-6xl z-10 relative drop-shadow-md transition-all mt-4 ${recipe ? 'animate-bounce-slight' : ''}`}>
                                       {machine.emoji}
+                                  </div>
+                                  
+                                  {/* Machine Name Below */}
+                                  <div className="absolute bottom-2 z-10 bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-black text-slate-600 truncate max-w-[80%] uppercase tracking-tighter backdrop-blur-sm">
+                                      {machine.name}
                                   </div>
                                   
                                   {/* Working Effects */}
@@ -664,7 +683,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
                                   {/* PROGRESS BAR (Only if working) */}
                                   {recipe && (
-                                      <div className="absolute bottom-6 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
+                                      <div className="absolute bottom-8 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
                                   )}
