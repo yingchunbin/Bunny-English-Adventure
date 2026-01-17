@@ -136,10 +136,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
       if (type === 'MACHINE') currentCount = userState.machineSlots?.length || 0;
 
-      // Adjusted cost formula to be more progressive but reasonable
-      // Start increasing after 2nd/6th item depending on type, but base logic unified
-      // Machines: 500 * 1.5^(count - 2) so 3rd machine costs 750
-      // Plots: 500 * 1.5^(count - 6) so 7th plot costs 750
       const threshold = type === 'PLOT' ? 6 : 2;
       const cost = baseCost * Math.pow(1.5, Math.max(0, currentCount - threshold)); 
       const finalCost = Math.floor(cost / 100) * 100; 
@@ -463,8 +459,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const hasStorage = storageItems.length > 0;
                   const queueCount = slot.queue || 0;
                   
-                  const storedProduceId = storageItems[0];
-                  const produce = PRODUCTS.find(p => p.id === storedProduceId);
+                  const produce = animal ? PRODUCTS.find(p => p.id === animal.produceId) : null;
                   
                   // Feed requirement data
                   const feedItem = animal ? [...CROPS, ...PRODUCTS].find(c => c.id === animal.feedCropId) : null;
@@ -515,29 +510,31 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  {/* Queue Display - Top Left */}
+                                  {/* NEW STORAGE VISUALIZATION - 3 Slots above animal */}
+                                  <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-1 bg-white/50 px-1.5 py-1 rounded-full backdrop-blur-sm border border-white/50 shadow-sm">
+                                      {[...Array(3)].map((_, i) => (
+                                          <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center border ${i < storageItems.length ? 'bg-white border-green-200 shadow-sm' : 'bg-slate-100/50 border-slate-200 border-dashed'}`}>
+                                              {i < storageItems.length ? <span className="text-xs">{produce?.emoji}</span> : null}
+                                          </div>
+                                      ))}
+                                  </div>
+
+                                  {/* Queue Display - Top Left (Simplified) */}
                                   {queueCount > 0 && (
-                                      <div className="absolute top-2 left-2 z-20 flex gap-1 bg-white/80 px-1.5 py-0.5 rounded-full shadow-sm border border-slate-100">
-                                          <span className="text-xs">{feedItem?.emoji}</span>
-                                          <span className="text-[10px] font-black text-orange-600">x{queueCount}</span>
+                                      <div className="absolute top-2 left-2 z-20 flex items-center justify-center w-6 h-6 bg-orange-100 rounded-full border border-orange-200 shadow-sm">
+                                          <span className="text-[9px] font-black text-orange-600">+{queueCount}</span>
                                       </div>
                                   )}
 
-                                  <div className={`text-7xl z-10 transition-all ${!isFed ? 'scale-90' : 'animate-walk'}`}>
+                                  <div className={`text-7xl z-10 transition-all mt-4 ${!isFed ? 'scale-90' : 'animate-walk'}`}>
                                       {animal.emoji}
                                   </div>
                                   
+                                  {/* Harvest Overlay ONLY if storage is full or user clicks, but visual cue is top bar */}
+                                  {/* If storage > 0, make animal slightly bounce to indicate ready */}
                                   {hasStorage && (
-                                      <div className="absolute inset-0 bg-white/60 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
-                                          <div className="text-5xl animate-bounce mb-2 drop-shadow-lg relative">
-                                              {produce?.emoji || '🥚'}
-                                              {storageItems.length > 1 && (
-                                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full border border-white">
-                                                      x{storageItems.length}
-                                                  </span>
-                                              )}
-                                          </div>
-                                          {renderHarvestButton()}
+                                      <div className="absolute bottom-16 animate-bounce text-green-500 font-bold text-xs drop-shadow-md pointer-events-none">
+                                          Thu hoạch!
                                       </div>
                                   )}
 

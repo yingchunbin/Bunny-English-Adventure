@@ -241,7 +241,7 @@ export const useFarmGame = (
                 if (hasChanges) newState.machineSlots = updatedSlots;
             }
 
-            // 4. Animal Auto-Process (Updated Logic for Queue)
+            // 4. Animal Auto-Process (UPDATED LOGIC: Storage limit 3)
             if (prev.livestockSlots) {
                 const updatedSlots = prev.livestockSlots.map(slot => {
                     if (slot.animalId) {
@@ -256,16 +256,23 @@ export const useFarmGame = (
                             if (newFedAt) {
                                 const elapsed = (currentTime - newFedAt) / 1000;
                                 if (elapsed >= animal.produceTime) {
-                                    newStorage.push(animal.produceId);
-                                    newFedAt = null; // Feeding done
-                                    slotChanged = true;
+                                    // Only move to storage if storage < 3
+                                    if (newStorage.length < 3) {
+                                        newStorage.push(animal.produceId);
+                                        newFedAt = null; // Feeding done and stored
+                                        slotChanged = true;
+                                    } else {
+                                        // Storage full, item stays "in progress/ready" 
+                                        // effectively pausing the animal until space is made
+                                        // No change here, wait for user to harvest
+                                    }
                                 }
                             }
 
                             // 2. Check if we should start next feeding from queue
-                            // Limit is 3: (current_producing:1 + waiting_in_queue + storage) must handle nicely.
-                            // Actually, strict limit is usually on OUTPUT storage.
-                            // If storage is full (3 items), we stop.
+                            // Condition: Not currently active AND queue has food AND storage is not full
+                            // Note: Even if storage is 2/3, we can start next. If storage is 3/3, we shouldn't start (or we start but can't collect).
+                            // Let's allow starting if storage < 3.
                             if (!newFedAt && newQueue > 0 && newStorage.length < 3) {
                                 newQueue--;
                                 newFedAt = currentTime;
@@ -600,7 +607,10 @@ export const useFarmGame = (
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if (!animal) return;
 
-      // Check Limits
+      // Check Limits: Queue + Storage (max 3)
+      // Note: `fedAt` implies one is being made. `queue` implies others are waiting. `storage` implies finished ones.
+      // Maximum capacity of "products pending" is 3 (Storage max).
+      // So if (active + queue + storage) >= 3, we are full.
       const currentActive = slot.fedAt ? 1 : 0;
       const currentQueue = slot.queue || 0;
       const currentStorage = slot.storage?.length || 0;
@@ -617,7 +627,7 @@ export const useFarmGame = (
       if (userFeedAmount < animal.feedAmount) {
           return { 
               success: false, 
-              msg: `Bé cần ${animal.feedAmount} ${feedName} (trong Kho nông sản) để cho ${animal.name} ăn. Bé đang có ${userFeedAmount}. Hãy trồng thêm nhé!` 
+              msg: `Bé cần ${animal.feedAmount} ${feedName} để cho ${animal.name} ăn. Bé đang có ${userFeedAmount}.` 
           };
       }
 
@@ -674,6 +684,7 @@ export const useFarmGame = (
               harvestedCrops: newHarvest,
               farmExp: newExp,
               farmLevel: newLevel,
+              // Clear storage
               livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, storage: [] } : s)
           };
       });
