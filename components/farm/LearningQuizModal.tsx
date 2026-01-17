@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Word } from '../../types';
-import { X, Check, BrainCircuit, Droplets, Bug, Zap, Volume2, Truck, RefreshCw } from 'lucide-react';
+import { X, Zap, Volume2, Truck, Droplets, Bug } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
-import { WordImage } from '../WordImage';
 
 interface LearningQuizModalProps {
   words: Word[];
-  type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER'; // Added NEW_ORDER
+  type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER'; 
   onSuccess: () => void;
   onClose: () => void;
   onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
@@ -16,7 +15,7 @@ interface LearningQuizModalProps {
 const QUESTION_COUNT = 3;
 
 export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, onSuccess, onClose, onShowAlert }) => {
-  const [questions, setQuestions] = useState<Array<{ target: Word, options: Word[], mode: 'IMAGE_TO_EN' | 'EN_TO_VI' | 'LISTEN' }>>([]);
+  const [questions, setQuestions] = useState<Array<{ target: Word, options: Word[], mode: 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN' }>>([]);
   const [currentQIdx, setCurrentQIdx] = useState(0);
   
   useEffect(() => {
@@ -25,8 +24,9 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
           for (let i = 0; i < QUESTION_COUNT; i++) {
               const target = words[Math.floor(Math.random() * words.length)];
               const distractors = words.filter(w => w.id !== target.id).sort(() => 0.5 - Math.random()).slice(0, 3);
-              const modes: ('IMAGE_TO_EN' | 'EN_TO_VI' | 'LISTEN')[] = ['IMAGE_TO_EN', 'EN_TO_VI'];
-              if (target.emoji) modes.push('LISTEN'); 
+              
+              // Only text-based and audio modes now. Removed IMAGE_TO_EN.
+              const modes: ('EN_TO_VI' | 'VI_TO_EN' | 'LISTEN')[] = ['EN_TO_VI', 'VI_TO_EN', 'LISTEN'];
               
               const mode = modes[Math.floor(Math.random() * modes.length)];
               newQuestions.push({
@@ -81,9 +81,6 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
           }
       } else {
           playSFX('wrong');
-          // Regenerate current question to force retry with new data or shuffle options
-          // Ideally we keep same question but user must try again. 
-          // User feedback: "Sai rồi, thử lại nhé"
           onShowAlert("Sai rồi! Bé thử lại câu này nhé!", "DANGER");
       }
   };
@@ -119,7 +116,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
         <div className="bg-white rounded-[2rem] w-full max-w-sm p-6 shadow-2xl relative border-4 border-indigo-200">
             <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><X /></button>
             
-            <div className="text-center mb-4">
+            <div className="text-center mb-6">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 border-4 border-white shadow-lg ${bg}`}>
                     {icon}
                 </div>
@@ -130,43 +127,48 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
                     {desc}
                 </p>
                 {/* Progress Dots */}
-                <div className="flex justify-center gap-2 mt-2">
+                <div className="flex justify-center gap-2 mt-3">
                     {[...Array(QUESTION_COUNT)].map((_, i) => (
-                        <div key={i} className={`w-3 h-3 rounded-full ${i < currentQIdx ? 'bg-green-500' : i === currentQIdx ? 'bg-blue-500 animate-pulse' : 'bg-slate-200'}`} />
+                        <div key={i} className={`w-3 h-3 rounded-full transition-all ${i < currentQIdx ? 'bg-green-500' : i === currentQIdx ? 'bg-blue-500 scale-125' : 'bg-slate-200'}`} />
                     ))}
                 </div>
             </div>
 
-            <div className="mb-6 text-center">
+            {/* Question Display */}
+            <div className="mb-6 text-center min-h-[5rem] flex flex-col justify-center">
                 {currentQ.mode === 'LISTEN' ? (
-                    <button onClick={playAudio} className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse hover:bg-blue-600 transition-colors">
+                    <button onClick={playAudio} className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse hover:bg-blue-600 transition-colors border-4 border-blue-300">
                         <Volume2 size={40} className="text-white"/>
                     </button>
                 ) : (
-                    <h2 className="text-2xl font-black text-indigo-600 min-h-[4rem] flex items-center justify-center">
+                    <h2 className="text-3xl font-black text-indigo-600 drop-shadow-sm">
                         {currentQ.mode === 'EN_TO_VI' ? currentQ.target.english : currentQ.target.vietnamese}
                     </h2>
                 )}
-                <p className="text-slate-400 font-bold text-xs mt-2 uppercase tracking-widest">
-                    {currentQ.mode === 'LISTEN' ? 'Nghe và chọn hình đúng' : 
-                     currentQ.mode === 'EN_TO_VI' ? 'Chọn nghĩa tiếng Việt' : 'Chọn từ tiếng Anh đúng'}
+                <p className="text-slate-400 font-bold text-[10px] mt-2 uppercase tracking-widest">
+                    {currentQ.mode === 'LISTEN' ? 'Nghe và chọn từ đúng' : 
+                     currentQ.mode === 'EN_TO_VI' ? 'Chọn nghĩa tiếng Việt' : 'Chọn từ tiếng Anh'}
                 </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-                {currentQ.options.map(opt => (
-                    <button 
-                        key={opt.id}
-                        onClick={() => handleAnswer(opt.id)}
-                        className="aspect-square bg-slate-50 rounded-xl border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 transition-all active:scale-95 p-2 flex items-center justify-center"
-                    >
-                        {currentQ.mode === 'EN_TO_VI' ? (
-                            <span className="font-bold text-slate-700 text-center text-sm">{opt.vietnamese}</span>
-                        ) : (
-                            <WordImage word={opt} className="w-full h-full rounded-lg" hideLabel={currentQ.mode === 'LISTEN'} />
-                        )}
-                    </button>
-                ))}
+            {/* Text Options Grid */}
+            <div className="grid grid-cols-1 gap-3">
+                {currentQ.options.map(opt => {
+                    const content = currentQ.mode === 'EN_TO_VI' ? opt.vietnamese : opt.english; // Listen expects English text options usually
+                    const isEnglishText = currentQ.mode !== 'EN_TO_VI'; // LISTEN and VI_TO_EN use English text options
+
+                    return (
+                        <button 
+                            key={opt.id}
+                            onClick={() => handleAnswer(opt.id)}
+                            className={`p-4 rounded-xl border-b-4 transition-all active:scale-95 active:border-b-0 active:translate-y-1 flex items-center justify-center ${isEnglishText ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-orange-50 border-orange-200 text-orange-800'}`}
+                        >
+                            <span className={`font-black ${isEnglishText ? 'text-xl' : 'text-lg'}`}>
+                                {content}
+                            </span>
+                        </button>
+                    )
+                })}
             </div>
         </div>
     </div>

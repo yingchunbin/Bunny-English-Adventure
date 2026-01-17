@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Mission } from '../../types';
-import { X, Gift, Coins, Droplets, Zap, Star, Tractor, Heart, CloudRain, Briefcase } from 'lucide-react';
+import { X, Gift, Coins, Droplets, Zap, Star, Tractor, Heart, CloudRain, Briefcase, CheckCircle } from 'lucide-react';
 import { Avatar } from '../Avatar';
 
 interface MissionModalProps {
@@ -12,7 +12,29 @@ interface MissionModalProps {
 
 export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, onClose }) => {
   const [activeTab, setActiveTab] = useState<'DAILY' | 'ACHIEVEMENT'>('DAILY');
-  const filteredMissions = missions.filter(m => m.category === activeTab);
+  
+  // Sorting Logic:
+  // 1. Completed & NOT Claimed (Priority!)
+  // 2. In Progress (Sorted by percentage descending)
+  // 3. Claimed (Bottom)
+  const filteredMissions = missions
+    .filter(m => m.category === activeTab)
+    .sort((a, b) => {
+        // Priority 1: Claimable
+        const aClaimable = a.completed && !a.claimed;
+        const bClaimable = b.completed && !b.claimed;
+        if (aClaimable && !bClaimable) return -1;
+        if (!aClaimable && bClaimable) return 1;
+
+        // Priority 3: Claimed (Push to bottom)
+        if (a.claimed && !b.claimed) return 1;
+        if (!a.claimed && b.claimed) return -1;
+
+        // Priority 2: Progress % Descending
+        const progA = a.current / a.target;
+        const progB = b.current / b.target;
+        return progB - progA;
+    });
 
   // Helper to get icon based on mission type
   const getMissionIcon = (type: Mission['type']) => {
@@ -61,13 +83,20 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                     filteredMissions.map(m => {
                         const progress = Math.min(100, (m.current / m.target) * 100);
                         const isCompleted = m.completed;
+                        const isClaimable = isCompleted && !m.claimed;
                         
                         return (
-                            <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isCompleted ? 'border-green-400 ring-2 ring-green-100' : 'border-white hover:border-indigo-200'}`}>
+                            <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isClaimable ? 'border-green-400 ring-4 ring-green-100 order-first' : 'border-white hover:border-indigo-200'}`}>
                                 
+                                {isClaimable && (
+                                    <div className="absolute top-0 right-0 bg-green-500 text-white text-[9px] font-black px-3 py-1 rounded-bl-xl shadow-sm z-20 animate-pulse">
+                                        NHẬN NGAY!
+                                    </div>
+                                )}
+
                                 <div className="flex items-center gap-4 mb-3 relative z-10">
                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-inner ${isCompleted ? 'bg-green-100 border-green-200' : 'bg-slate-50 border-slate-100'}`}>
-                                        {getMissionIcon(m.type)}
+                                        {m.claimed ? <CheckCircle size={24} className="text-green-600"/> : getMissionIcon(m.type)}
                                     </div>
                                     <div className="flex-1">
                                         <h4 className={`font-black text-xs sm:text-sm uppercase leading-tight mb-1 ${isCompleted ? 'text-green-700' : 'text-slate-700'}`}>{m.desc}</h4>
@@ -93,7 +122,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                          <Gift size={14} className="text-pink-500"/>}
                                     </div>
                                     
-                                    {isCompleted && !m.claimed ? (
+                                    {isClaimable ? (
                                         <button onClick={() => onClaim(m)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce">
                                             <Gift size={14}/> Nhận Quà
                                         </button>
