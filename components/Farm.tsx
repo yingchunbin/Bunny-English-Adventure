@@ -643,9 +643,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               <>
                                   {/* PRODUCT PREVIEW ICONS (Floating Above) */}
                                   {!recipe && !hasStorage && (
-                                      <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-0.5 z-10 bg-white/80 px-2 py-1 rounded-xl shadow-sm border border-slate-100 animate-bounce-slight max-w-[80%]">
+                                      <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-1 z-10 max-w-[80%]">
                                           {outputProducts.map(p => (
-                                              <span key={p?.id} className="text-sm leading-none filter drop-shadow-sm">{p?.emoji}</span>
+                                              <span key={p?.id} className="text-sm leading-none filter drop-shadow-sm bg-white/50 rounded-full p-0.5">{p?.emoji}</span>
                                           ))}
                                       </div>
                                   )}
@@ -1044,13 +1044,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 initialTab={initialInvTab}
                 inventory={userState.inventory} 
                 seeds={CROPS} 
-                animals={ANIMALS}
-                machines={MACHINES}
-                decorations={DECORATIONS}
-                ownedAnimals={userState.livestockSlots || []}
-                ownedMachines={userState.machineSlots || []}
-                ownedDecorations={userState.decorations || []}
-                allItems={[...CROPS, ...PRODUCTS]}
+                animals={ANIMALS} 
+                machines={MACHINES} 
+                decorations={DECORATIONS} 
+                ownedAnimals={userState.livestockSlots || []} 
+                ownedMachines={userState.machineSlots || []} 
+                ownedDecorations={userState.decorations || []} 
+                allItems={[...CROPS, ...PRODUCTS]} 
                 mode={inventoryMode}
                 onSelectSeed={(seedId) => {
                     if (selectedId) {
