@@ -10,7 +10,33 @@ export const useFarmGame = (
 ) => {
   const [now, setNow] = useState(Date.now());
   
-  // Helper: Create a single order
+  // Helper: Calculate Base Time for an Item (in minutes)
+  const getItemProductionTime = (itemId: string): number => {
+      // 1. Check Crop
+      const crop = CROPS.find(c => c.id === itemId);
+      if (crop) return Math.ceil(crop.growthTime / 60);
+
+      // 2. Check Animal Product
+      const animal = ANIMALS.find(a => a.produceId === itemId);
+      if (animal) {
+          const feedCropTime = getItemProductionTime(animal.feedCropId);
+          return Math.ceil(animal.produceTime / 60) + feedCropTime;
+      }
+
+      // 3. Check Machine Product
+      const recipe = RECIPES.find(r => r.outputId === itemId);
+      if (recipe) {
+          let inputTime = 0;
+          recipe.input.forEach(input => {
+              inputTime = Math.max(inputTime, getItemProductionTime(input.id));
+          });
+          return Math.ceil(recipe.duration / 60) + inputTime;
+      }
+
+      return 5; // Default fallback
+  };
+
+  // Helper: Create a single order with calculated time
   const createSingleOrder = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
       const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa", "Chị Ong Vàng", "Anh Kiến", "Cụ Voi"];
       const level = userState.farmLevel || 1;
@@ -47,16 +73,31 @@ export const useFarmGame = (
       const requirements = [];
       let totalValue = 0;
       let totalExp = 0;
+      let maxProductionTime = 0;
 
       for (const [itemId, amount] of Object.entries(tempReqs)) {
           requirements.push({ cropId: itemId, amount });
+          
+          // Value & Exp Calc
           const itemData = [...CROPS, ...PRODUCTS].find(x => x.id === itemId);
           if (itemData) {
               totalValue += itemData.sellPrice * amount;
               const expBase = itemData.type === 'CROP' ? (itemData as Crop).exp : 20;
               totalExp += expBase * amount * 3.0;
           }
+
+          // Time Calc: Estimate time to produce this batch
+          // We assume parallel production if user has multiple slots, but let's be generous.
+          // Time = UnitTime * Amount.
+          const unitTime = getItemProductionTime(itemId);
+          const batchTime = unitTime * Math.ceil(amount / 2); // Assume 2 slots avg
+          if (batchTime > maxProductionTime) maxProductionTime = batchTime;
       }
+
+      // Order Duration Calculation
+      // Minimum 15 minutes.
+      // Factor: 3x production time to be safe and relaxed for kids.
+      const durationMinutes = Math.max(15, maxProductionTime * 3);
 
       return {
           id: Math.random().toString(36).substr(2, 9),
@@ -64,7 +105,7 @@ export const useFarmGame = (
           requirements,
           rewardCoins: Math.ceil((totalValue * 1.5) / 10) * 10,
           rewardExp: Math.ceil(totalExp / 5) * 5,
-          expiresAt: Date.now() + (Math.random() * 10 + 5) * 60 * 1000 
+          expiresAt: Date.now() + (durationMinutes * 60 * 1000)
       };
   };
 
@@ -545,8 +586,7 @@ export const useFarmGame = (
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if (!animal) return;
 
-      // Check Limits (3 max capacity including: current active, queue, storage)
-      // Actually simple rule: Queue + Storage cannot exceed 3 (or whatever capacity is)
+      // Check Limits
       const currentActive = slot.fedAt ? 1 : 0;
       const currentQueue = slot.queue || 0;
       const currentStorage = slot.storage?.length || 0;
@@ -555,7 +595,9 @@ export const useFarmGame = (
           return { success: false, msg: "Chuồng đầy rồi! Hãy thu hoạch trước khi cho ăn tiếp." };
       }
 
-      const feedName = CROPS.find(c => c.id === animal.feedCropId)?.name || 'thức ăn';
+      const feedCrop = CROPS.find(c => c.id === animal.feedCropId);
+      const feedName = feedCrop?.name || 'thức ăn';
+      const feedEmoji = feedCrop?.emoji || '🥕';
       const userFeedAmount = userState.harvestedCrops?.[animal.feedCropId] || 0;
 
       if (userFeedAmount < animal.feedAmount) {
@@ -586,7 +628,7 @@ export const useFarmGame = (
           }
       });
       updateMissionProgress('FEED', 1);
-      return { success: true, msg: `Đã cho ${animal.name} ăn! -${animal.feedAmount} ${feedName}` };
+      return { success: true, msg: `Đã cho ${animal.name} ăn!`, feedEmoji: feedEmoji, amount: animal.feedAmount };
   };
 
   const collectProduct = (slotId: number) => {

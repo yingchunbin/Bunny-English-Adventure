@@ -37,7 +37,7 @@ interface FlyingItem {
 
 interface FloatingText {
     id: number;
-    text: string;
+    text: React.ReactNode; // Changed to allow JSX/Icons
     x: number;
     y: number;
     color: string;
@@ -110,7 +110,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       setTimeout(() => setFloatingTexts(prev => prev.filter(t => !texts.includes(t))), 1500);
   };
 
-  const addFloatingText = (x: number, y: number, text: string, color: string = 'text-yellow-500') => {
+  const addFloatingText = (x: number, y: number, text: React.ReactNode, color: string = 'text-yellow-500') => {
       const newText: FloatingText = { id: Date.now() + Math.random(), text, x, y, color };
       setFloatingTexts(prev => [...prev, newText]);
       setTimeout(() => setFloatingTexts(prev => prev.filter(t => t.id !== newText.id)), 1500);
@@ -136,7 +136,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
       if (type === 'MACHINE') currentCount = userState.machineSlots?.length || 0;
 
-      const cost = baseCost * Math.pow(1.5, Math.max(0, currentCount - 6)); 
+      // Adjusted cost formula to be more progressive but reasonable
+      // Start increasing after 2nd/6th item depending on type, but base logic unified
+      // Machines: 500 * 1.5^(count - 2) so 3rd machine costs 750
+      // Plots: 500 * 1.5^(count - 6) so 7th plot costs 750
+      const threshold = type === 'PLOT' ? 6 : 2;
+      const cost = baseCost * Math.pow(1.5, Math.max(0, currentCount - threshold)); 
       const finalCost = Math.floor(cost / 100) * 100; 
 
       setConfirmConfig({
@@ -257,18 +262,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const handleFeedAnimal = (slot: any, e: React.MouseEvent) => {
       // Prevent bubble up
       e.stopPropagation();
-      const res = feedAnimal(slot.id);
+      const res: any = feedAnimal(slot.id);
       if (res && !res.success) {
           handleShowAlert(res.msg);
       } else if (res && res.success) {
           // Show floating text for consumption
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          // Extract amount and name from message or just use generic text
-          // The message is "Đã cho [name] ăn! -[amount] [feedName]"
-          const parts = res.msg.split('-');
-          if (parts.length > 1) {
-             addFloatingText(rect.left, rect.top, `-${parts[1]}`, "text-orange-600");
-          }
+          // Use emoji in floating text
+          addFloatingText(rect.left, rect.top, 
+            <div className="flex items-center gap-1">
+                <span className="font-black text-red-500">-{res.amount}</span>
+                <span className="text-2xl">{res.feedEmoji}</span>
+            </div>, 
+            "text-red-500"
+          );
       }
   };
 
@@ -370,10 +377,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       </button>
   );
 
-  const renderSpeedUpButton = (type: 'CROP' | 'ANIMAL' | 'MACHINE', slotId: number) => (
+  const renderSpeedUpButton = (type: 'CROP' | 'ANIMAL' | 'MACHINE', slotId: number, position: string = 'absolute top-2 left-2') => (
       <button
           onClick={(e) => { e.stopPropagation(); setQuizContext({ type: 'SPEED_UP', slotId, entityType: type }); setActiveModal('QUIZ'); }}
-          className="absolute top-2 left-2 z-30 bg-yellow-400 text-white p-1.5 rounded-full shadow-sm hover:bg-yellow-500 border-2 border-white animate-pulse active:scale-90 transition-all"
+          className={`${position} z-30 bg-yellow-400 text-white p-1.5 rounded-full shadow-sm hover:bg-yellow-500 border-2 border-white animate-pulse active:scale-90 transition-all`}
       >
           <Zap size={14} fill="currentColor" />
       </button>
@@ -415,7 +422,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                   </div>
                               )}
                               
-                              {/* SPEED UP BUTTON */}
+                              {/* SPEED UP BUTTON - Default Top Left for Crops */}
                               {!isReady && !hasPest && renderSpeedUpButton('CROP', plot.id)}
 
                               <div className={`text-7xl transition-all duration-500 z-10 ${isReady ? 'scale-110 drop-shadow-2xl' : 'scale-75 opacity-90 grayscale-[0.3]'}`}>
@@ -478,7 +485,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !animal ? 'bg-amber-50 border-amber-200 border-dashed' : 'bg-[#FFF3E0] border-[#FFE0B2]'}
                         `}
                       >
-                          {/* MANAGE BUTTON FOR ANIMAL */}
+                          {/* MANAGE BUTTON FOR ANIMAL - Top Right */}
                           {animal && (
                               <div 
                                 onClick={(e) => { 
@@ -492,8 +499,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </div>
                           )}
 
-                          {/* SPEED UP */}
-                          {animal && isFed && renderSpeedUpButton('ANIMAL', slot.id)}
+                          {/* SPEED UP - MOVED TO BOTTOM LEFT to avoid queue overlap */}
+                          {animal && isFed && renderSpeedUpButton('ANIMAL', slot.id, 'absolute bottom-2 left-2')}
 
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
@@ -504,7 +511,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  {/* Queue Display */}
+                                  {/* Queue Display - Top Left */}
                                   {queueCount > 0 && (
                                       <div className="absolute top-2 left-2 z-20 flex gap-1 bg-white/80 px-1.5 py-0.5 rounded-full shadow-sm border border-slate-100">
                                           <span className="text-xs">{feedItem?.emoji}</span>
@@ -731,9 +738,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             {renderSectionTabs()}
         </div>
 
-        {/* Harvest All Button - Floating */}
+        {/* Harvest All Button - Fixed Position Icon */}
         {readyCount >= 2 && (
-            <div className="absolute bottom-24 right-4 z-40 animate-bounce">
+            <div className="fixed bottom-24 right-4 z-[60] animate-bounce">
                 <button 
                     onClick={() => {
                         const res = harvestAll();
@@ -745,9 +752,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             }
                         }
                     }}
-                    className="bg-amber-500 text-white p-4 rounded-full shadow-2xl border-4 border-white flex items-center justify-center gap-2 font-black text-xs uppercase hover:bg-amber-600 transition-all active:scale-90"
+                    className="bg-amber-500 text-white w-16 h-16 rounded-full shadow-2xl border-4 border-white flex flex-col items-center justify-center font-black text-[10px] uppercase hover:bg-amber-600 transition-all active:scale-90"
                 >
-                    <Hand size={24} /> Thu hoạch tất cả ({readyCount})
+                    <Hand size={24} />
+                    <span>Thu hoạch</span>
+                    <span className="bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center absolute -top-1 -right-1 border-2 border-white shadow-sm">{readyCount}</span>
                 </button>
             </div>
         )}

@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FarmOrder, FarmItem } from '../../types';
-import { Truck, X, RefreshCw, Coins, Zap } from 'lucide-react';
+import { Truck, X, RefreshCw, Coins, Zap, Clock } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { Avatar } from '../Avatar';
 
@@ -16,6 +16,24 @@ interface OrderBoardProps {
 }
 
 export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory, onDeliver, onRefresh, onClose, onShowAlert }) => {
+  // Local state to force re-render every minute for countdowns
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+      const interval = setInterval(() => setNow(Date.now()), 60000);
+      return () => clearInterval(interval);
+  }, []);
+
+  const getRemainingTime = (expiresAt: number) => {
+      const diff = expiresAt - now;
+      if (diff <= 0) return "Hết hạn";
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (hours > 0) return `${hours}h ${minutes}p`;
+      return `${minutes} phút`;
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fadeIn">
         <div className="bg-white rounded-[2.5rem] w-full max-w-md relative border-8 border-orange-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
@@ -38,13 +56,20 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                 ) : (
                     orders.map(order => {
                         const canDeliver = order.requirements.every(req => (inventory[req.cropId] || 0) >= req.amount);
-                        
+                        const isExpired = order.expiresAt <= now;
+                        const timeString = getRemainingTime(order.expiresAt);
+
                         return (
-                            <div key={order.id} className="bg-white border-4 border-white rounded-[2rem] p-4 shadow-sm hover:border-orange-200 transition-colors">
+                            <div key={order.id} className={`bg-white border-4 border-white rounded-[2rem] p-4 shadow-sm transition-colors ${isExpired ? 'opacity-50 grayscale' : 'hover:border-orange-200'}`}>
                                 <div className="flex justify-between items-center mb-4 border-b border-orange-50 pb-2">
                                     <div className="flex items-center gap-2">
                                         <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 font-black text-[10px] shadow-inner">{order.npcName.charAt(0)}</div>
-                                        <span className="font-black text-slate-800 text-xs uppercase tracking-tighter">{order.npcName}</span>
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-slate-800 text-xs uppercase tracking-tighter">{order.npcName}</span>
+                                            <span className={`text-[9px] font-bold flex items-center gap-1 ${isExpired ? 'text-red-500' : 'text-slate-400'}`}>
+                                                <Clock size={8}/> {timeString}
+                                            </span>
+                                        </div>
                                     </div>
                                     <div className="flex gap-2">
                                         <div className="flex items-center gap-1 text-[10px] font-black text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200"><Coins size={12} fill="currentColor"/> {order.rewardCoins}</div>
@@ -73,6 +98,7 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                     </div>
                                     <button 
                                         onClick={() => {
+                                            if (isExpired) return;
                                             if (canDeliver) {
                                                 onDeliver(order);
                                             } else {
@@ -80,9 +106,10 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                                 onShowAlert("Bé chưa đủ hàng trong Kho nông sản để giao nhé!", "DANGER");
                                             }
                                         }}
-                                        className={`ml-2 h-12 px-5 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center ${canDeliver ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}
+                                        disabled={isExpired}
+                                        className={`ml-2 h-12 px-5 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center ${canDeliver && !isExpired ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}
                                     >
-                                        Giao Hàng
+                                        {isExpired ? 'Hết hạn' : 'Giao Hàng'}
                                     </button>
                                 </div>
                             </div>
