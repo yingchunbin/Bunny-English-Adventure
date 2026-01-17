@@ -465,7 +465,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   
                   const storedProduceId = storageItems[0];
                   const produce = PRODUCTS.find(p => p.id === storedProduceId);
-                  const feedItem = animal ? CROPS.find(c => c.id === animal.feedCropId) : null;
+                  
+                  // Feed requirement data
+                  const feedItem = animal ? [...CROPS, ...PRODUCTS].find(c => c.id === animal.feedCropId) : null;
+                  const userHas = animal ? (userState.harvestedCrops?.[animal.feedCropId] || 0) : 0;
+                  const canFeed = animal && userHas >= animal.feedAmount;
 
                   return (
                       <button 
@@ -537,7 +541,20 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                       </div>
                                   )}
 
-                                  {!isFed && !hasStorage && <div className="absolute bottom-6 bg-orange-500 text-white px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg z-20 flex items-center gap-1 border-2 border-white"><Zap size={10} fill="currentColor"/> ĐÓI BỤNG</div>}
+                                  {!isFed && !hasStorage && (
+                                      <div className="absolute bottom-6 z-20 flex flex-col items-center">
+                                          <div className={`px-3 py-1.5 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border-2 border-white transition-all ${canFeed ? 'bg-green-500 text-white animate-bounce' : 'bg-white/90 text-slate-700 backdrop-blur-sm'}`}>
+                                              {canFeed ? <Zap size={10} fill="currentColor"/> : <span className="text-red-500 font-bold">Cần:</span>}
+                                              <span className="text-sm leading-none filter drop-shadow-sm">{feedItem?.emoji}</span>
+                                              <span>x{animal.feedAmount}</span>
+                                          </div>
+                                          {!canFeed && (
+                                              <div className="mt-1 bg-red-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full border border-white shadow-sm">
+                                                  Thiếu {animal.feedAmount - userHas}
+                                              </div>
+                                          )}
+                                      </div>
+                                  )}
                                   
                                   {isFed && (
                                       <div className="absolute bottom-6 w-16 h-2 bg-black/10 rounded-full overflow-hidden border border-white z-10">
