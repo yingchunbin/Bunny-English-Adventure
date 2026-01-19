@@ -2,318 +2,342 @@
 import { GradeCurriculum } from '../types';
 
 export const G5_FAMILY_FRIENDS: GradeCurriculum = {
-  1: {
-    title: "Unit 1: The Ancient Mayans (Người Maya cổ đại)",
+  0: {
+    title: "Starter: Back Together (Gặp lại nhau)",
     theme: 'cool',
     words: [
-      { en: "Ancient", vi: "Cổ đại", pro: "ˈeɪnʃənt", exEn: "Ancient history.", exVi: "Lịch sử cổ đại." },
-      { en: "Civilization", vi: "Nền văn minh", pro: "ˌsɪvəlaɪˈzeɪʃn", exEn: "Mayan civilization.", exVi: "Văn minh Maya." },
-      { en: "Temple", vi: "Ngôi đền", pro: "ˈtempl", exEn: "Big temple.", exVi: "Ngôi đền lớn." },
-      { en: "Statue", vi: "Bức tượng", pro: "ˈstætʃuː", exEn: "Stone statue.", exVi: "Tượng đá." },
-      { en: "Carve", vi: "Chạm khắc", pro: "kɑːv", exEn: "Carve wood.", exVi: "Chạm khắc gỗ." }
+      { en: "Subject", vi: "Môn học", pro: "ˈsʌbdʒɪkt", exEn: "Favorite subject.", exVi: "Môn học yêu thích." },
+      { en: "Math", vi: "Toán", pro: "mæθ", exEn: "Do math.", exVi: "Làm toán." },
+      { en: "English", vi: "Tiếng Anh", pro: "ˈɪŋɡlɪʃ", exEn: "Speak English.", exVi: "Nói tiếng Anh." },
+      { en: "Science", vi: "Khoa học", pro: "ˈsaɪəns", exEn: "Science class.", exVi: "Lớp khoa học." },
+      { en: "Doctor", vi: "Bác sĩ", pro: "ˈdɒktə", exEn: "I want to be a doctor.", exVi: "Tớ muốn làm bác sĩ." }
     ],
     sentences: [
-      { en: "The Mayans lived long ago", vi: "Người Maya đã sống cách đây rất lâu" },
-      { en: "They built big temples", vi: "Họ đã xây những ngôi đền lớn" }
+      { en: "My favorite subject is English", vi: "Môn học yêu thích của tớ là Tiếng Anh" },
+      { en: "She likes doing math problems", vi: "Cô ấy thích làm toán" },
+      { en: "Is Holly swimming", vi: "Holly có đang bơi không" },
+      { en: "No she is not", vi: "Không cô ấy không bơi" }
+    ]
+  },
+  1: {
+    title: "Unit 1: One Day (Một ngày)",
+    theme: 'urban',
+    words: [
+      { en: "Shower", vi: "Tắm vòi sen", pro: "ˈʃaʊə", exEn: "Have a shower.", exVi: "Đi tắm." },
+      { en: "Brush teeth", vi: "Đánh răng", pro: "brʌʃ tiːθ", exEn: "Brush my teeth.", exVi: "Đánh răng của tớ." },
+      { en: "Get dressed", vi: "Mặc quần áo", pro: "ɡet drest", exEn: "Get dressed quickly.", exVi: "Mặc đồ nhanh lên." },
+      { en: "Catch the bus", vi: "Bắt xe buýt", pro: "kætʃ ðə bʌs", exEn: "Catch the bus to school.", exVi: "Bắt xe buýt đi học." },
+      { en: "Walk", vi: "Đi bộ", pro: "wɔːk", exEn: "Walk to school.", exVi: "Đi bộ đến trường." }
+    ],
+    sentences: [
+      { en: "I walk to school", vi: "Tớ đi bộ đến trường" },
+      { en: "He catches the bus", vi: "Cậu ấy bắt xe buýt" },
+      { en: "Does he walk to school", vi: "Cậu ấy có đi bộ đi học không" }
     ]
   },
   2: {
-    title: "Unit 2: Our Vacation (Kỳ nghỉ của chúng tớ)",
-    theme: 'nature',
+    title: "Unit 2: Places to Go (Những nơi để đi)",
+    theme: 'urban',
     words: [
-      { en: "Vacation", vi: "Kỳ nghỉ", pro: "veɪˈkeɪʃn", exEn: "Summer vacation.", exVi: "Kỳ nghỉ hè." },
-      { en: "Suitcase", vi: "Va li", pro: "ˈsuːtkeɪs", exEn: "Pack the suitcase.", exVi: "Xếp hành lý." },
-      { en: "Sunscreen", vi: "Kem chống nắng", pro: "ˈsʌnskriːn", exEn: "Use sunscreen.", exVi: "Dùng kem chống nắng." },
-      { en: "Towel", vi: "Khăn tắm", pro: "ˈtaʊəl", exEn: "Wet towel.", exVi: "Khăn ướt." },
-      { en: "Soap", vi: "Xà phòng", pro: "səʊp", exEn: "Wash with soap.", exVi: "Rửa bằng xà phòng." }
+      { en: "Concert", vi: "Buổi hòa nhạc", pro: "ˈkɒnsət", exEn: "Go to a concert.", exVi: "Đi xem hòa nhạc." },
+      { en: "Shopping mall", vi: "Trung tâm mua sắm", pro: "ˈʃɒpɪŋ mɔːl", exEn: "Big shopping mall.", exVi: "Trung tâm mua sắm lớn." },
+      { en: "Library", vi: "Thư viện", pro: "ˈlaɪbrəri", exEn: "Quiet library.", exVi: "Thư viện yên tĩnh." },
+      { en: "Theater", vi: "Rạp hát/Rạp phim", pro: "ˈθɪətə", exEn: "Movie theater.", exVi: "Rạp chiếu phim." },
+      { en: "Singer", vi: "Ca sĩ", pro: "ˈsɪŋə", exEn: "Famous singer.", exVi: "Ca sĩ nổi tiếng." },
+      { en: "Actor", vi: "Diễn viên", pro: "ˈæktə", exEn: "Movie actor.", exVi: "Diễn viên điện ảnh." }
     ],
     sentences: [
-      { en: "I am going to pack my suitcase", vi: "Tớ sẽ xếp hành lý vào va li" },
-      { en: "Don't forget the sunscreen", vi: "Đừng quên kem chống nắng nhé" }
+      { en: "I always go to the playground", vi: "Tớ luôn đi ra sân chơi" },
+      { en: "She sometimes goes to the shopping mall", vi: "Cô ấy thỉnh thoảng đi trung tâm mua sắm" },
+      { en: "My birthday is in May", vi: "Sinh nhật tớ vào tháng Năm" }
     ]
   },
   3: {
-    title: "Unit 3: The food here is great! (Đồ ăn)",
+    title: "Unit 3: Could you give me some pasta? (Đồ ăn)",
     theme: 'warm',
     words: [
-      { en: "Waiter", vi: "Bồi bàn (nam)", pro: "ˈweɪtə", exEn: "Ask the waiter.", exVi: "Hỏi nam bồi bàn." },
-      { en: "Waitress", vi: "Bồi bàn (nữ)", pro: "ˈweɪtrəs", exEn: "The waitress is kind.", exVi: "Cô bồi bàn rất tốt bụng." },
-      { en: "Uniform", vi: "Đồng phục", pro: "ˈjuːnɪfɔːm", exEn: "School uniform.", exVi: "Đồng phục trường." },
-      { en: "Menu", vi: "Thực đơn", pro: "ˈmenjuː", exEn: "Look at the menu.", exVi: "Nhìn vào thực đơn." },
-      { en: "Customer", vi: "Khách hàng", pro: "ˈkʌstəmə", exEn: "Happy customer.", exVi: "Khách hàng vui vẻ." }
+      { en: "Pasta", vi: "Mỳ Ý", pro: "ˈpæstə", exEn: "I like pasta.", exVi: "Tớ thích mỳ Ý." },
+      { en: "Cereal", vi: "Ngũ cốc", pro: "ˈsɪəriəl", exEn: "Breakfast cereal.", exVi: "Ngũ cốc ăn sáng." },
+      { en: "Cucumber", vi: "Dưa chuột", pro: "ˈkjuːkʌmbə", exEn: "Green cucumber.", exVi: "Dưa chuột xanh." },
+      { en: "Onion", vi: "Hành tây", pro: "ˈʌnjən", exEn: "Chop the onion.", exVi: "Thái hành tây." },
+      { en: "Melon", vi: "Dưa lưới", pro: "ˈmelən", exEn: "Sweet melon.", exVi: "Dưa lưới ngọt." }
     ],
     sentences: [
-      { en: "The waiter is wearing a uniform", vi: "Người bồi bàn đang mặc đồng phục" },
-      { en: "Can I see the menu please", vi: "Cho tôi xem thực đơn được không" }
+      { en: "Could you give me some pasta", vi: "Cho tớ xin ít mỳ Ý được không" },
+      { en: "I would like some melons", vi: "Tớ muốn một ít dưa lưới" },
+      { en: "Yes here you are", vi: "Vâng của bạn đây" }
     ]
   },
   4: {
-    title: "Unit 4: We had a concert (Buổi hòa nhạc)",
-    theme: 'urban',
+    title: "Review 1 (Ôn tập 1)",
+    theme: 'cool',
     words: [
-      { en: "Concert", vi: "Buổi hòa nhạc", pro: "ˈkɒnsət", exEn: "Rock concert.", exVi: "Buổi hòa nhạc Rock." },
-      { en: "Drums", vi: "Trống", pro: "drʌmz", exEn: "Play drums.", exVi: "Chơi trống." },
-      { en: "Instruments", vi: "Nhạc cụ", pro: "ˈɪnstrəmənts", exEn: "Musical instruments.", exVi: "Nhạc cụ âm nhạc." },
-      { en: "Violin", vi: "Đàn vĩ cầm", pro: "ˌvaɪəˈlɪn", exEn: "Play the violin.", exVi: "Chơi đàn vĩ cầm." },
-      { en: "Stage", vi: "Sân khấu", pro: "steɪdʒ", exEn: "On the stage.", exVi: "Trên sân khấu." }
+      { en: "Subject", vi: "Môn học", pro: "ˈsʌbdʒɪkt", exEn: "School subject.", exVi: "Môn học ở trường." },
+      { en: "Shower", vi: "Vòi sen", pro: "ˈʃaʊə", exEn: "Take a shower.", exVi: "Đi tắm." },
+      { en: "Concert", vi: "Buổi hòa nhạc", pro: "ˈkɒnsət", exEn: "Music concert.", exVi: "Buổi hòa nhạc." },
+      { en: "Pasta", vi: "Mỳ Ý", pro: "ˈpæstə", exEn: "Hot pasta.", exVi: "Mỳ nóng." },
+      { en: "Library", vi: "Thư viện", pro: "ˈlaɪbrəri", exEn: "Read in library.", exVi: "Đọc ở thư viện." }
     ],
     sentences: [
-      { en: "We played at the concert", vi: "Chúng tớ đã chơi ở buổi hòa nhạc" },
-      { en: "The audience clapped loudly", vi: "Khán giả đã vỗ tay rất to" }
+      { en: "My favorite subject is Math", vi: "Môn học yêu thích của tớ là Toán" },
+      { en: "I never go to the shopping mall", vi: "Tớ không bao giờ đi trung tâm mua sắm" },
+      { en: "Could I have some water please", vi: "Cho tớ xin chút nước được không" }
     ]
   },
   5: {
-    title: "Unit 5: The dinosaur museum (Bảo tàng khủng long)",
-    theme: 'nature',
+    title: "Unit 4: Buying Food (Mua thực phẩm)",
+    theme: 'warm',
     words: [
-      { en: "Dinosaur", vi: "Khủng long", pro: "ˈdaɪnəsɔː", exEn: "Big dinosaur.", exVi: "Con khủng long lớn." },
-      { en: "Museum", vi: "Bảo tàng", pro: "mjuˈziːəm", exEn: "Visit the museum.", exVi: "Thăm bảo tàng." },
-      { en: "Skeleton", vi: "Bộ xương", pro: "ˈskelɪtn", exEn: "Dinosaur skeleton.", exVi: "Bộ xương khủng long." },
-      { en: "Model", vi: "Mô hình", pro: "ˈmɒdl", exEn: "A model car.", exVi: "Một mô hình xe hơi." },
-      { en: "Scary", vi: "Đáng sợ", pro: "ˈskeəri", exEn: "It looks scary.", exVi: "Nó trông thật đáng sợ." }
+      { en: "Fruit", vi: "Trái cây", pro: "fruːt", exEn: "Fresh fruit.", exVi: "Trái cây tươi." },
+      { en: "Vegetables", vi: "Rau củ", pro: "ˈvedʒtəblz", exEn: "Green vegetables.", exVi: "Rau củ xanh." },
+      { en: "Cheese", vi: "Phô mai", pro: "tʃiːz", exEn: "Yellow cheese.", exVi: "Phô mai vàng." },
+      { en: "Grain", vi: "Ngũ cốc/Hạt", pro: "ɡreɪn", exEn: "Whole grain.", exVi: "Ngũ cốc nguyên hạt." },
+      { en: "Dairy", vi: "Sản phẩm sữa", pro: "ˈdeəri", exEn: "Dairy products.", exVi: "Các sản phẩm từ sữa." }
     ],
     sentences: [
-      { en: "We went to the dinosaur museum", vi: "Chúng tớ đã đi đến bảo tàng khủng long" },
-      { en: "I saw a big skeleton", vi: "Tớ đã thấy một bộ xương lớn" }
+      { en: "Could I have some chicken noodles please", vi: "Làm ơn cho tớ một ít mỳ gà" },
+      { en: "I have a sandwich and some orange juice", vi: "Tớ có một cái bánh kẹp và ít nước cam" },
+      { en: "Would you like an apple", vi: "Bạn có muốn ăn táo không" }
     ]
   },
   6: {
-    title: "Unit 6: Whose jacket is this? (Thể thao)",
-    theme: 'cool',
+    title: "Unit 5: Getting Around (Giao thông)",
+    theme: 'urban',
     words: [
-      { en: "Team", vi: "Đội", pro: "tiːm", exEn: "Football team.", exVi: "Đội bóng đá." },
-      { en: "Jacket", vi: "Áo khoác", pro: "ˈdʒækɪt", exEn: "Warm jacket.", exVi: "Áo khoác ấm." },
-      { en: "Trainers", vi: "Giày thể thao", pro: "ˈtreɪnəz", exEn: "New trainers.", exVi: "Giày thể thao mới." },
-      { en: "Trophy", vi: "Cúp", pro: "ˈtrəʊfi", exEn: "Win a trophy.", exVi: "Giành cúp." },
-      { en: "Player", vi: "Cầu thủ", pro: "ˈpleɪə", exEn: "Best player.", exVi: "Cầu thủ giỏi nhất." }
+      { en: "Bus", vi: "Xe buýt", pro: "bʌs", exEn: "School bus.", exVi: "Xe buýt trường học." },
+      { en: "Motorcycle", vi: "Xe máy", pro: "ˈməʊtəsaɪkl", exEn: "Fast motorcycle.", exVi: "Xe máy nhanh." },
+      { en: "Plane", vi: "Máy bay", pro: "pleɪn", exEn: "Fly by plane.", exVi: "Bay bằng máy bay." },
+      { en: "Taxi", vi: "Xe taxi", pro: "ˈtæksi", exEn: "Take a taxi.", exVi: "Bắt taxi." },
+      { en: "Trolley", vi: "Xe điện", pro: "ˈtrɒli", exEn: "Ride a trolley.", exVi: "Đi xe điện." }
     ],
     sentences: [
-      { en: "Whose jacket is this", vi: "Đây là áo khoác của ai" },
-      { en: "It is mine", vi: "Nó là của tớ" },
-      { en: "Are these trainers yours", vi: "Đôi giày này có phải của bạn không" },
-      { en: "No they are hers", vi: "Không chúng là của cô ấy" }
+      { en: "There was a park", vi: "Đã có một cái công viên" },
+      { en: "There were flowers", vi: "Đã có những bông hoa" },
+      { en: "There were not any motorcycles", vi: "Đã không có chiếc xe máy nào" }
     ]
   },
   7: {
-    title: "Unit 7: Go back to the roundabout (Chỉ đường)",
-    theme: 'urban',
+    title: "Unit 6: They had a long trip (Chuyến đi dài)",
+    theme: 'nature',
     words: [
-      { en: "Roundabout", vi: "Vòng xuyến", pro: "ˈraʊndəbaʊt", exEn: "At the roundabout.", exVi: "Tại vòng xuyến." },
-      { en: "Traffic light", vi: "Đèn giao thông", pro: "ˈtræfɪk laɪt", exEn: "Red traffic light.", exVi: "Đèn đỏ." },
-      { en: "Turn left", vi: "Rẽ trái", pro: "tɜːn left", exEn: "Turn left here.", exVi: "Rẽ trái ở đây." },
-      { en: "Petrol station", vi: "Trạm xăng", pro: "ˈpetrəl steɪʃn", exEn: "Find a petrol station.", exVi: "Tìm trạm xăng." },
-      { en: "Bridge", vi: "Cây cầu", pro: "brɪdʒ", exEn: "Cross the bridge.", exVi: "Băng qua cầu." }
+      { en: "Australia", vi: "Nước Úc", pro: "ɒˈstreɪliə", exEn: "Go to Australia.", exVi: "Đi đến Úc." },
+      { en: "Humid", vi: "Ẩm ướt", pro: "ˈhjuːmɪd", exEn: "Humid weather.", exVi: "Thời tiết ẩm ướt." },
+      { en: "Stormy", vi: "Có bão", pro: "ˈstɔːmi", exEn: "Stormy day.", exVi: "Ngày bão." },
+      { en: "Cloudy", vi: "Nhiều mây", pro: "ˈklaʊdi", exEn: "Cloudy sky.", exVi: "Bầu trời nhiều mây." },
+      { en: "Foggy", vi: "Có sương mù", pro: "ˈfɒɡi", exEn: "Foggy morning.", exVi: "Buổi sáng sương mù." }
     ],
     sentences: [
-      { en: "Go straight at the roundabout", vi: "Đi thẳng ở vòng xuyến" },
-      { en: "Turn right at the traffic lights", vi: "Rẽ phải ở đèn giao thông" },
-      { en: "Go over the bridge", vi: "Đi qua cây cầu" }
+      { en: "The weather was sunny", vi: "Thời tiết đã có nắng" },
+      { en: "They had a long trip", vi: "Họ đã có một chuyến đi dài" },
+      { en: "She did not have an umbrella", vi: "Cô ấy đã không có ô" }
     ]
   },
   8: {
-    title: "Unit 8: The best bed (So sánh)",
-    theme: 'warm',
+    title: "Unit 7: The Ancient Mayans (Người Maya)",
+    theme: 'cool',
     words: [
-      { en: "Comfortable", vi: "Thoải mái", pro: "ˈkʌmftəbl", exEn: "A comfortable bed.", exVi: "Một chiếc giường thoải mái." },
-      { en: "Hard", vi: "Cứng", pro: "hɑːd", exEn: "Hard chair.", exVi: "Ghế cứng." },
-      { en: "Soft", vi: "Mềm", pro: "sɒft", exEn: "Soft pillow.", exVi: "Gối mềm." },
-      { en: "Expensive", vi: "Đắt tiền", pro: "ɪkˈspensɪv", exEn: "Expensive car.", exVi: "Xe hơi đắt tiền." },
-      { en: "Repair", vi: "Sửa chữa", pro: "rɪˈpeə", exEn: "Repair the toy.", exVi: "Sửa đồ chơi." }
+      { en: "Live", vi: "Sống", pro: "lɪv", exEn: "Live in a house.", exVi: "Sống trong nhà." },
+      { en: "Cook", vi: "Nấu ăn", pro: "kʊk", exEn: "Cook food.", exVi: "Nấu ăn." },
+      { en: "Use", vi: "Sử dụng", pro: "juːz", exEn: "Use tools.", exVi: "Dùng công cụ." },
+      { en: "Start", vi: "Bắt đầu", pro: "stɑːt", exEn: "Start work.", exVi: "Bắt đầu làm việc." },
+      { en: "Finish", vi: "Kết thúc", pro: "ˈfɪnɪʃ", exEn: "Finish the job.", exVi: "Hoàn thành công việc." }
     ],
     sentences: [
-      { en: "My bed is more comfortable than yours", vi: "Giường của tớ thoải mái hơn của bạn" },
-      { en: "This is the most expensive bed", vi: "Đây là chiếc giường đắt nhất" },
-      { en: "It is less expensive than the old one", vi: "Nó ít tốn kém hơn cái cũ" }
+      { en: "They lived two thousand years ago", vi: "Họ đã sống cách đây 2000 năm" },
+      { en: "They did not live in apartments", vi: "Họ đã không sống trong căn hộ" },
+      { en: "Did they cook good food", vi: "Họ có nấu ăn ngon không" }
     ]
   },
   9: {
-    title: "Unit 9: Will it really happen? (Tương lai)",
-    theme: 'cool',
+    title: "Review 2 (Ôn tập 2)",
+    theme: 'warm',
     words: [
-      { en: "Future", vi: "Tương lai", pro: "ˈfjuːtʃə", exEn: "In the future.", exVi: "Trong tương lai." },
-      { en: "Rocket", vi: "Tên lửa", pro: "ˈrɒkɪt", exEn: "Fly in a rocket.", exVi: "Bay bằng tên lửa." },
-      { en: "Astronaut", vi: "Phi hành gia", pro: "ˈæstrənɔːt", exEn: "Brave astronaut.", exVi: "Phi hành gia dũng cảm." },
-      { en: "Planet", vi: "Hành tinh", pro: "ˈplænɪt", exEn: "Red planet.", exVi: "Hành tinh đỏ." },
-      { en: "Travel", vi: "Du lịch/Đi lại", pro: "ˈtrævl", exEn: "Space travel.", exVi: "Du hành vũ trụ." }
+      { en: "Fruit", vi: "Trái cây", pro: "fruːt", exEn: "Fresh fruit.", exVi: "Trái cây tươi." },
+      { en: "Taxi", vi: "Xe taxi", pro: "ˈtæksi", exEn: "Yellow taxi.", exVi: "Taxi màu vàng." },
+      { en: "Stormy", vi: "Có bão", pro: "ˈstɔːmi", exEn: "It is stormy.", exVi: "Trời đang bão." },
+      { en: "Live", vi: "Sống", pro: "lɪv", exEn: "Live here.", exVi: "Sống ở đây." },
+      { en: "Start", vi: "Bắt đầu", pro: "stɑːt", exEn: "Start now.", exVi: "Bắt đầu ngay." }
     ],
     sentences: [
-      { en: "People will travel in super fast planes", vi: "Con người sẽ đi lại bằng máy bay siêu tốc" },
-      { en: "Will we go to the moon", vi: "Chúng ta sẽ đi lên mặt trăng chứ" },
-      { en: "Yes we will", vi: "Có chúng ta sẽ đi" }
+      { en: "There was a taxi", vi: "Đã có một chiếc taxi" },
+      { en: "The weather was foggy", vi: "Thời tiết đã có sương mù" },
+      { en: "Did they have a good trip", vi: "Họ có chuyến đi tốt đẹp không" }
     ]
   },
   10: {
-    title: "Unit 10: How much time have we got? (Sân bay)",
-    theme: 'urban',
+    title: "Unit 8: Geography (Địa lý)",
+    theme: 'nature',
     words: [
-      { en: "Money", vi: "Tiền", pro: "ˈmʌni", exEn: "Save money.", exVi: "Tiết kiệm tiền." },
-      { en: "Passenger", vi: "Hành khách", pro: "ˈpæsɪndʒə", exEn: "Train passenger.", exVi: "Hành khách tàu hỏa." },
-      { en: "Luggage", vi: "Hành lý", pro: "ˈlʌɡɪdʒ", exEn: "Heavy luggage.", exVi: "Hành lý nặng." },
-      { en: "Passport", vi: "Hộ chiếu", pro: "ˈpɑːspɔːt", exEn: "Show passport.", exVi: "Trình hộ chiếu." },
-      { en: "Newspaper", vi: "Báo", pro: "ˈnjuːzpeɪpə", exEn: "Read newspaper.", exVi: "Đọc báo." }
+      { en: "Desert", vi: "Sa mạc", pro: "ˈdezət", exEn: "Hot desert.", exVi: "Sa mạc nóng." },
+      { en: "Camel", vi: "Lạc đà", pro: "ˈkæml", exEn: "Ride a camel.", exVi: "Cưỡi lạc đà." },
+      { en: "River", vi: "Dòng sông", pro: "ˈrɪvə", exEn: "Long river.", exVi: "Dòng sông dài." },
+      { en: "Stream", vi: "Suối", pro: "striːm", exEn: "Small stream.", exVi: "Con suối nhỏ." },
+      { en: "Rock", vi: "Tảng đá", pro: "rɒk", exEn: "Hard rock.", exVi: "Tảng đá cứng." }
     ],
     sentences: [
-      { en: "How much money do you have", vi: "Bạn có bao nhiêu tiền" },
-      { en: "I do not have much money", vi: "Tớ không có nhiều tiền" },
-      { en: "We have lots of luggage", vi: "Chúng tớ có rất nhiều hành lý" }
+      { en: "How was your vacation", vi: "Kỳ nghỉ của bạn thế nào" },
+      { en: "It was great", vi: "Nó rất tuyệt" },
+      { en: "How was the weather in Thailand", vi: "Thời tiết ở Thái Lan thế nào" }
     ]
   },
   11: {
-    title: "Unit 11: Something new to watch (Truyền hình)",
-    theme: 'warm',
+    title: "Unit 9: The Dinosaur Museum (Bảo tàng)",
+    theme: 'cool',
     words: [
-      { en: "Cartoon", vi: "Hoạt hình", pro: "kɑːˈtuːn", exEn: "Funny cartoon.", exVi: "Hoạt hình vui nhộn." },
-      { en: "Documentary", vi: "Phim tài liệu", pro: "ˌdɒkjuˈmentri", exEn: "Nature documentary.", exVi: "Phim tài liệu thiên nhiên." },
-      { en: "Channel", vi: "Kênh", pro: "ˈtʃænl", exEn: "Change channel.", exVi: "Chuyển kênh." },
-      { en: "Remote control", vi: "Điều khiển từ xa", pro: "rɪˈməʊt kənˈtrəʊl", exEn: "Use remote control.", exVi: "Dùng điều khiển." },
-      { en: "News", vi: "Tin tức", pro: "njuːz", exEn: "Watch the news.", exVi: "Xem tin tức." }
+      { en: "Dinosaur", vi: "Khủng long", pro: "ˈdaɪnəsɔː", exEn: "Big dinosaur.", exVi: "Con khủng long to." },
+      { en: "Bone", vi: "Xương", pro: "bəʊn", exEn: "Dinosaur bone.", exVi: "Xương khủng long." },
+      { en: "Model", vi: "Mô hình", pro: "ˈmɒdl", exEn: "Model car.", exVi: "Mô hình xe." },
+      { en: "Scary", vi: "Đáng sợ", pro: "ˈskeəri", exEn: "Scary monster.", exVi: "Quái vật đáng sợ." },
+      { en: "Roar", vi: "Gầm", pro: "rɔː", exEn: "Lions roar.", exVi: "Sư tử gầm." }
     ],
     sentences: [
-      { en: "I watched a documentary last night", vi: "Tớ đã xem phim tài liệu tối qua" },
-      { en: "Can you pass me the remote control", vi: "Bạn đưa tớ cái điều khiển được không" }
+      { en: "We went to the dinosaur museum", vi: "Chúng tớ đã đi bảo tàng khủng long" },
+      { en: "We did not go to school", vi: "Chúng tớ đã không đi học" },
+      { en: "Did they buy a postcard", vi: "Họ có mua bưu thiếp không" }
     ]
   },
   12: {
-    title: "Unit 12: A new computer (Công nghệ)",
-    theme: 'cool',
+    title: "Unit 10: Comparison (So sánh)",
+    theme: 'nature',
     words: [
-      { en: "Printer", vi: "Máy in", pro: "ˈprɪntə", exEn: "Color printer.", exVi: "Máy in màu." },
-      { en: "Screen", vi: "Màn hình", pro: "skriːn", exEn: "Touch screen.", exVi: "Màn hình cảm ứng." },
-      { en: "Mouse", vi: "Con chuột", pro: "maʊs", exEn: "Click the mouse.", exVi: "Bấm chuột." },
-      { en: "Keyboard", vi: "Bàn phím", pro: "ˈkiːbɔːd", exEn: "Type on keyboard.", exVi: "Gõ bàn phím." },
-      { en: "Email", vi: "Thư điện tử", pro: "ˈiːmeɪl", exEn: "Send an email.", exVi: "Gửi email." }
+      { en: "Mountain", vi: "Núi", pro: "ˈmaʊntən", exEn: "High mountain.", exVi: "Núi cao." },
+      { en: "Ocean", vi: "Đại dương", pro: "ˈəʊʃn", exEn: "Deep ocean.", exVi: "Đại dương sâu thẳm." },
+      { en: "Waterfall", vi: "Thác nước", pro: "ˈwɔːtəfɔːl", exEn: "Beautiful waterfall.", exVi: "Thác nước đẹp." },
+      { en: "Deep", vi: "Sâu", pro: "diːp", exEn: "Deep lake.", exVi: "Hồ sâu." },
+      { en: "High", vi: "Cao", pro: "haɪ", exEn: "High jump.", exVi: "Nhảy cao." }
     ],
     sentences: [
-      { en: "I use the computer to do my homework", vi: "Tớ dùng máy tính để làm bài tập" },
-      { en: "Turn on the printer please", vi: "Làm ơn bật máy in lên" }
+      { en: "A cheetah is faster than a mouse", vi: "Báo gấm nhanh hơn chuột" },
+      { en: "An ocean is wider than a lake", vi: "Đại dương rộng hơn hồ" },
+      { en: "Is it higher", vi: "Nó có cao hơn không" }
     ]
   },
   13: {
-    title: "Unit 13: The Ancient Egyptians (Lịch sử)",
-    theme: 'nature',
+    title: "Unit 11: In the Park (Trong công viên)",
+    theme: 'urban',
     words: [
-      { en: "Pyramid", vi: "Kim tự tháp", pro: "ˈpɪrəmɪd", exEn: "Big pyramid.", exVi: "Kim tự tháp lớn." },
-      { en: "Tomb", vi: "Lăng mộ", pro: "tuːm", exEn: "Ancient tomb.", exVi: "Lăng mộ cổ." },
-      { en: "Jewelry", vi: "Trang sức", pro: "ˈdʒuːəlri", exEn: "Gold jewelry.", exVi: "Trang sức vàng." },
-      { en: "Steps", vi: "Bậc thang", pro: "steps", exEn: "Stone steps.", exVi: "Bậc thang đá." },
-      { en: "Papyrus", vi: "Giấy cói", pro: "pəˈpaɪrəs", exEn: "Write on papyrus.", exVi: "Viết trên giấy cói." }
+      { en: "Path", vi: "Lối đi", pro: "pɑːθ", exEn: "Walk on the path.", exVi: "Đi trên lối đi." },
+      { en: "Grass", vi: "Cỏ", pro: "ɡrɑːs", exEn: "Green grass.", exVi: "Cỏ xanh." },
+      { en: "Fountain", vi: "Đài phun nước", pro: "ˈfaʊntɪn", exEn: "Water fountain.", exVi: "Đài phun nước." },
+      { en: "Garbage can", vi: "Thùng rác", pro: "ˈɡɑːbɪdʒ kæn", exEn: "Use the garbage can.", exVi: "Dùng thùng rác." },
+      { en: "Litter", vi: "Rác (vứt bừa)", pro: "ˈlɪtə", exEn: "Do not litter.", exVi: "Đừng xả rác." }
     ],
     sentences: [
-      { en: "The Egyptians built pyramids", vi: "Người Ai Cập đã xây kim tự tháp" },
-      { en: "They wore gold jewelry", vi: "Họ đã đeo trang sức bằng vàng" }
+      { en: "You must walk on the path", vi: "Bạn phải đi trên lối đi" },
+      { en: "Do not shout loudly", vi: "Đừng hét to" },
+      { en: "Run quickly", vi: "Chạy nhanh lên" }
     ]
   },
   14: {
-    title: "Unit 14: Did you have a good day? (Quá khứ)",
-    theme: 'urban',
+    title: "Review 3 (Ôn tập 3)",
+    theme: 'nature',
     words: [
-      { en: "Backpack", vi: "Ba lô", pro: "ˈbækpæk", exEn: "Heavy backpack.", exVi: "Ba lô nặng." },
-      { en: "Start", vi: "Bắt đầu", pro: "stɑːt", exEn: "Start school.", exVi: "Bắt đầu học." },
-      { en: "Finish", vi: "Kết thúc", pro: "ˈfɪnɪʃ", exEn: "Finish homework.", exVi: "Làm xong bài tập." },
-      { en: "Love", vi: "Yêu thích", pro: "lʌv", exEn: "I love music.", exVi: "Tớ yêu âm nhạc." },
-      { en: "Hate", vi: "Ghét", pro: "heɪt", exEn: "I hate rain.", exVi: "Tớ ghét mưa." }
+      { en: "Desert", vi: "Sa mạc", pro: "ˈdezət", exEn: "Dry desert.", exVi: "Sa mạc khô." },
+      { en: "Dinosaur", vi: "Khủng long", pro: "ˈdaɪnəsɔː", exEn: "Old dinosaur.", exVi: "Khủng long cổ đại." },
+      { en: "Ocean", vi: "Đại dương", pro: "ˈəʊʃn", exEn: "Blue ocean.", exVi: "Đại dương xanh." },
+      { en: "Fountain", vi: "Đài phun nước", pro: "ˈfaʊntɪn", exEn: "Nice fountain.", exVi: "Đài phun nước đẹp." },
+      { en: "Shout", vi: "Hét", pro: "ʃaʊt", exEn: "Don't shout.", exVi: "Đừng hét." }
     ],
     sentences: [
-      { en: "Did you have a good day", vi: "Bạn đã có một ngày tốt lành chứ" },
-      { en: "When did you finish school", vi: "Khi nào bạn tan học" },
-      { en: "I finished at three o'clock", vi: "Tớ tan lúc ba giờ" }
+      { en: "Where did you go", vi: "Bạn đã đi đâu" },
+      { en: "The ocean is deep", vi: "Đại dương rất sâu" },
+      { en: "You must follow the rules", vi: "Bạn phải tuân thủ quy tắc" }
     ]
   },
   15: {
-    title: "Unit 15: Our holiday! (Kỳ nghỉ)",
+    title: "Unit 12: Seasons (Các mùa)",
     theme: 'nature',
     words: [
-      { en: "Holiday", vi: "Kỳ nghỉ", pro: "ˈhɒlədeɪ", exEn: "Summer holiday.", exVi: "Kỳ nghỉ hè." },
-      { en: "Learn", vi: "Học", pro: "lɜːn", exEn: "Learn to surf.", exVi: "Học lướt sóng." },
-      { en: "Swim", vi: "Bơi", pro: "swɪm", exEn: "Swim in the sea.", exVi: "Bơi dưới biển." },
-      { en: "Camp", vi: "Cắm trại", pro: "kæmp", exEn: "Camp in the woods.", exVi: "Cắm trại trong rừng." },
-      { en: "Relax", vi: "Thư giãn", pro: "rɪˈlæks", exEn: "Relax at home.", exVi: "Thư giãn ở nhà." }
+      { en: "Spring", vi: "Mùa xuân", pro: "sprɪŋ", exEn: "Warm spring.", exVi: "Mùa xuân ấm áp." },
+      { en: "Summer", vi: "Mùa hè", pro: "ˈsʌmə", exEn: "Hot summer.", exVi: "Mùa hè nóng bức." },
+      { en: "Fall", vi: "Mùa thu", pro: "fɔːl", exEn: "Cool fall.", exVi: "Mùa thu mát mẻ." },
+      { en: "Winter", vi: "Mùa đông", pro: "ˈwɪntə", exEn: "Cold winter.", exVi: "Mùa đông lạnh giá." },
+      { en: "Season", vi: "Mùa", pro: "ˈsiːzn", exEn: "Four seasons.", exVi: "Bốn mùa." }
     ],
     sentences: [
-      { en: "We are going to have a holiday", vi: "Chúng tớ sắp có một kỳ nghỉ" },
-      { en: "I am going to swim", vi: "Tớ sẽ đi bơi" },
-      { en: "It is going to be fun", vi: "Nó sẽ rất vui" }
+      { en: "What are you doing Tom", vi: "Bạn đang làm gì thế Tom" },
+      { en: "Did you go to the museum last week", vi: "Tuần trước bạn có đi bảo tàng không" },
+      { en: "It was cold in winter", vi: "Trời đã lạnh vào mùa đông" }
     ]
   },
-  // --- NEW UNITS ADDED BELOW ---
   16: {
-    title: "Unit 16: Jungle Adventure (Thám hiểm rừng xanh)",
-    theme: 'nature',
+    title: "Unit 13: What's the matter? (Sức khỏe)",
+    theme: 'warm',
     words: [
-      { en: "Jungle", vi: "Rừng rậm", pro: "ˈdʒʌŋɡl", exEn: "Green jungle.", exVi: "Rừng rậm xanh." },
-      { en: "Waterfall", vi: "Thác nước", pro: "ˈwɔːtəfɔːl", exEn: "High waterfall.", exVi: "Thác nước cao." },
-      { en: "Bridge", vi: "Cây cầu", pro: "brɪdʒ", exEn: "Cross the bridge.", exVi: "Băng qua cầu." },
-      { en: "Rhino", vi: "Tê giác", pro: "ˈraɪnəʊ", exEn: "Big rhino.", exVi: "Con tê giác lớn." },
-      { en: "Gorilla", vi: "Khỉ đột", pro: "ɡəˈrɪlə", exEn: "Strong gorilla.", exVi: "Khỉ đột khỏe mạnh." }
+      { en: "Headache", vi: "Đau đầu", pro: "ˈhedeɪk", exEn: "Bad headache.", exVi: "Đau đầu dữ dội." },
+      { en: "Fever", vi: "Sốt", pro: "ˈfiːvə", exEn: "High fever.", exVi: "Sốt cao." },
+      { en: "Cold", vi: "Cảm lạnh", pro: "kəʊld", exEn: "Catch a cold.", exVi: "Bị cảm." },
+      { en: "Stomach ache", vi: "Đau bụng", pro: "ˈstʌmək eɪk", exEn: "Sore stomach.", exVi: "Đau bụng." },
+      { en: "Medicine", vi: "Thuốc", pro: "ˈmedsn", exEn: "Take medicine.", exVi: "Uống thuốc." }
     ],
     sentences: [
-      { en: "We walked in the jungle", vi: "Chúng tớ đã đi bộ trong rừng" },
-      { en: "The waterfall is beautiful", vi: "Thác nước thật đẹp" },
-      { en: "Be careful on the bridge", vi: "Hãy cẩn thận trên cầu nhé" }
+      { en: "You should drink some water", vi: "Bạn nên uống chút nước" },
+      { en: "You should not eat lots of cakes", vi: "Bạn không nên ăn nhiều bánh ngọt" },
+      { en: "Should I eat fruit", vi: "Tớ có nên ăn trái cây không" }
     ]
   },
   17: {
-    title: "Unit 17: Eating Out (Đi ăn nhà hàng)",
-    theme: 'warm',
+    title: "Unit 14: Will it really happen? (Tương lai)",
+    theme: 'cool',
     words: [
-      { en: "Restaurant", vi: "Nhà hàng", pro: "ˈrestrɒnt", exEn: "Nice restaurant.", exVi: "Nhà hàng đẹp." },
-      { en: "Order", vi: "Gọi món", pro: "ˈɔːdə", exEn: "Order food.", exVi: "Gọi đồ ăn." },
-      { en: "Delicious", vi: "Ngon tuyệt", pro: "dɪˈlɪʃəs", exEn: "Delicious soup.", exVi: "Món súp ngon tuyệt." },
-      { en: "Spicy", vi: "Cay", pro: "ˈspaɪsi", exEn: "Spicy noodles.", exVi: "Mì cay." },
-      { en: "Dessert", vi: "Tráng miệng", pro: "dɪˈzɜːt", exEn: "Ice cream for dessert.", exVi: "Kem cho tráng miệng." }
+      { en: "Future", vi: "Tương lai", pro: "ˈfjuːtʃə", exEn: "In the future.", exVi: "Trong tương lai." },
+      { en: "Rocket", vi: "Tên lửa", pro: "ˈrɒkɪt", exEn: "Fly a rocket.", exVi: "Lái tên lửa." },
+      { en: "Astronaut", vi: "Phi hành gia", pro: "ˈæstrənɔːt", exEn: "Brave astronaut.", exVi: "Phi hành gia dũng cảm." },
+      { en: "Planet", vi: "Hành tinh", pro: "ˈplænɪt", exEn: "Red planet.", exVi: "Hành tinh đỏ." },
+      { en: "Robot", vi: "Người máy", pro: "ˈrəʊbɒt", exEn: "Smart robot.", exVi: "Robot thông minh." }
     ],
     sentences: [
-      { en: "I would like to order pizza", vi: "Tớ muốn gọi món pizza" },
-      { en: "This food is delicious", vi: "Món ăn này ngon tuyệt" },
-      { en: "Do you like spicy food", vi: "Bạn có thích đồ ăn cay không" }
+      { en: "People will travel in super fast planes", vi: "Mọi người sẽ đi bằng máy bay siêu tốc" },
+      { en: "There will not be long trips", vi: "Sẽ không còn những chuyến đi dài nữa" },
+      { en: "Will they go to Vietnam", vi: "Họ sẽ đến Việt Nam chứ" }
     ]
   },
   18: {
-    title: "Unit 18: Traffic Safety (An toàn giao thông)",
+    title: "Unit 15: Something new to watch (Truyền hình)",
     theme: 'urban',
     words: [
-      { en: "Traffic light", vi: "Đèn giao thông", pro: "ˈtræfɪk laɪt", exEn: "Red light.", exVi: "Đèn đỏ." },
-      { en: "Crosswalk", vi: "Vạch qua đường", pro: "ˈkrɒswɔːk", exEn: "Use the crosswalk.", exVi: "Dùng vạch qua đường." },
-      { en: "Sign", vi: "Biển báo", pro: "saɪn", exEn: "Stop sign.", exVi: "Biển báo dừng." },
-      { en: "Helmet", vi: "Mũ bảo hiểm", pro: "ˈhelmɪt", exEn: "Wear a helmet.", exVi: "Đội mũ bảo hiểm." },
-      { en: "Safe", vi: "An toàn", pro: "seɪf", exEn: "Be safe.", exVi: "Hãy an toàn." }
+      { en: "Cartoon", vi: "Hoạt hình", pro: "kɑːˈtuːn", exEn: "Funny cartoon.", exVi: "Hoạt hình vui nhộn." },
+      { en: "News", vi: "Tin tức", pro: "njuːz", exEn: "Watch news.", exVi: "Xem tin tức." },
+      { en: "Channel", vi: "Kênh", pro: "ˈtʃænl", exEn: "Change channel.", exVi: "Đổi kênh." },
+      { en: "Remote control", vi: "Điều khiển từ xa", pro: "rɪˈməʊt kənˈtrəʊl", exEn: "Use remote.", exVi: "Dùng điều khiển." },
+      { en: "Video game", vi: "Trò chơi điện tử", pro: "ˈvɪdiəʊ ɡeɪm", exEn: "Play video games.", exVi: "Chơi điện tử." }
     ],
     sentences: [
-      { en: "Stop at the red light", vi: "Dừng lại khi đèn đỏ" },
-      { en: "You must wear a helmet", vi: "Bạn phải đội mũ bảo hiểm" },
-      { en: "Walk on the crosswalk", vi: "Đi bộ trên vạch qua đường" }
+      { en: "What are you going to do", vi: "Bạn định làm gì" },
+      { en: "I am going to watch my favorite show", vi: "Tớ định xem chương trình yêu thích" },
+      { en: "Are you going to help me", vi: "Bạn có định giúp tớ không" }
     ]
   },
   19: {
-    title: "Unit 19: My Hobbies (Sở thích của tớ)",
+    title: "Review 4 (Ôn tập 4)",
     theme: 'cool',
     words: [
-      { en: "Collecting", vi: "Sưu tầm", pro: "kəˈlektɪŋ", exEn: "Collecting stamps.", exVi: "Sưu tầm tem." },
-      { en: "Painting", vi: "Vẽ tranh", pro: "ˈpeɪntɪŋ", exEn: "Painting pictures.", exVi: "Vẽ tranh." },
-      { en: "Dancing", vi: "Nhảy múa", pro: "ˈdɑːnsɪŋ", exEn: "I love dancing.", exVi: "Tớ yêu nhảy múa." },
-      { en: "Chess", vi: "Cờ vua", pro: "tʃes", exEn: "Play chess.", exVi: "Chơi cờ vua." },
-      { en: "Photography", vi: "Nhiếp ảnh", pro: "fəˈtɒɡrəfi", exEn: "Take photos.", exVi: "Chụp ảnh." }
+      { en: "Spring", vi: "Mùa xuân", pro: "sprɪŋ", exEn: "Green spring.", exVi: "Mùa xuân xanh." },
+      { en: "Headache", vi: "Đau đầu", pro: "ˈhedeɪk", exEn: "Bad headache.", exVi: "Đau đầu." },
+      { en: "Astronaut", vi: "Phi hành gia", pro: "ˈæstrənɔːt", exEn: "Go to space.", exVi: "Vào vũ trụ." },
+      { en: "Cartoon", vi: "Hoạt hình", pro: "kɑːˈtuːn", exEn: "TV cartoon.", exVi: "Hoạt hình TV." },
+      { en: "Future", vi: "Tương lai", pro: "ˈfjuːtʃə", exEn: "The future.", exVi: "Tương lai." }
     ],
     sentences: [
-      { en: "My hobby is painting", vi: "Sở thích của tớ là vẽ tranh" },
-      { en: "Do you like playing chess", vi: "Bạn có thích chơi cờ vua không" },
-      { en: "She is good at dancing", vi: "Cô ấy nhảy rất giỏi" }
+      { en: "I am going to visit my grandma", vi: "Tớ định đi thăm bà" },
+      { en: "You should take medicine", vi: "Bạn nên uống thuốc" },
+      { en: "Will it rain tomorrow", vi: "Mai trời có mưa không" }
     ]
   },
   20: {
-    title: "Unit 20: End of Year Party (Tiệc cuối năm)",
-    theme: 'warm',
+    title: "Unit 16: Jobs and Work (Công việc)",
+    theme: 'urban',
     words: [
-      { en: "Celebration", vi: "Lễ kỷ niệm", pro: "ˌselɪˈbreɪʃn", exEn: "Big celebration.", exVi: "Lễ kỷ niệm lớn." },
-      { en: "Perform", vi: "Biểu diễn", pro: "pəˈfɔːm", exEn: "Perform on stage.", exVi: "Biểu diễn trên sân khấu." },
-      { en: "Memory", vi: "Kỷ niệm", pro: "ˈmeməri", exEn: "Good memory.", exVi: "Kỷ niệm đẹp." },
-      { en: "Proud", vi: "Tự hào", pro: "praʊd", exEn: "I am proud.", exVi: "Tớ thấy tự hào." },
-      { en: "Goodbye", vi: "Tạm biệt", pro: "ˌɡʊdˈbaɪ", exEn: "Say goodbye.", exVi: "Nói lời tạm biệt." }
+      { en: "Factory", vi: "Nhà máy", pro: "ˈfæktri", exEn: "Work in factory.", exVi: "Làm trong nhà máy." },
+      { en: "Boss", vi: "Ông chủ", pro: "bɒs", exEn: "The boss.", exVi: "Ông chủ." },
+      { en: "Office", vi: "Văn phòng", pro: "ˈɒfɪs", exEn: "Big office.", exVi: "Văn phòng lớn." },
+      { en: "Worker", vi: "Công nhân", pro: "ˈwɜːkə", exEn: "Hard worker.", exVi: "Công nhân chăm chỉ." },
+      { en: "Job", vi: "Công việc", pro: "dʒɒb", exEn: "New job.", exVi: "Công việc mới." }
     ],
     sentences: [
-      { en: "We are celebrating today", vi: "Hôm nay chúng tớ tổ chức ăn mừng" },
-      { en: "I will miss my friends", vi: "Tớ sẽ nhớ các bạn của tớ" },
-      { en: "Have a great summer", vi: "Chúc một mùa hè tuyệt vời" }
+      { en: "Pass me the remote control please", vi: "Làm ơn đưa tớ cái điều khiển" },
+      { en: "What is on TV", vi: "Trên TV có gì thế" },
+      { en: "My dad works in a factory", vi: "Bố tớ làm việc trong nhà máy" }
     ]
   }
 };
