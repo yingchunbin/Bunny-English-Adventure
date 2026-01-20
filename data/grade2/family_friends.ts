@@ -241,5 +241,169 @@ export const G2_FAMILY_FRIENDS: GradeCurriculum = {
       { en: "The women are happy", vi: "Những người phụ nữ đang vui vẻ" },
       { en: "Well done everyone", vi: "Làm tốt lắm mọi người" }
     ]
+  },
+  16: {
+    title: "Starter: Hello!",
+    theme: 'urban',
+    words: [
+      { en: "Rosy", vi: "Tên riêng Rosy", pro: "/ˈrəʊzi/", exEn: "Hello, I'm Rosy.", exVi: "Xin chào, tớ là Rosy." },
+      { en: "Tim", vi: "Tên riêng Tim", pro: "/tɪm/", exEn: "Hello, I'm Tim.", exVi: "Xin chào, tớ là Tim." },
+      { en: "Billy", vi: "Tên riêng Billy", pro: "/ˈbɪli/", exEn: "Hello, I'm Billy.", exVi: "Xin chào, tớ là Billy." },
+      { en: "Miss Jones", vi: "Cô Jones", pro: "/mɪs dʒəʊnz/", exEn: "Hello, Miss Jones.", exVi: "Chào cô Jones." },
+      { en: "Orange", vi: "Màu cam", pro: "/ˈɒrɪndʒ/", exEn: "It's orange.", exVi: "Nó màu cam." },
+      { en: "Pink", vi: "Màu hồng", pro: "/pɪŋk/", exEn: "It's pink.", exVi: "Nó màu hồng." },
+      { en: "Brown", vi: "Màu nâu", pro: "/braʊn/", exEn: "It's brown.", exVi: "Nó màu nâu." },
+      { en: "Purple", vi: "Màu tím", pro: "/ˈpɜːpl/", exEn: "It's purple.", exVi: "Nó màu tím." },
+      { en: "Monday", vi: "Thứ Hai", pro: "/ˈmʌndeɪ/", exEn: "Today is Monday.", exVi: "Hôm nay là thứ Hai." },
+      { en: "Tuesday", vi: "Thứ Ba", pro: "/ˈtjuːzdeɪ/", exEn: "It's Tuesday.", exVi: "Đó là thứ Ba." },
+      { en: "Wednesday", vi: "Thứ Tư", pro: "/ˈwenzdeɪ/", exEn: "It's Wednesday.", exVi: "Đó là thứ Tư." },
+      { en: "Thursday", vi: "Thứ Năm", pro: "/ˈθɜːzdeɪ/", exEn: "It's Thursday.", exVi: "Đó là thứ Năm." },
+      { en: "Friday", vi: "Thứ Sáu", pro: "/ˈfraɪdeɪ/", exEn: "It's Friday.", exVi: "Đó là thứ Sáu." },
+      { en: "Saturday", vi: "Thứ Bảy", pro: "/ˈsætədeɪ/", exEn: "It's Saturday.", exVi: "Đó là thứ Bảy." },
+      { en: "Sunday", vi: "Chủ nhật", pro: "/ˈsʌndeɪ/", exEn: "It's Sunday.", exVi: "Đó là Chủ nhật." },
+      { en: "Big", vi: "To, lớn", pro: "/bɪɡ/", exEn: "It's a big teddy bear.", exVi: "Đó là một con gấu bông lớn." },
+      { en: "Little", vi: "Nhỏ, bé", pro: "/ˈlɪtl/", exEn: "It's a little teddy bear.", exVi: "Đó là một con gấu bông nhỏ." }
+    ],
+    sentences: [
+      { en: "How old are you? I'm seven.", vi: "Bạn bao nhiêu tuổi? Tớ 7 tuổi." },
+      { en: "It's a little chair.", vi: "Đó là một cái ghế nhỏ." },
+      { en: "It's a big chair.", vi: "Đó là một cái ghế lớn." }
+    ]
+  },
+  17: {
+    title: "Unit 1: Is this your mom?",
+    theme: 'warm',
+    words: [
+      { en: "Mom", vi: "Mẹ, má", pro: "/mʌm/", exEn: "This is my mom.", exVi: "Đây là mẹ tớ." },
+      { en: "Dad", vi: "Ba, cha, bố", pro: "/dæd/", exEn: "This is my dad.", exVi: "Đây là bố tớ." },
+      { en: "Brother", vi: "Anh, em trai", pro: "/ˈbrʌðə(r)/", exEn: "This is my brother.", exVi: "Đây là em trai tớ." },
+      { en: "Sister", vi: "Chị, em gái", pro: "/ˈsɪstə(r)/", exEn: "This is my sister.", exVi: "Đây là chị gái tớ." },
+      { en: "Grandpa", vi: "Ông ngoại, ông nội", pro: "/ˈɡrænpɑː/", exEn: "This is my grandpa.", exVi: "Đây là ông tớ." },
+      { en: "Grandma", vi: "Bà ngoại, bà nội", pro: "/ˈɡrænmɑː/", exEn: "This is my grandma.", exVi: "Đây là bà tớ." },
+      { en: "Nose", vi: "Cái mũi", pro: "/nəʊz/", exEn: "This is my nose.", exVi: "Đây là cái mũi của tớ." },
+      { en: "Neck", vi: "Cái cổ", pro: "/nek/", exEn: "This is my neck.", exVi: "Đây là cái cổ của tớ." },
+      { en: "Orange", vi: "Quả cam", pro: "/ˈɒrɪndʒ/", exEn: "This is my orange.", exVi: "Đây là quả cam của tớ." },
+      { en: "Octopus", vi: "Con bạch tuộc", pro: "/ˈɒktəpəs/", exEn: "This is my octopus.", exVi: "Đây là con bạch tuộc của tớ." },
+      { en: "Panda", vi: "Con gấu trúc", pro: "/ˈpændə/", exEn: "Polly is a panda.", exVi: "Polly là một con gấu trúc." },
+      { en: "Pen", vi: "Bút bi", pro: "/pen/", exEn: "She has a pen.", exVi: "Cô ấy có một cây bút bi." },
+      { en: "Eleven", vi: "Số 11", pro: "/ɪˈlevn/", exEn: "I have eleven books.", exVi: "Tớ có 11 quyển sách." },
+      { en: "Twelve", vi: "Số 12", pro: "/twelv/", exEn: "I'm twelve.", exVi: "Tớ 12 tuổi." }
+    ],
+    sentences: [
+      { en: "Is this your mom? Yes, it is.", vi: "Đây có phải mẹ bạn không? Đúng vậy." },
+      { en: "Is this your grandma? No, it isn't.", vi: "Đây có phải bà bạn không? Không phải." },
+      { en: "Be polite at other people's homes.", vi: "Hãy lịch sự khi ở nhà người khác." }
+    ]
+  },
+  18: {
+    title: "Unit 2: He's happy!",
+    theme: 'cool',
+    words: [
+      { en: "Happy", vi: "Vui vẻ", pro: "/ˈhæpi/", exEn: "She's happy.", exVi: "Cô ấy đang vui." },
+      { en: "Sad", vi: "Buồn", pro: "/sæd/", exEn: "He's sad.", exVi: "Cậu ấy đang buồn." },
+      { en: "Hungry", vi: "Đói", pro: "/ˈhʌŋɡri/", exEn: "She's hungry.", exVi: "Cô ấy đang đói." },
+      { en: "Thirsty", vi: "Khát", pro: "/ˈθɜːsti/", exEn: "I'm thirsty.", exVi: "Tớ đang khát." },
+      { en: "Hot", vi: "Nóng", pro: "/hɒt/", exEn: "It's hot.", exVi: "Trời nóng." },
+      { en: "Cold", vi: "Lạnh", pro: "/kəʊld/", exEn: "She's cold.", exVi: "Cô ấy đang lạnh." },
+      { en: "Queen", vi: "Hoàng hậu", pro: "/kwiːn/", exEn: "The queen is quiet.", exVi: "Hoàng hậu đang yên lặng." },
+      { en: "Quiet", vi: "Yên lặng", pro: "/ˈkwaɪət/", exEn: "Be quiet, please.", exVi: "Vui lòng giữ yên lặng." },
+      { en: "River", vi: "Dòng sông", pro: "/ˈrɪvə(r)/", exEn: "Look at the river.", exVi: "Hãy nhìn dòng sông kìa." },
+      { en: "Rainbow", vi: "Cầu vồng", pro: "/ˈreɪnbəʊ/", exEn: "Look at the rainbow.", exVi: "Hãy nhìn cầu vồng kìa." },
+      { en: "Sofa", vi: "Ghế xô-pha", pro: "/ˈsəʊfə/", exEn: "There's a sock on the sofa.", exVi: "Có một chiếc tất trên ghế xô-pha." },
+      { en: "Sock", vi: "Vớ, tất", pro: "/sɒk/", exEn: "This is my sock.", exVi: "Đây là chiếc tất của tớ." },
+      { en: "Thirteen", vi: "Số 13", pro: "/ˌθɜːˈtiːn/", exEn: "Number thirteen.", exVi: "Số 13." },
+      { en: "Fourteen", vi: "Số 14", pro: "/ˌfɔːˈtiːn/", exEn: "I have fourteen toys.", exVi: "Tớ có 14 món đồ chơi." }
+    ],
+    sentences: [
+      { en: "He's happy. She's cold.", vi: "Cậu ấy vui. Cô ấy lạnh." },
+      { en: "Are they hungry? Yes, they are.", vi: "Họ có đói không? Có, họ có." },
+      { en: "Respect other people's feelings.", vi: "Hãy tôn trọng cảm xúc của người khác." }
+    ]
+  },
+  19: {
+    title: "Unit 3: Are these his pants?",
+    theme: 'nature',
+    words: [
+      { en: "Dress", vi: "Áo đầm, áo váy", pro: "/dres/", exEn: "This is Rosy's dress.", exVi: "Đây là váy của Rosy." },
+      { en: "Socks", vi: "Vớ, tất (đôi)", pro: "/sɒks/", exEn: "Are these her socks?", exVi: "Đây có phải tất của cô ấy không?" },
+      { en: "T-shirt", vi: "Áo thun", pro: "/ˈtiː ʃɜːt/", exEn: "Is this Billy's T-shirt?", exVi: "Đây có phải áo thun của Billy không?" },
+      { en: "Pants", vi: "Quần dài", pro: "/pænts/", exEn: "Are these his pants?", exVi: "Đây có phải quần dài của cậu ấy không?" },
+      { en: "Shorts", vi: "Quần soóc", pro: "/ʃɔːts/", exEn: "They're my shorts!", exVi: "Đó là quần soóc của tớ!" },
+      { en: "Shoes", vi: "Giày", pro: "/ʃuːz/", exEn: "These are my shoes.", exVi: "Đây là đôi giày của tớ." },
+      { en: "Towel", vi: "Khăn tắm", pro: "/ˈtaʊəl/", exEn: "It has a towel.", exVi: "Nó có một chiếc khăn tắm." },
+      { en: "Turtle", vi: "Con rùa", pro: "/ˈtɜːtl/", exEn: "Look at the turtle.", exVi: "Hãy nhìn con rùa kìa." },
+      { en: "Umbrella", vi: "Cây dù, cái ô", pro: "/ʌmˈbrelə/", exEn: "Look at the umbrella.", exVi: "Hãy nhìn cây dù kìa." },
+      { en: "Up", vi: "Lên", pro: "/ʌp/", exEn: "It goes up.", exVi: "Nó đi lên." },
+      { en: "Violin", vi: "Đàn vi-ô-lông", pro: "/ˌvaɪəˈlɪn/", exEn: "I have a violin.", exVi: "Tớ có một cây đàn vi-ô-lông." },
+      { en: "Vase", vi: "Bình / lọ hoa", pro: "/veɪs/", exEn: "I have a vase.", exVi: "Tớ có một cái bình hoa." },
+      { en: "Fifteen", vi: "Số 15", pro: "/ˌfɪfˈtiːn/", exEn: "Fifteen pants.", exVi: "15 cái quần dài." },
+      { en: "Sixteen", vi: "Số 16", pro: "/ˌsɪksˈtiːn/", exEn: "Sixteen shirts.", exVi: "16 cái áo sơ mi." }
+    ],
+    sentences: [
+      { en: "Are these his/her socks? Yes, they are.", vi: "Đây có phải tất của cậu ấy/cô ấy không? Đúng vậy." },
+      { en: "Are these his pants? No, they aren't.", vi: "Đây có phải quần của cậu ấy không? Không phải." },
+      { en: "Be helpful to others.", vi: "Hãy giúp đỡ người khác." }
+    ]
+  },
+  20: {
+    title: "Unit 4: I go to school by bus",
+    theme: 'urban',
+    words: [
+      { en: "Bus", vi: "Xe buýt", pro: "/bæs/", exEn: "I go to school by bus.", exVi: "Tớ đi học bằng xe buýt." },
+      { en: "Bike", vi: "Xe đạp", pro: "/baɪk/", exEn: "I go by bike.", exVi: "Tớ đi bằng xe đạp." },
+      { en: "Boat", vi: "Thuyền", pro: "/bəʊt/", exEn: "It's a boat.", exVi: "Đó là một con thuyền." },
+      { en: "Car", vi: "Xe hơi", pro: "/kɑː(r)/", exEn: "I go by car.", exVi: "Tớ đi bằng xe hơi." },
+      { en: "Truck", vi: "Xe tải", pro: "/trʌk/", exEn: "It's a yellow truck.", exVi: "Đó là một chiếc xe tải màu vàng." },
+      { en: "Motorbike", vi: "Xe máy", pro: "/ˈməʊtəbaɪk/", exEn: "I go by motorbike.", exVi: "Tớ đi bằng xe máy." },
+      { en: "Woman", vi: "Phụ nữ", pro: "/ˈwʊmən/", exEn: "She's a woman.", exVi: "Cô ấy là một người phụ nữ." },
+      { en: "Wall", vi: "Bức tường", pro: "/wɔːl/", exEn: "It's a wall.", exVi: "Đó là một bức tường." },
+      { en: "Box", vi: "Cái / chiếc hộp", pro: "/bɒks/", exEn: "It's a box.", exVi: "Đó là một chiếc hộp." },
+      { en: "Fox", vi: "Con cáo", pro: "/fɒks/", exEn: "It's a fox.", exVi: "Đó là một con cáo." },
+      { en: "Yogurt", vi: "Sữa chua", pro: "/ˈjɒɡət/", exEn: "I like yogurt.", exVi: "Tớ thích sữa chua." },
+      { en: "Yo-yo", vi: "Đồ chơi yo-yo", pro: "/ˈjəʊ jəʊ/", exEn: "I have a yo-yo.", exVi: "Tớ có một cái yo-yo." },
+      { en: "Zebra", vi: "Con ngựa vằn", pro: "/ˈzebrə/", exEn: "Look at the zebra.", exVi: "Hãy nhìn con ngựa vằn kìa." },
+      { en: "Zoo", vi: "Vườn thú", pro: "/zuː/", exEn: "Let's go to the zoo.", exVi: "Hãy đi đến vườn thú." },
+      { en: "Seventeen", vi: "Số 17", pro: "/ˌsevnˈtiːn/", exEn: "Number seventeen.", exVi: "Số 17." },
+      { en: "Eighteen", vi: "Số 18", pro: "/ˌeɪˈtiːn/", exEn: "Eighteen cars.", exVi: "18 chiếc xe hơi." }
+    ],
+    sentences: [
+      { en: "I walk to school.", vi: "Tớ đi bộ đến trường." },
+      { en: "I go to grandma's house by bus!", vi: "Tớ đến nhà bà bằng xe buýt!" },
+      { en: "Be careful on the road.", vi: "Hãy cẩn thận khi đi trên đường." }
+    ]
+  },
+  21: {
+    title: "Unit 5: Where's the ball?",
+    theme: 'nature',
+    words: [
+      { en: "Seesaw", vi: "Ván bập bênh", pro: "/ˈsiːsɔː/", exEn: "It's under the seesaw.", exVi: "Nó ở dưới bập bênh." },
+      { en: "Slide", vi: "Ván trượt, cầu trượt", pro: "/slaɪd/", exEn: "The ball's on the slide.", exVi: "Quả bóng ở trên cầu trượt." },
+      { en: "Goal", vi: "Khung thành", pro: "/ɡəʊl/", exEn: "And now it's in the goal!", exVi: "Và giờ nó đã ở trong khung thành!" },
+      { en: "Tree", vi: "Cây", pro: "/triː/", exEn: "The ball is near the tree.", exVi: "Quả bóng ở gần cái cây." },
+      { en: "Pool", vi: "Hồ nước", pro: "/puːl/", exEn: "Don't swim in the pool.", exVi: "Đừng bơi trong hồ." },
+      { en: "Frisbee", vi: "Đĩa nhựa nhẹ (để ném)", pro: "/ˈfrɪzbi/", exEn: "Where's the Frisbee?", exVi: "Cái đĩa bay đâu rồi?" },
+      { en: "Nineteen", vi: "Số 19", pro: "/ˌnaɪnˈtiːn/", exEn: "Nineteen trees.", exVi: "19 cái cây." },
+      { en: "Twenty", vi: "Số 20", pro: "/ˈtwenti/", exEn: "I'm twenty.", exVi: "Tớ 20 tuổi." }
+    ],
+    sentences: [
+      { en: "Where's the ball? It's in/on/under the goal.", vi: "Quả bóng đâu rồi? Nó ở trong/trên/dưới khung thành." },
+      { en: "Take care in the park.", vi: "Hãy cẩn thận khi ở công viên." }
+    ]
+  },
+  22: {
+    title: "Unit 6: Where's Grandma?",
+    theme: 'urban',
+    words: [
+      { en: "Kitchen", vi: "Bếp", pro: "/ˈkɪtʃɪn/", exEn: "Is she in the kitchen?", exVi: "Cô ấy có ở trong bếp không?" },
+      { en: "Living room", vi: "Phòng khách", pro: "/ˈlɪvɪŋ ruːm/", exEn: "Is Dad in the living room?", exVi: "Bố có ở trong phòng khách không?" },
+      { en: "Dining room", vi: "Phòng ăn", pro: "/ˈdaɪnɪŋ ruːm/", exEn: "We are in the dining room.", exVi: "Chúng tớ đang ở trong phòng ăn." },
+      { en: "Bedroom", vi: "Phòng ngủ", pro: "/ˈbedruːm/", exEn: "Go to your bedroom.", exVi: "Đi vào phòng ngủ của con đi." },
+      { en: "Bathroom", vi: "Buồng tắm", pro: "/ˈbɑːθruːm/", exEn: "Where's the bathroom?", exVi: "Phòng tắm ở đâu vậy?" }
+    ],
+    sentences: [
+      { en: "Where's Grandma? She's in the kitchen.", vi: "Bà đâu rồi? Bà ở trong bếp." },
+      { en: "Is she in the kitchen? Yes, she is. / No, she isn't.", vi: "Bà có ở trong bếp không? Đúng vậy. / Không phải." },
+      { en: "Spend time with your family.", vi: "Hãy dành thời gian cho gia đình." }
+    ]
   }
 };
