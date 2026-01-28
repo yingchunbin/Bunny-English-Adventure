@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Crop, Product, FarmOrder } from '../../types';
 import { Warehouse, X, Coins, Sparkles, Sprout, Egg, AlertTriangle, Truck, Trash, Info, Cookie } from 'lucide-react';
+import { resolveImage } from '../../utils/imageUtils';
 
 interface BarnModalProps {
   crops: (Crop | Product)[];
@@ -141,11 +142,14 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                 {filteredItems.map(item => {
                     const count = harvested[item.id];
                     const isWanted = isNeededForOrder(item.id);
+                    const imgUrl = resolveImage(item.imageUrl);
                     
                     return (
                         <div key={item.id} className={`flex items-center justify-between p-3 rounded-[2rem] border-4 bg-white shadow-sm transition-all group ${isWanted ? 'border-orange-200 bg-orange-50/30' : 'border-white hover:border-emerald-200'}`}>
                             <div className="flex items-center gap-4 relative">
-                                <span className="text-4xl drop-shadow-md group-hover:scale-110 transition-transform select-none">{item.emoji}</span>
+                                <div className="w-12 h-12 flex items-center justify-center">
+                                    {imgUrl ? <img src={imgUrl} alt={item.name} className="w-full h-full object-contain" /> : <span className="text-4xl drop-shadow-md group-hover:scale-110 transition-transform select-none">{item.emoji}</span>}
+                                </div>
                                 <div>
                                     <div className="font-black text-slate-800 text-sm uppercase tracking-tighter">{item.name}</div>
                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Đang có: <span className="text-emerald-600 font-black">{count}</span></div>

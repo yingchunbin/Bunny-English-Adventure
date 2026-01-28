@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
 import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2 } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
+import { resolveImage } from '../../utils/imageUtils';
 
 interface InventoryModalProps {
   initialTab?: 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
@@ -46,12 +47,39 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       return inventory[id] || 0;
   };
 
+  // Duplicate helper from ShopModal for consistency
+  const getRarityStyle = (cost: number) => {
+      if(cost >= 20) return { 
+          border: 'border-yellow-400', 
+          shadow: 'shadow-[0_0_15px_rgba(250,204,21,0.4)]', 
+          bg: 'bg-yellow-50'
+      }; 
+      if(cost >= 10) return { 
+          border: 'border-purple-400', 
+          shadow: 'shadow-[0_0_10px_rgba(192,132,252,0.3)]',
+          bg: 'bg-purple-50'
+      }; 
+      if(cost >= 5) return { 
+          border: 'border-blue-300', 
+          shadow: 'shadow-[0_0_8px_rgba(96,165,250,0.2)]',
+          bg: 'bg-blue-50'
+      }; 
+      return { 
+          border: 'border-slate-200', 
+          shadow: 'shadow-sm',
+          bg: 'bg-white'
+      }; 
+  };
+
   const renderItemRow = (item: FarmItem, count: number) => {
       if (count <= 0 && activeTab !== 'DECOR') return null; // Hide if not owned
       // For DECOR, we pass in '1' if owned via getOwnedCount logic, so it renders
 
       let extraInfo = null;
       let decorStatus = null;
+      const imgUrl = resolveImage(item.imageUrl);
+      
+      let containerStyle = "bg-white border-slate-100"; // Default
 
       if (activeTab === 'ANIMALS') {
           const animal = animals.find(a => a.id === item.id);
@@ -75,10 +103,13 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       if (activeTab === 'DECOR') {
           const decor = decorations.find(d => d.id === item.id);
-          // Check if placed in slots (logic passed from parent would be better but simple ID check ok for now)
-          // const isActive = activeDecorIds.includes(item.id); 
           const buffText = decor?.buff?.desc || "";
-          extraInfo = buffText ? <div className="text-[9px] font-bold text-purple-500 bg-purple-50 px-2 py-1 rounded border border-purple-100 mt-1">{buffText}</div> : null;
+          
+          // Apply Rarity Glow Logic
+          const rarity = getRarityStyle(decor?.cost || 0);
+          containerStyle = `${rarity.bg} ${rarity.border} ${rarity.shadow}`;
+
+          extraInfo = buffText ? <div className="text-[9px] font-bold text-purple-500 bg-white/80 px-2 py-1 rounded border border-purple-100 mt-1">{buffText}</div> : null;
           
           if (mode === 'SELECT_DECOR') {
               decorStatus = (
@@ -95,10 +126,10 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       }
 
       return (
-          <div key={item.id} className={`bg-white border-4 rounded-3xl p-3 flex items-center justify-between shadow-sm animate-fadeIn border-slate-100`}>
+          <div key={item.id} className={`border-4 rounded-3xl p-3 flex items-center justify-between shadow-sm animate-fadeIn ${containerStyle}`}>
               <div className="flex items-center gap-3">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative ${activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : activeTab === 'MACHINES' ? 'bg-blue-50 border-blue-100' : 'bg-purple-50 border-purple-100'}`}>
-                      {item.emoji}
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative overflow-hidden ${activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : activeTab === 'MACHINES' ? 'bg-blue-50 border-blue-100' : 'bg-white border-white/50'}`}>
+                      {imgUrl ? <img src={imgUrl} alt={item.name} className="w-full h-full object-contain" /> : item.emoji}
                   </div>
                   <div>
                       <div className="font-black text-slate-700 text-sm uppercase">{item.name}</div>

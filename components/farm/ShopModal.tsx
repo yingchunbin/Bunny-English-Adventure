@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
 import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
+import { resolveImage } from '../../utils/imageUtils';
 
 interface ShopModalProps {
   crops: Crop[];
@@ -71,6 +72,38 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       return 'hover:scale-110';
   };
 
+  // Helper to determine rarity glow based on cost (Stars)
+  const getRarityStyle = (cost: number) => {
+      if(cost >= 20) return { 
+          bg: 'bg-yellow-50', 
+          border: 'border-yellow-400', 
+          shadow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]', 
+          text: 'text-yellow-600',
+          badge: 'bg-yellow-100 text-yellow-700'
+      }; // Legendary
+      if(cost >= 10) return { 
+          bg: 'bg-purple-50', 
+          border: 'border-purple-400', 
+          shadow: 'shadow-[0_0_10px_rgba(192,132,252,0.4)]', 
+          text: 'text-purple-600',
+          badge: 'bg-purple-100 text-purple-700'
+      }; // Epic
+      if(cost >= 5) return { 
+          bg: 'bg-blue-50', 
+          border: 'border-blue-300', 
+          shadow: 'shadow-[0_0_8px_rgba(96,165,250,0.3)]', 
+          text: 'text-blue-600',
+          badge: 'bg-blue-100 text-blue-700'
+      }; // Rare
+      return { 
+          bg: 'bg-white', 
+          border: 'border-slate-200', 
+          shadow: 'shadow-sm', 
+          text: 'text-slate-700',
+          badge: 'bg-slate-100 text-slate-500'
+      }; // Common
+  };
+
   const sortedCrops = sortItems(crops.filter(c => !c.isMagic));
   const sortedAnimals = sortItems(animals);
   const sortedMachines = sortItems(machines);
@@ -125,10 +158,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             const amount = seedAmounts[crop.id] || 1;
                             const totalCost = crop.cost * amount;
                             const currency = crop.currency || 'COIN';
+                            const imgUrl = resolveImage(crop.imageUrl);
                             
                             return (
                                 <div key={crop.id} className={`bg-white p-3 rounded-2xl border-4 flex items-center gap-3 ${isLocked ? 'grayscale opacity-60 border-slate-200' : 'border-pink-100'}`}>
-                                    <div className="text-5xl">{crop.emoji}</div>
+                                    <div className="w-12 h-12 flex items-center justify-center">
+                                        {imgUrl ? <img src={imgUrl} alt={crop.name} className="w-full h-full object-contain" /> : <div className="text-5xl">{crop.emoji}</div>}
+                                    </div>
                                     <div className="flex-1">
                                         <div className="font-black text-slate-700 text-sm">{crop.name}</div>
                                         <div className="text-[10px] text-slate-500 font-bold">Thu hoạch: {crop.growthTime}s</div>
@@ -161,10 +197,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             
                             const feedItem = allItems.find(c => c.id === animal.feedCropId);
                             const produceItem = allItems.find(p => p.id === animal.produceId);
+                            const imgUrl = resolveImage(animal.imageUrl);
                             
                             return (
                                 <div key={animal.id} className={`bg-white p-3 rounded-2xl border-4 flex items-center gap-3 ${isLocked ? 'grayscale opacity-60 border-slate-200' : 'border-orange-100'}`}>
-                                    <div className="text-5xl">{animal.emoji}</div>
+                                    <div className="w-12 h-12 flex items-center justify-center">
+                                        {imgUrl ? <img src={imgUrl} alt={animal.name} className="w-full h-full object-contain" /> : <div className="text-5xl">{animal.emoji}</div>}
+                                    </div>
                                     <div className="flex-1">
                                         <div className="font-black text-slate-700 text-sm">{animal.name}</div>
                                         
@@ -201,11 +240,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             const isLocked = farmLevel < (machine.minLevel || 0);
                             const currency = machine.currency || 'COIN';
                             const machineRecipes = recipes.filter(r => r.machineId === machine.id);
+                            const imgUrl = resolveImage(machine.imageUrl);
 
                             return (
                                 <div key={machine.id} className={`bg-white p-3 rounded-2xl border-4 flex flex-col gap-2 ${isLocked ? 'grayscale opacity-60 border-slate-200' : 'border-blue-100'}`}>
                                     <div className="flex items-center gap-3">
-                                        <div className="text-5xl">{machine.emoji}</div>
+                                        <div className="w-12 h-12 flex items-center justify-center">
+                                            {imgUrl ? <img src={imgUrl} alt={machine.name} className="w-full h-full object-contain" /> : <div className="text-5xl">{machine.emoji}</div>}
+                                        </div>
                                         <div className="flex-1">
                                             <div className="font-black text-slate-700 text-sm">{machine.name}</div>
                                             <div className="text-[10px] text-slate-500 font-bold leading-tight">{machine.description}</div>
@@ -242,28 +284,35 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
-                {/* DECOR - UPDATED VISUALS */}
+                {/* DECOR - GLOW EFFECTS ADDED */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedDecor.map(decor => {
                             const owned = userState.decorations?.includes(decor.id);
-                            const currency = decor.currency || 'COIN';
+                            const currency = decor.currency || 'STAR';
                             const anim = getDecorAnimation(decor.id);
+                            const imgUrl = resolveImage(decor.imageUrl);
+                            
+                            // Determine rarity style
+                            const style = getRarityStyle(decor.cost);
 
                             return (
-                                <div key={decor.id} className={`bg-white p-4 rounded-3xl border-4 flex items-center gap-4 transition-all relative overflow-hidden group ${owned ? 'border-green-200 bg-green-50' : 'border-purple-200 hover:border-purple-300 hover:shadow-lg'}`}>
+                                <div 
+                                    key={decor.id} 
+                                    className={`p-4 rounded-3xl border-4 flex items-center gap-4 transition-all relative overflow-hidden group ${owned ? 'border-green-200 bg-green-50' : `${style.border} ${style.bg} ${style.shadow}`}`}
+                                >
                                     
                                     {/* Glowing Background Effect */}
-                                    <div className="absolute -left-4 -top-4 w-24 h-24 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"></div>
+                                    <div className="absolute -left-4 -top-4 w-24 h-24 bg-gradient-to-br from-white/50 to-transparent rounded-full blur-xl opacity-60"></div>
 
-                                    <div className={`text-6xl z-10 transition-transform duration-500 ${anim} drop-shadow-md`}>
-                                        {decor.emoji}
+                                    <div className={`w-16 h-16 flex items-center justify-center z-10 transition-all drop-shadow-md ${anim}`}>
+                                        {imgUrl ? <img src={imgUrl} alt={decor.name} className="w-full h-full object-contain" /> : <div className="text-6xl">{decor.emoji}</div>}
                                     </div>
                                     
                                     <div className="flex-1 z-10">
-                                        <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{decor.name}</div>
+                                        <div className={`font-black text-sm uppercase tracking-tight ${style.text}`}>{decor.name}</div>
                                         {decor.buff && (
-                                            <div className="text-[10px] font-bold text-purple-600 bg-white/80 px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border border-purple-100 shadow-sm backdrop-blur-sm">
+                                            <div className={`text-[10px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm backdrop-blur-sm ${style.badge} border-white/50`}>
                                                 <Plus size={8}/> {decor.buff.desc}
                                             </div>
                                         )}

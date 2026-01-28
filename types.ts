@@ -63,6 +63,7 @@ export interface FarmItem {
   id: string;
   name: string;
   emoji: string;
+  imageUrl?: string; // New field for custom 2D assets
   type: ItemType;
   description?: string;
   cost: number;
