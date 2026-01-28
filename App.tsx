@@ -18,9 +18,17 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v9';
-// List of legacy keys to check for data restoration
-const LEGACY_KEYS = ['turtle_english_state_v8', 'turtle_english_state_v7', 'turtle_english_state'];
+// TARGET KEY FOR THE APP
+const CURRENT_VERSION_KEY = 'turtle_english_state_v10';
+
+// ALL POSSIBLE KEYS TO SCAN (Current + Legacy)
+const ALL_STORAGE_KEYS = [
+    'turtle_english_state_v10',
+    'turtle_english_state_v9',
+    'turtle_english_state_v8',
+    'turtle_english_state_v7',
+    'turtle_english_state'
+];
 
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
@@ -71,23 +79,20 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
-// Helper function to migrate old data structures to the new v9 format
+// Helper function to migrate and sanitize data
 const migrateState = (oldState: any): UserState => {
-  console.log("Migrating legacy state...", oldState);
-  
   // 1. Merge with default to ensure all new fields exist
   let newState = { ...DEFAULT_USER_STATE, ...oldState };
 
-  // 2. Handle 'decorSlots' migration from 'activeDecorIds' (v8) or init default
-  if (!newState.decorSlots || newState.decorSlots.length === 0) {
+  // 2. Decor Slots Migration (v8 -> v9/v10)
+  if ((!newState.decorSlots || newState.decorSlots.length === 0) && oldState.activeDecorIds) {
       const defaultSlots = [
           { id: 1, isUnlocked: true, decorId: null },
           { id: 2, isUnlocked: true, decorId: null },
           { id: 3, isUnlocked: false, decorId: null },
       ];
       
-      // If we have legacy activeDecorIds, map them to the new slots
-      if (oldState.activeDecorIds && Array.isArray(oldState.activeDecorIds)) {
+      if (Array.isArray(oldState.activeDecorIds)) {
           oldState.activeDecorIds.forEach((dId: string, idx: number) => {
               if (idx < defaultSlots.length) {
                   defaultSlots[idx] = { ...defaultSlots[idx], isUnlocked: true, decorId: dId };
@@ -97,45 +102,74 @@ const migrateState = (oldState: any): UserState => {
       newState.decorSlots = defaultSlots;
   }
 
-  // 3. Ensure other critical arrays exist and are not null
+  // 3. Ensure critical arrays exist
+  if (!newState.decorSlots) newState.decorSlots = DEFAULT_USER_STATE.decorSlots;
   if (!newState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels || DEFAULT_USER_STATE.unlockedLevels;
   if (!newState.completedLevels) newState.completedLevels = oldState.completedLevels || DEFAULT_USER_STATE.completedLevels;
   if (!newState.farmPlots) newState.farmPlots = oldState.farmPlots || DEFAULT_USER_STATE.farmPlots;
-  if (!newState.inventory) newState.inventory = oldState.inventory || DEFAULT_USER_STATE.inventory;
   
-  // 4. Ensure settings exist
-  if (!newState.settings) newState.settings = DEFAULT_USER_STATE.settings;
-
   return newState;
+};
+
+// Calculate a "Progress Score" to decide which save file is best
+const calculateProgressScore = (state: any) => {
+    if (!state) return -1;
+    let score = 0;
+    
+    // Most important: How much did they learn?
+    if (Array.isArray(state.completedLevels)) {
+        score += state.completedLevels.length * 10000;
+    }
+
+    // Secondary: Farm progress
+    if (state.farmLevel) {
+        score += state.farmLevel * 1000;
+    }
+
+    // Tertiary: Wealth
+    if (state.coins) {
+        score += state.coins;
+    }
+
+    return score;
 };
 
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        // 1. Try loading the current version
-        const savedV9 = localStorage.getItem(CURRENT_VERSION_KEY);
-        if (savedV9) {
-            return JSON.parse(savedV9);
-        }
+        // 1. Gather all candidates from all known keys
+        const candidates: { key: string, data: any, score: number }[] = [];
 
-        // 2. If not found, try to find and migrate legacy versions
-        for (const key of LEGACY_KEYS) {
-            const savedLegacy = localStorage.getItem(key);
-            if (savedLegacy) {
-                console.log(`Found legacy data in ${key}, restoring...`);
+        ALL_STORAGE_KEYS.forEach(key => {
+            const raw = localStorage.getItem(key);
+            if (raw) {
                 try {
-                    const parsed = JSON.parse(savedLegacy);
-                    // Basic validation to ensure it's not empty garbage
+                    const parsed = JSON.parse(raw);
                     if (parsed && typeof parsed === 'object') {
-                        return migrateState(parsed);
+                        const score = calculateProgressScore(parsed);
+                        candidates.push({ key, data: parsed, score });
                     }
                 } catch (e) {
-                    console.warn(`Failed to parse ${key}`, e);
+                    console.warn(`Corrupt data in ${key}`);
                 }
             }
+        });
+
+        // 2. Sort by Score Descending (Highest progress first)
+        candidates.sort((a, b) => b.score - a.score);
+
+        if (candidates.length > 0) {
+            const best = candidates[0];
+            console.log(`🏆 Restoring best save from: ${best.key} (Score: ${best.score})`);
+            
+            // If the best save has score > 200 (approx base score of default state), use it.
+            // Default state has ~200 score (coins). A user with 1 completed level has > 10200.
+            // A user with empty state but selected book might have ~200.
+            // If the user has old data with levels, it will massively outscore the empty state.
+            return migrateState(best.data);
         }
         
-        // 3. New user
+        // 3. New user (No valid data found anywhere)
         return DEFAULT_USER_STATE;
       } catch (e) {
         console.error("Critical State Error:", e);
@@ -153,6 +187,7 @@ export default function App() {
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
   useEffect(() => {
+      // Save to the CURRENT v10 key, ensuring future reloads pick this up (if it remains the highest score)
       localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userState));
   }, [userState]);
 
@@ -301,7 +336,6 @@ export default function App() {
               />
           )}
 
-          {/* ... Other Screens (CHAT, TIME_ATTACK, GAME) remain same ... */}
           {screen === Screen.CHAT && (
               <div className="h-full flex flex-col bg-white">
                   <div className="p-4 bg-white shadow-sm flex items-center gap-2 border-b border-slate-100">
@@ -379,9 +413,8 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem(CURRENT_VERSION_KEY);
-                      // Also clear legacy keys to truly reset
-                      LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
+                      // Only clear keys if user explicitly resets
+                      ALL_STORAGE_KEYS.forEach(k => localStorage.removeItem(k));
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
