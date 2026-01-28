@@ -12,11 +12,15 @@ import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
 import { SpeakingGame } from './components/SpeakingGame';
-import { ConfirmModal } from './components/ui/ConfirmModal'; // Import ConfirmModal
+import { ConfirmModal } from './components/ui/ConfirmModal'; 
 import { getLevels, LEVELS, TEXTBOOKS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
+
+const CURRENT_VERSION_KEY = 'turtle_english_state_v9';
+// List of legacy keys to check for data restoration
+const LEGACY_KEYS = ['turtle_english_state_v8', 'turtle_english_state_v7', 'turtle_english_state'];
 
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
@@ -37,7 +41,6 @@ const DEFAULT_USER_STATE: UserState = {
       { id: 3, isUnlocked: false, cropId: null, plantedAt: null },
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
   ],
-  // Unlock first 2 slots by default for animals and machines
   livestockSlots: [
       { id: 1, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
       { id: 2, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
@@ -68,12 +71,74 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
+// Helper function to migrate old data structures to the new v9 format
+const migrateState = (oldState: any): UserState => {
+  console.log("Migrating legacy state...", oldState);
+  
+  // 1. Merge with default to ensure all new fields exist
+  let newState = { ...DEFAULT_USER_STATE, ...oldState };
+
+  // 2. Handle 'decorSlots' migration from 'activeDecorIds' (v8) or init default
+  if (!newState.decorSlots || newState.decorSlots.length === 0) {
+      const defaultSlots = [
+          { id: 1, isUnlocked: true, decorId: null },
+          { id: 2, isUnlocked: true, decorId: null },
+          { id: 3, isUnlocked: false, decorId: null },
+      ];
+      
+      // If we have legacy activeDecorIds, map them to the new slots
+      if (oldState.activeDecorIds && Array.isArray(oldState.activeDecorIds)) {
+          oldState.activeDecorIds.forEach((dId: string, idx: number) => {
+              if (idx < defaultSlots.length) {
+                  defaultSlots[idx] = { ...defaultSlots[idx], isUnlocked: true, decorId: dId };
+              }
+          });
+      }
+      newState.decorSlots = defaultSlots;
+  }
+
+  // 3. Ensure other critical arrays exist and are not null
+  if (!newState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels || DEFAULT_USER_STATE.unlockedLevels;
+  if (!newState.completedLevels) newState.completedLevels = oldState.completedLevels || DEFAULT_USER_STATE.completedLevels;
+  if (!newState.farmPlots) newState.farmPlots = oldState.farmPlots || DEFAULT_USER_STATE.farmPlots;
+  if (!newState.inventory) newState.inventory = oldState.inventory || DEFAULT_USER_STATE.inventory;
+  
+  // 4. Ensure settings exist
+  if (!newState.settings) newState.settings = DEFAULT_USER_STATE.settings;
+
+  return newState;
+};
+
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state_v9'); // Bump version to 9 for schema change
-        return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
+        // 1. Try loading the current version
+        const savedV9 = localStorage.getItem(CURRENT_VERSION_KEY);
+        if (savedV9) {
+            return JSON.parse(savedV9);
+        }
+
+        // 2. If not found, try to find and migrate legacy versions
+        for (const key of LEGACY_KEYS) {
+            const savedLegacy = localStorage.getItem(key);
+            if (savedLegacy) {
+                console.log(`Found legacy data in ${key}, restoring...`);
+                try {
+                    const parsed = JSON.parse(savedLegacy);
+                    // Basic validation to ensure it's not empty garbage
+                    if (parsed && typeof parsed === 'object') {
+                        return migrateState(parsed);
+                    }
+                } catch (e) {
+                    console.warn(`Failed to parse ${key}`, e);
+                }
+            }
+        }
+        
+        // 3. New user
+        return DEFAULT_USER_STATE;
       } catch (e) {
+        console.error("Critical State Error:", e);
         return DEFAULT_USER_STATE;
       }
   });
@@ -85,10 +150,10 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [showConfirmBook, setShowConfirmBook] = useState(false); // State for confirm modal
+  const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state_v9', JSON.stringify(userState));
+      localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
@@ -314,7 +379,9 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem('turtle_english_state_v9');
+                      localStorage.removeItem(CURRENT_VERSION_KEY);
+                      // Also clear legacy keys to truly reset
+                      LEGACY_KEYS.forEach(k => localStorage.removeItem(k));
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
