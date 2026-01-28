@@ -1,13 +1,11 @@
 
 import { Crop, Decor, AnimalItem, Product, ProcessingRecipe, MachineItem, Mission } from '../types';
 
-// ... (Keep existing CROPS, ANIMALS, PRODUCTS, MACHINES, RECIPES arrays as they are) ...
-// NOTE: I am abbreviating the lists above to focus on the DECORATIONS update. 
-// In a real implementation, I would copy the full file content. 
-// Assuming the user context allows partial update or expects full file. 
-// I will output the FULL file content with updated DECORATIONS.
+// ... (Keep existing CROPS, ANIMALS, PRODUCTS, MACHINES, RECIPES arrays as they are - unchanged) ...
+// NOTE: For brevity in the diff, I am including the imports and then jumping to the specific constant update.
+// The rest of the file content (CROPS, ANIMALS, etc.) remains exactly the same as the previous version provided.
+// Please assume the previous arrays are here.
 
-// --- CROPS ---
 export const CROPS: Crop[] = [
   // Basics
   { id: 'carrot', name: 'Cà rốt', emoji: '🥕', type: 'CROP', currency: 'COIN', cost: 10, sellPrice: 20, growthTime: 10, exp: 5, unlockReq: 0 }, 
@@ -316,83 +314,83 @@ export const DECORATIONS: Decor[] = [
     },
 ];
 
-// Expanded Achievements - More tiers and new categories
+// Expanded Achievements - More tiers and new categories with CLEAR DESCRIPTIONS
 export const FARM_ACHIEVEMENTS_DATA: Mission[] = [
     // Harvesting Tiers
-    { id: 'hv_10', desc: 'Nông Dân Tập Sự (Thu hoạch 10)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
-    { id: 'hv_50', desc: 'Nông Dân Chăm Chỉ (Thu hoạch 50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
-    { id: 'hv_200', desc: 'Tay Gặt Hái (Thu hoạch 200)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
-    { id: 'hv_500', desc: 'Chúa Tể Ruộng Đồng (Thu hoạch 500)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
-    { id: 'hv_1000', desc: 'Thần Nông Tái Thế (Thu hoạch 1000)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 100 }, completed: false, claimed: false },
-    { id: 'hv_2000', desc: 'Vua Nông Nghiệp (Thu hoạch 2000)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 2000, current: 0, reward: { type: 'STAR', amount: 200 }, completed: false, claimed: false },
+    { id: 'hv_10', desc: 'Thu hoạch 10 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
+    { id: 'hv_50', desc: 'Thu hoạch 50 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
+    { id: 'hv_200', desc: 'Thu hoạch 200 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
+    { id: 'hv_500', desc: 'Tưới nước cho cây (500 lần)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
+    { id: 'hv_1000', desc: 'Thu hoạch 1000 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 100 }, completed: false, claimed: false },
+    { id: 'hv_2000', desc: 'Thu hoạch 2000 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 2000, current: 0, reward: { type: 'STAR', amount: 200 }, completed: false, claimed: false },
     
     // Earning Tiers
-    { id: 'earn_500', desc: 'Khởi Nghiệp (Kiếm 500 xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
-    { id: 'earn_2000', desc: 'Tiểu Thương (Kiếm 2000 xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 2000, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false },
-    { id: 'earn_10k', desc: 'Đại Gia Phố Huyện (Kiếm 10k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 10000, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
-    { id: 'earn_50k', desc: 'Tỷ Phú Nông Trại (Kiếm 50k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 50000, current: 0, reward: { type: 'STAR', amount: 100 }, completed: false, claimed: false },
-    { id: 'earn_100k', desc: 'Vua Tiền Tệ (Kiếm 100k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 100000, current: 0, reward: { type: 'STAR', amount: 200 }, completed: false, claimed: false },
+    { id: 'earn_500', desc: 'Kiếm 500 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
+    { id: 'earn_2000', desc: 'Kiếm 2000 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 2000, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false },
+    { id: 'earn_10k', desc: 'Kiếm 10,000 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 10000, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
+    { id: 'earn_50k', desc: 'Kiếm 50,000 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 50000, current: 0, reward: { type: 'STAR', amount: 100 }, completed: false, claimed: false },
+    { id: 'earn_100k', desc: 'Kiếm 100,000 xu', type: 'EARN', category: 'ACHIEVEMENT', target: 100000, current: 0, reward: { type: 'STAR', amount: 200 }, completed: false, claimed: false },
     
     // Feeding Tiers
-    { id: 'feed_10', desc: 'Bạn Của Muôn Loài (Cho ăn 10 lần)', type: 'FEED', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
-    { id: 'feed_50', desc: 'Chăm Sóc Tận Tình (Cho ăn 50 lần)', type: 'FEED', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
-    { id: 'feed_200', desc: 'Bảo Mẫu Tài Ba (Cho ăn 200 lần)', type: 'FEED', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 15 }, completed: false, claimed: false },
-    { id: 'feed_500', desc: 'Chuyên Gia Chăn Nuôi (Cho ăn 500 lần)', type: 'FEED', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
+    { id: 'feed_10', desc: 'Cho thú ăn 10 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
+    { id: 'feed_50', desc: 'Cho thú ăn 50 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
+    { id: 'feed_200', desc: 'Cho thú ăn 200 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 15 }, completed: false, claimed: false },
+    { id: 'feed_500', desc: 'Cho thú ăn 500 lần', type: 'FEED', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
     
     // Watering Tiers
-    { id: 'water_20', desc: 'Tưới Tiêu (20 lần)', type: 'WATER', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
-    { id: 'water_100', desc: 'Thần Mưa (100 lần)', type: 'WATER', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
-    { id: 'water_500', desc: 'Biển Cả Mênh Mông (500 lần)', type: 'WATER', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'STAR', amount: 30 }, completed: false, claimed: false },
+    { id: 'water_20', desc: 'Tưới cây 20 lần', type: 'WATER', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
+    { id: 'water_100', desc: 'Tưới cây 100 lần', type: 'WATER', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
+    { id: 'water_500', desc: 'Tưới cây 500 lần', type: 'WATER', category: 'ACHIEVEMENT', target: 500, current: 0, reward: { type: 'STAR', amount: 30 }, completed: false, claimed: false },
 
     // Fertilizing Tiers
-    { id: 'fert_10', desc: 'Kích Thích Tăng Trưởng (10 lần)', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
-    { id: 'fert_50', desc: 'Bậc Thầy Bón Phân (50 lần)', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
-    { id: 'fert_200', desc: 'Phù Thủy Hóa Học (200 lần)', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
+    { id: 'fert_10', desc: 'Bón phân cho cây (10 lần)', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
+    { id: 'fert_50', desc: 'Bón phân cho cây (50 lần)', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
+    { id: 'fert_200', desc: 'Bón phân cho cây (200 lần)', type: 'FERTILIZE', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
 
     // Quizzes Tiers
-    { id: 'quiz_10', desc: 'Học Giả Chăm Chỉ (10 câu đố)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
-    { id: 'quiz_50', desc: 'Giáo Sư Biết Tuốt (50 câu đố)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 25 }, completed: false, claimed: false },
-    { id: 'quiz_200', desc: 'Thần Đồng Tiếng Anh (200 câu đố)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 100 }, completed: false, claimed: false },
-    { id: 'quiz_1000', desc: 'Bách Khoa Toàn Thư (1000 câu đố)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 500 }, completed: false, claimed: false },
+    { id: 'quiz_10', desc: 'Trả lời đúng 10 câu đố', type: 'QUIZ', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
+    { id: 'quiz_50', desc: 'Trả lời đúng 50 câu đố', type: 'QUIZ', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 25 }, completed: false, claimed: false },
+    { id: 'quiz_200', desc: 'Trả lời đúng 200 câu đố', type: 'QUIZ', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 100 }, completed: false, claimed: false },
+    { id: 'quiz_1000', desc: 'Trả lời đúng 1000 câu đố', type: 'QUIZ', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'STAR', amount: 500 }, completed: false, claimed: false },
 
     // Order Tiers (Simulated via Earn)
-    { id: 'order_10', desc: 'Shipper Thân Thiện (Kiếm 1k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'FERTILIZER', amount: 3 }, completed: false, claimed: false },
-    { id: 'order_50', desc: 'Shipper Tốc Độ (Kiếm 5k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 5000, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
-    { id: 'order_100', desc: 'Ông Trùm Logistics (Kiếm 20k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 20000, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
+    { id: 'order_10', desc: 'Giao 10 đơn hàng (kiếm 1k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'FERTILIZER', amount: 3 }, completed: false, claimed: false },
+    { id: 'order_50', desc: 'Giao 50 đơn hàng (kiếm 5k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 5000, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
+    { id: 'order_100', desc: 'Giao 100 đơn hàng (kiếm 20k xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 20000, current: 0, reward: { type: 'STAR', amount: 50 }, completed: false, claimed: false },
 
     // Specific Items (Fun)
-    { id: 'carrot_king', desc: 'Vua Cà Rốt (Thu hoạch 100)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false },
-    { id: 'egg_master', desc: 'Chuyên Gia Trứng (Thu hoạch 50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 300 }, completed: false, claimed: false },
-    { id: 'milk_man', desc: 'Thợ Vắt Sữa (Thu hoạch 50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 400 }, completed: false, claimed: false },
-    { id: 'baker', desc: 'Thợ Làm Bánh (Thu hoạch 30)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 30, current: 0, reward: { type: 'COIN', amount: 1000 }, completed: false, claimed: false },
-    { id: 'pumpkin_patch', desc: 'Lễ Hội Bí Ngô (Thu hoạch 20)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
-    { id: 'rose_garden', desc: 'Vườn Hồng Lãng Mạn (Thu hoạch 10)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
-    { id: 'sushi_chef', desc: 'Đầu Bếp Sushi (Thu hoạch 20)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'STAR', amount: 30 }, completed: false, claimed: false },
+    { id: 'carrot_king', desc: 'Thu hoạch 100 Cà Rốt', type: 'HARVEST', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'COIN', amount: 500 }, completed: false, claimed: false },
+    { id: 'egg_master', desc: 'Thu hoạch 50 Trứng Gà', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 300 }, completed: false, claimed: false },
+    { id: 'milk_man', desc: 'Thu hoạch 50 Sữa Tươi', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 400 }, completed: false, claimed: false },
+    { id: 'baker', desc: 'Làm ra 30 sản phẩm từ Lò Bánh', type: 'HARVEST', category: 'ACHIEVEMENT', target: 30, current: 0, reward: { type: 'COIN', amount: 1000 }, completed: false, claimed: false },
+    { id: 'pumpkin_patch', desc: 'Thu hoạch 20 Bí Ngô', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
+    { id: 'rose_garden', desc: 'Thu hoạch 10 Hoa Hồng', type: 'HARVEST', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
+    { id: 'sushi_chef', desc: 'Làm ra 20 Sushi', type: 'HARVEST', category: 'ACHIEVEMENT', target: 20, current: 0, reward: { type: 'STAR', amount: 30 }, completed: false, claimed: false },
     
     // Pest Control
-    { id: 'bug_hunter_10', desc: 'Dũng Sĩ Diệt Sâu (10 lần)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
-    { id: 'bug_hunter_50', desc: 'Kẻ Thù Của Sâu Bọ (50 lần)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
-    { id: 'bug_hunter_100', desc: 'Thanh Trừng Sâu Bọ (100 lần)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
+    { id: 'bug_hunter_10', desc: 'Diệt sâu bọ 10 lần', type: 'QUIZ', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'FERTILIZER', amount: 2 }, completed: false, claimed: false },
+    { id: 'bug_hunter_50', desc: 'Diệt sâu bọ 50 lần', type: 'QUIZ', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'FERTILIZER', amount: 10 }, completed: false, claimed: false },
+    { id: 'bug_hunter_100', desc: 'Diệt sâu bọ 100 lần', type: 'QUIZ', category: 'ACHIEVEMENT', target: 100, current: 0, reward: { type: 'STAR', amount: 20 }, completed: false, claimed: false },
 
     // Speed Up
-    { id: 'speed_up_10', desc: 'Tia Chớp (Tăng tốc 10 lần)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
-    { id: 'speed_up_50', desc: 'Nhanh Như Gió (Tăng tốc 50 lần)', type: 'QUIZ', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
+    { id: 'speed_up_10', desc: 'Dùng Tăng Tốc 10 lần', type: 'QUIZ', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'WATER', amount: 5 }, completed: false, claimed: false },
+    { id: 'speed_up_50', desc: 'Dùng Tăng Tốc 50 lần', type: 'QUIZ', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'WATER', amount: 20 }, completed: false, claimed: false },
 
     // Decoration (Simulated via Earn)
-    { id: 'decor_fan', desc: 'Yêu Cái Đẹp (Kiếm 1000 xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false }, 
+    { id: 'decor_fan', desc: 'Mua đồ trang trí (tích lũy 1000 xu)', type: 'EARN', category: 'ACHIEVEMENT', target: 1000, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false }, 
     
     // Time Based (Simulated via Harvest counts as a proxy for time spent)
-    { id: 'night_owl', desc: 'Cú Đêm Chăm Chỉ (Thu hoạch 200)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
-    { id: 'early_bird', desc: 'Chú Chim Sớm (Thu hoạch 150)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 150, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
+    { id: 'night_owl', desc: 'Thu hoạch 200 lần (Cú đêm)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 200, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
+    { id: 'early_bird', desc: 'Thu hoạch 150 lần (Dậy sớm)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 150, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
     
-    { id: 'machine_op', desc: 'Kỹ Sư Vận Hành (Thu hoạch 300)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 300, current: 0, reward: { type: 'COIN', amount: 1000 }, completed: false, claimed: false },
+    { id: 'machine_op', desc: 'Thu hoạch 300 sản phẩm từ máy', type: 'HARVEST', category: 'ACHIEVEMENT', target: 300, current: 0, reward: { type: 'COIN', amount: 1000 }, completed: false, claimed: false },
     
     // Misc
-    { id: 'harvest_expert_1', desc: 'Thu Hoạch Lúa (50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
-    { id: 'harvest_expert_2', desc: 'Thu Hoạch Ngô (50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 150 }, completed: false, claimed: false },
-    { id: 'harvest_expert_3', desc: 'Thu Hoạch Cà Chua (50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
-    { id: 'harvest_expert_4', desc: 'Thu Hoạch Dâu Tây (50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
-    { id: 'harvest_expert_5', desc: 'Thu Hoạch Khoai Tây (50)', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
+    { id: 'harvest_expert_1', desc: 'Thu hoạch 50 Lúa Mì', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
+    { id: 'harvest_expert_2', desc: 'Thu hoạch 50 Bắp Ngô', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 150 }, completed: false, claimed: false },
+    { id: 'harvest_expert_3', desc: 'Thu hoạch 50 Cà Chua', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
+    { id: 'harvest_expert_4', desc: 'Thu hoạch 50 Dâu Tây', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 10 }, completed: false, claimed: false },
+    { id: 'harvest_expert_5', desc: 'Thu hoạch 50 Khoai Tây', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'COIN', amount: 200 }, completed: false, claimed: false },
 ];
 
 export const DAILY_MISSION_POOL: Mission[] = [

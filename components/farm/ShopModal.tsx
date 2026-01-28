@@ -64,6 +64,13 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       });
   };
 
+  const getDecorAnimation = (decorId: string) => {
+      if (['fountain', 'lamp_post', 'statue'].includes(decorId)) return 'animate-pulse';
+      if (['scarecrow', 'flower_pot'].includes(decorId)) return 'animate-bounce';
+      if (['hay_bale', 'bench'].includes(decorId)) return 'hover:animate-spin';
+      return 'hover:scale-110';
+  };
+
   const sortedCrops = sortItems(crops.filter(c => !c.isMagic));
   const sortedAnimals = sortItems(animals);
   const sortedMachines = sortItems(machines);
@@ -235,20 +242,41 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
-                {/* DECOR */}
+                {/* DECOR - UPDATED VISUALS */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedDecor.map(decor => {
                             const owned = userState.decorations?.includes(decor.id);
                             const currency = decor.currency || 'COIN';
+                            const anim = getDecorAnimation(decor.id);
+
                             return (
-                                <div key={decor.id} className={`bg-white p-3 rounded-2xl border-4 flex items-center gap-3 ${owned ? 'border-green-200 bg-green-50' : 'border-purple-100'}`}>
-                                    <div className="text-5xl">{decor.emoji}</div>
-                                    <div className="flex-1">
-                                        <div className="font-black text-slate-700 text-sm">{decor.name}</div>
+                                <div key={decor.id} className={`bg-white p-4 rounded-3xl border-4 flex items-center gap-4 transition-all relative overflow-hidden group ${owned ? 'border-green-200 bg-green-50' : 'border-purple-200 hover:border-purple-300 hover:shadow-lg'}`}>
+                                    
+                                    {/* Glowing Background Effect */}
+                                    <div className="absolute -left-4 -top-4 w-24 h-24 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full blur-2xl opacity-40 group-hover:opacity-70 transition-opacity"></div>
+
+                                    <div className={`text-6xl z-10 transition-transform duration-500 ${anim} drop-shadow-md`}>
+                                        {decor.emoji}
+                                    </div>
+                                    
+                                    <div className="flex-1 z-10">
+                                        <div className="font-black text-slate-800 text-sm uppercase tracking-tight">{decor.name}</div>
+                                        {decor.buff && (
+                                            <div className="text-[10px] font-bold text-purple-600 bg-white/80 px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border border-purple-100 shadow-sm backdrop-blur-sm">
+                                                <Plus size={8}/> {decor.buff.desc}
+                                            </div>
+                                        )}
                                         
-                                        {!owned ? renderBuyButton(decor.cost, currency, () => onBuyDecor(decor), false) 
-                                        : <div className="text-xs font-black text-green-600 mt-2 text-center bg-white rounded-lg py-1">Đã sở hữu</div>}
+                                        {!owned ? (
+                                            <div className="mt-2">
+                                                {renderBuyButton(decor.cost, currency, () => onBuyDecor(decor), false)}
+                                            </div>
+                                        ) : (
+                                            <div className="text-xs font-black text-green-600 mt-3 flex items-center gap-1 bg-white/50 px-2 py-1 rounded-lg w-fit">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div> Đã sở hữu
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )
