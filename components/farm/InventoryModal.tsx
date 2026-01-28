@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
-import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle } from 'lucide-react';
+import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2 } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 
 interface InventoryModalProps {
@@ -15,12 +15,14 @@ interface InventoryModalProps {
   
   ownedAnimals: LivestockSlot[];
   ownedMachines: MachineSlot[];
-  ownedDecorations: string[]; // List of IDs
+  ownedDecorations: string[]; // List of IDs (owned)
+  activeDecorIds?: string[]; // List of IDs (active)
 
-  mode: 'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'; 
+  mode: 'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE' | 'SELECT_DECOR'; 
   onSelectSeed?: (seedId: string) => void;
   onSelectAnimal?: (animalId: string) => void;
   onSelectMachine?: (machineId: string) => void;
+  onToggleDecor?: (decorId: string) => void; // New callback
   onGoToShop?: () => void;
   onClose: () => void;
 }
@@ -30,25 +32,27 @@ type Tab = 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 export const InventoryModal: React.FC<InventoryModalProps> = ({ 
     initialTab = 'SEEDS',
     inventory, seeds, animals, machines, decorations, allItems,
-    ownedAnimals, ownedMachines, ownedDecorations,
-    mode, onSelectSeed, onSelectAnimal, onSelectMachine, onClose, onGoToShop 
+    ownedAnimals, ownedMachines, ownedDecorations, activeDecorIds = [],
+    mode, onSelectSeed, onSelectAnimal, onSelectMachine, onToggleDecor, onClose, onGoToShop 
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   const getOwnedCount = (type: Tab, id: string) => {
       // In inventory modal, we now care about "Available to place" count which is stored in inventory for all types
-      // The old logic for ANIMALS/MACHINES/DECOR counted *placed* items, but here we want *unplaced* inventory items.
+      // Except for decorations which are unique ownership
+      if (type === 'DECOR') {
+          return ownedDecorations.includes(id) ? 1 : 0;
+      }
       return inventory[id] || 0;
   };
 
   const renderItemRow = (item: FarmItem, count: number) => {
-      // STRICT FILTER: Always hide if count <= 0
-      if (count <= 0) return null;
+      if (count <= 0 && activeTab !== 'DECOR') return null; // Hide if not owned
+      // For DECOR, we pass in '1' if owned via getOwnedCount logic, so it renders
 
-      // In SELECT/PLACE modes, ensure we are on the right tab to avoid confusion, 
-      // though user might want to browse. But for actions, we only render buttons if tab matches mode intent.
-      
       let extraInfo = null;
+      let decorStatus = null;
+
       if (activeTab === 'ANIMALS') {
           const animal = animals.find(a => a.id === item.id);
           const produce = allItems.find(p => p.id === animal?.produceId);
@@ -69,46 +73,71 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
            }
       }
 
+      if (activeTab === 'DECOR') {
+          const decor = decorations.find(d => d.id === item.id);
+          // Check if placed in slots (logic passed from parent would be better but simple ID check ok for now)
+          // const isActive = activeDecorIds.includes(item.id); 
+          const buffText = decor?.buff?.desc || "";
+          extraInfo = buffText ? <div className="text-[9px] font-bold text-purple-500 bg-purple-50 px-2 py-1 rounded border border-purple-100 mt-1">{buffText}</div> : null;
+          
+          if (mode === 'SELECT_DECOR') {
+              decorStatus = (
+                  <button 
+                      onClick={() => onToggleDecor && onToggleDecor(item.id)}
+                      className="bg-purple-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                  >
+                      Đặt vào ô
+                  </button>
+              );
+          } else {
+              decorStatus = <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Đã sở hữu</span>
+          }
+      }
+
       return (
-          <div key={item.id} className="bg-white border-4 border-slate-100 rounded-3xl p-3 flex items-center justify-between shadow-sm animate-fadeIn">
+          <div key={item.id} className={`bg-white border-4 rounded-3xl p-3 flex items-center justify-between shadow-sm animate-fadeIn border-slate-100`}>
               <div className="flex items-center gap-3">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border ${activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : activeTab === 'MACHINES' ? 'bg-blue-50 border-blue-100' : 'bg-purple-50 border-purple-100'}`}>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative ${activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : activeTab === 'MACHINES' ? 'bg-blue-50 border-blue-100' : 'bg-purple-50 border-purple-100'}`}>
                       {item.emoji}
                   </div>
                   <div>
                       <div className="font-black text-slate-700 text-sm uppercase">{item.name}</div>
-                      <div className="text-xs font-bold text-slate-400 mb-1">Số lượng: <span className="text-blue-600">{count}</span></div>
+                      {activeTab !== 'DECOR' && <div className="text-xs font-bold text-slate-400 mb-1">Số lượng: <span className="text-blue-600">{count}</span></div>}
                       {extraInfo}
                   </div>
               </div>
 
               {/* Action Buttons */}
-              {mode === 'SELECT_SEED' && activeTab === 'SEEDS' && (
-                  <button 
-                      onClick={() => onSelectSeed && onSelectSeed(item.id)}
-                      className="bg-green-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
-                  >
-                      Gieo hạt
-                  </button>
-              )}
+              <div className="flex flex-col gap-1 items-end">
+                  {mode === 'SELECT_SEED' && activeTab === 'SEEDS' && (
+                      <button 
+                          onClick={() => onSelectSeed && onSelectSeed(item.id)}
+                          className="bg-green-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                      >
+                          Gieo hạt
+                      </button>
+                  )}
 
-              {mode === 'PLACE_ANIMAL' && activeTab === 'ANIMALS' && (
-                  <button 
-                      onClick={() => onSelectAnimal && onSelectAnimal(item.id)}
-                      className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
-                  >
-                      Thả chuồng
-                  </button>
-              )}
+                  {mode === 'PLACE_ANIMAL' && activeTab === 'ANIMALS' && (
+                      <button 
+                          onClick={() => onSelectAnimal && onSelectAnimal(item.id)}
+                          className="bg-orange-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                      >
+                          Thả chuồng
+                      </button>
+                  )}
 
-              {mode === 'PLACE_MACHINE' && activeTab === 'MACHINES' && (
-                  <button 
-                      onClick={() => onSelectMachine && onSelectMachine(item.id)}
-                      className="bg-blue-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
-                  >
-                      Lắp đặt
-                  </button>
-              )}
+                  {mode === 'PLACE_MACHINE' && activeTab === 'MACHINES' && (
+                      <button 
+                          onClick={() => onSelectMachine && onSelectMachine(item.id)}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                      >
+                          Lắp đặt
+                      </button>
+                  )}
+
+                  {activeTab === 'DECOR' && decorStatus}
+              </div>
           </div>
       );
   };
@@ -118,13 +147,12 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           case 'SEEDS': return seeds.filter(s => !s.isMagic);
           case 'ANIMALS': return animals;
           case 'MACHINES': return machines;
-          case 'DECOR': return decorations;
+          case 'DECOR': return decorations.filter(d => ownedDecorations.includes(d.id));
           default: return [];
       }
   };
 
   const currentList = getListForTab();
-  // Check if current tab is empty
   const isEmpty = currentList.every(item => getOwnedCount(activeTab, item.id) <= 0);
 
   return (
@@ -167,7 +195,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
-                
                 {currentList.map(item => renderItemRow(item, getOwnedCount(activeTab, item.id)))}
 
                 {isEmpty && (

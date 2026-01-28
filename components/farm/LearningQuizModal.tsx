@@ -17,6 +17,7 @@ const QUESTION_COUNT = 3;
 export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, onSuccess, onClose, onShowAlert }) => {
   const [questions, setQuestions] = useState<Array<{ target: Word, options: Word[], mode: 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN' }>>([]);
   const [currentQIdx, setCurrentQIdx] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false); // Prevent double clicks
   
   useEffect(() => {
       if (words.length >= 4) {
@@ -56,32 +57,39 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
   }
 
   const handleAnswer = (wordId: string) => {
-      if (!questions[currentQIdx]) return;
+      if (isProcessing || !questions[currentQIdx]) return;
       
       if (wordId === questions[currentQIdx].target.id) {
+          setIsProcessing(true); // Lock immediately
           playSFX('correct');
           
           if (currentQIdx < QUESTION_COUNT - 1) {
-              const nextIdx = currentQIdx + 1;
-              setCurrentQIdx(nextIdx);
-              // Auto play next audio
-              if (questions[nextIdx].mode === 'LISTEN') {
-                  setTimeout(() => {
-                      const u = new SpeechSynthesisUtterance(questions[nextIdx].target.english);
-                      u.lang = 'en-US';
-                      window.speechSynthesis.speak(u);
-                  }, 500);
-              }
+              // Add delay before moving to next question to allow sound to play and prevent accidental double taps
+              setTimeout(() => {
+                  const nextIdx = currentQIdx + 1;
+                  setCurrentQIdx(nextIdx);
+                  // Auto play next audio
+                  if (questions[nextIdx].mode === 'LISTEN') {
+                      setTimeout(() => {
+                          const u = new SpeechSynthesisUtterance(questions[nextIdx].target.english);
+                          u.lang = 'en-US';
+                          window.speechSynthesis.speak(u);
+                      }, 200);
+                  }
+                  setIsProcessing(false); // Unlock
+              }, 800);
           } else {
-              // All correct
+              // All correct - Final Question
               setTimeout(() => {
                   playSFX('success');
                   onSuccess();
+                  // Do NOT set isProcessing to false here to prevent re-clicking while modal is closing
               }, 500);
           }
       } else {
           playSFX('wrong');
           onShowAlert("Sai rồi! Bé thử lại câu này nhé!", "DANGER");
+          // No need to lock for wrong answer, or unlock immediately if you want
       }
   };
 
@@ -154,14 +162,15 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
             {/* Text Options Grid */}
             <div className="grid grid-cols-1 gap-3">
                 {currentQ.options.map(opt => {
-                    const content = currentQ.mode === 'EN_TO_VI' ? opt.vietnamese : opt.english; // Listen expects English text options usually
-                    const isEnglishText = currentQ.mode !== 'EN_TO_VI'; // LISTEN and VI_TO_EN use English text options
+                    const content = currentQ.mode === 'EN_TO_VI' ? opt.vietnamese : opt.english; 
+                    const isEnglishText = currentQ.mode !== 'EN_TO_VI'; 
 
                     return (
                         <button 
                             key={opt.id}
                             onClick={() => handleAnswer(opt.id)}
-                            className={`p-4 rounded-xl border-b-4 transition-all active:scale-95 active:border-b-0 active:translate-y-1 flex items-center justify-center ${isEnglishText ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-orange-50 border-orange-200 text-orange-800'}`}
+                            disabled={isProcessing}
+                            className={`p-4 rounded-xl border-b-4 transition-all active:scale-95 active:border-b-0 active:translate-y-1 flex items-center justify-center ${isEnglishText ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-orange-50 border-orange-200 text-orange-800'} ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             <span className={`font-black ${isEnglishText ? 'text-xl' : 'text-lg'}`}>
                                 {content}

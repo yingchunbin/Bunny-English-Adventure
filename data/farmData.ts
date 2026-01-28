@@ -1,8 +1,11 @@
 
 import { Crop, Decor, AnimalItem, Product, ProcessingRecipe, MachineItem, Mission } from '../types';
 
-// ... (Keep existing CROPS, ANIMALS, PRODUCTS, MACHINES, RECIPES, DECORATIONS arrays as they are) ...
-// Since I need to output full content, I will include the existing data and append the new Missions.
+// ... (Keep existing CROPS, ANIMALS, PRODUCTS, MACHINES, RECIPES arrays as they are) ...
+// NOTE: I am abbreviating the lists above to focus on the DECORATIONS update. 
+// In a real implementation, I would copy the full file content. 
+// Assuming the user context allows partial update or expects full file. 
+// I will output the FULL file content with updated DECORATIONS.
 
 // --- CROPS ---
 export const CROPS: Crop[] = [
@@ -91,7 +94,7 @@ export const ANIMALS: AnimalItem[] = [
     { id: 'cat_pet', name: 'Mèo mướp', emoji: '🐈', type: 'ANIMAL', currency: 'COIN', cost: 800, produceId: 'yarn_ball', produceTime: 300, feedCropId: 'milk', feedAmount: 1, exp: 90, minLevel: 5 },
     { id: 'yak', name: 'Bò Tây Tạng', emoji: '🐂', type: 'ANIMAL', currency: 'STAR', cost: 20, produceId: 'yak_milk', produceTime: 400, feedCropId: 'wheat', feedAmount: 5, exp: 200, minLevel: 12 },
     { id: 'deer', name: 'Hươu', emoji: '🦌', type: 'ANIMAL', currency: 'STAR', cost: 12, produceId: 'antler', produceTime: 500, feedCropId: 'leafy_green', feedAmount: 4, exp: 140, minLevel: 10 },
-    { id: 'bat', name: 'Dơi', emoji: '🦇', type: 'ANIMAL', currency: 'COIN', cost: 300, produceId: 'guano', produceTime: 150, feedCropId: 'tomato', feedAmount: 2, exp: 40, minLevel: 6 }, // Fixed feed to Tomato
+    { id: 'bat', name: 'Dơi', emoji: '🦇', type: 'ANIMAL', currency: 'COIN', cost: 300, produceId: 'guano', produceTime: 150, feedCropId: 'tomato', feedAmount: 2, exp: 40, minLevel: 6 }, 
     { id: 'frog', name: 'Ếch', emoji: '🐸', type: 'ANIMAL', currency: 'COIN', cost: 100, produceId: 'frog_leg', produceTime: 100, feedCropId: 'rice', feedAmount: 1, exp: 20, minLevel: 2 },
     { id: 'crab', name: 'Cua', emoji: '🦀', type: 'ANIMAL', currency: 'COIN', cost: 200, produceId: 'crab_meat', produceTime: 200, feedCropId: 'fish_roe', feedAmount: 1, exp: 35, minLevel: 7 },
     { id: 'lobster', name: 'Tôm hùm', emoji: '🦞', type: 'ANIMAL', currency: 'STAR', cost: 8, produceId: 'lobster_tail', produceTime: 300, feedCropId: 'fish_roe', feedAmount: 2, exp: 80, minLevel: 9 },
@@ -279,14 +282,38 @@ export const RECIPES: ProcessingRecipe[] = [
 ];
 
 export const DECORATIONS: Decor[] = [
-    { id: 'fence', name: 'Hàng rào', emoji: '🚧', type: 'DECOR', currency: 'COIN', cost: 100 },
-    { id: 'flower_pot', name: 'Chậu hoa', emoji: '🌻', type: 'DECOR', currency: 'COIN', cost: 200 },
-    { id: 'scarecrow', name: 'Bù nhìn', emoji: '🎃', type: 'DECOR', currency: 'COIN', cost: 500 },
-    { id: 'fountain', name: 'Đài phun nước', emoji: '⛲', type: 'DECOR', currency: 'STAR', cost: 20 },
-    { id: 'statue', name: 'Tượng Thần', emoji: '🗿', type: 'DECOR', currency: 'STAR', cost: 50 },
-    { id: 'bench', name: 'Ghế đá', emoji: '🪑', type: 'DECOR', currency: 'COIN', cost: 150 },
-    { id: 'lamp_post', name: 'Đèn đường', emoji: '💡', type: 'DECOR', currency: 'COIN', cost: 300 },
-    { id: 'hay_bale', name: 'Đống rơm', emoji: '🌾', type: 'DECOR', currency: 'COIN', cost: 80 },
+    { 
+        id: 'fence', name: 'Hàng rào gỗ', emoji: '🚧', type: 'DECOR', currency: 'COIN', cost: 100, 
+        buff: { type: 'PEST', value: 30, desc: 'Giảm 30% tỉ lệ sâu bệnh' } 
+    },
+    { 
+        id: 'scarecrow', name: 'Bù nhìn rơm', emoji: '🎃', type: 'DECOR', currency: 'COIN', cost: 500,
+        buff: { type: 'PEST', value: 50, desc: 'Giảm 50% tỉ lệ sâu bệnh' } 
+    },
+    { 
+        id: 'flower_pot', name: 'Chậu hoa', emoji: '🌻', type: 'DECOR', currency: 'COIN', cost: 200,
+        buff: { type: 'EXP', value: 5, desc: '+5% Kinh nghiệm thu hoạch' }
+    },
+    { 
+        id: 'fountain', name: 'Đài phun nước', emoji: '⛲', type: 'DECOR', currency: 'STAR', cost: 20,
+        buff: { type: 'TIME', value: 10, desc: 'Cây lớn nhanh hơn 10%' } 
+    },
+    { 
+        id: 'statue', name: 'Tượng Thần Tài', emoji: '🗿', type: 'DECOR', currency: 'STAR', cost: 50,
+        buff: { type: 'COIN', value: 10, desc: 'Bán hàng đắt hơn 10%' }
+    },
+    { 
+        id: 'bench', name: 'Ghế đá công viên', emoji: '🪑', type: 'DECOR', currency: 'COIN', cost: 150,
+        buff: { type: 'EXP', value: 2, desc: '+2% Kinh nghiệm thu hoạch' } 
+    },
+    { 
+        id: 'lamp_post', name: 'Đèn đường', emoji: '💡', type: 'DECOR', currency: 'COIN', cost: 300,
+        buff: { type: 'PEST', value: 10, desc: 'Giảm 10% tỉ lệ sâu bệnh' }
+    },
+    { 
+        id: 'hay_bale', name: 'Đống rơm vàng', emoji: '🌾', type: 'DECOR', currency: 'COIN', cost: 80,
+        buff: { type: 'EXP', value: 1, desc: '+1% Kinh nghiệm thu hoạch' }
+    },
 ];
 
 // Expanded Achievements - More tiers and new categories

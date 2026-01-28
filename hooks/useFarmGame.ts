@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot } from '../types';
-import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from '../data/farmData';
+import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot, Decor } from '../types';
+import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL, DECORATIONS } from '../data/farmData';
 import { playSFX } from '../utils/sound';
 
 export const useFarmGame = (
@@ -10,6 +10,21 @@ export const useFarmGame = (
 ) => {
   const [now, setNow] = useState(Date.now());
   
+  // Helper: Calculate total buff for a type from active slots
+  const getDecorBonus = (type: 'EXP' | 'COIN' | 'TIME' | 'PEST'): number => {
+      const activeSlots = userState.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
+      if (activeSlots.length === 0) return 0;
+      
+      let total = 0;
+      activeSlots.forEach(slot => {
+          const decor = DECORATIONS.find(d => d.id === slot.decorId);
+          if (decor && decor.buff && decor.buff.type === type) {
+              total += decor.buff.value;
+          }
+      });
+      return total;
+  };
+
   // Helper: Calculate Base Time for an Item (in minutes)
   const getItemProductionTime = (itemId: string): number => {
       // 1. Check Crop
@@ -87,22 +102,14 @@ export const useFarmGame = (
           }
 
           // Time Calc: Estimate time to produce this batch
-          // We assume parallel production if user has multiple slots, but let's be generous.
-          // Time = UnitTime * Amount.
           const unitTime = getItemProductionTime(itemId);
           const batchTime = unitTime * Math.ceil(amount / 2); // Assume 2 slots avg
           if (batchTime > maxProductionTime) maxProductionTime = batchTime;
       }
 
-      // Order Duration Calculation
-      // Minimum 15 minutes.
-      // Factor: 3x production time to be safe and relaxed for kids.
       const durationMinutes = Math.max(15, maxProductionTime * 3);
 
-      // Economy & Reward Calculation
-      // Multiplier increased to 2.5 to ensure profit
       const finalCoins = Math.ceil((totalValue * 2.5) / 10) * 10;
-      // 30% Chance to get 1-3 Stars
       const rewardStars = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0;
 
       return {
@@ -129,25 +136,19 @@ export const useFarmGame = (
           let newState = { ...prev };
           let changed = false;
 
-          // --- FIX: MERGE MISSING ACHIEVEMENTS ---
-          // Identify existing achievement IDs in user state
           const currentMissionIds = new Set(prev.missions?.map(m => m.id) || []);
-          
-          // Find achievements in MASTER DATA that are NOT in user state
           const missingAchievements = FARM_ACHIEVEMENTS_DATA.filter(ach => !currentMissionIds.has(ach.id));
 
           if (missingAchievements.length > 0) {
-              // Append missing achievements
               newState.missions = [...(prev.missions || []), ...missingAchievements];
               changed = true;
           }
 
-          // Daily Mission Reset Logic
           if (prev.lastMissionUpdate !== todayStr) {
               const currentAchievements = newState.missions?.filter(m => m.category === 'ACHIEVEMENT') || [];
               const dailies = [...DAILY_MISSION_POOL]
                   .sort(() => 0.5 - Math.random())
-                  .slice(0, 5) // 5 daily missions
+                  .slice(0, 5)
                   .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
               
               newState.missions = [...currentAchievements, ...dailies];
@@ -164,6 +165,16 @@ export const useFarmGame = (
                   createSingleOrder(1, 0, prev.livestockSlots || [])
               ];
               newState.activeOrders = initialOrders;
+              changed = true;
+          }
+
+          // Initial decor slots if undefined
+          if (!prev.decorSlots) {
+              newState.decorSlots = [
+                  { id: 1, isUnlocked: true, decorId: null },
+                  { id: 2, isUnlocked: true, decorId: null },
+                  { id: 3, isUnlocked: false, decorId: null },
+              ];
               changed = true;
           }
 
@@ -193,8 +204,19 @@ export const useFarmGame = (
                 }
             }
 
-            // 2. Bugs & Weeds
-            if (Math.random() < 0.01) {
+            // 2. Bugs & Weeds (With PEST reduction buff)
+            let bugChance = 0.01;
+            // Apply Decor Bonus: Reduce pest chance
+            const activeSlots = prev.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
+            let pestReduction = 0;
+            activeSlots.forEach(slot => {
+                const decor = DECORATIONS.find(d => d.id === slot.decorId);
+                if (decor?.buff?.type === 'PEST') pestReduction += decor.buff.value;
+            });
+            // Cap reduction at 90%
+            bugChance = bugChance * (1 - Math.min(0.9, pestReduction / 100));
+
+            if (Math.random() < bugChance) {
                 const cleanPlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
                 if (cleanPlots.length > 0) {
                     const target = cleanPlots[Math.floor(Math.random() * cleanPlots.length)];
@@ -241,7 +263,7 @@ export const useFarmGame = (
                 if (hasChanges) newState.machineSlots = updatedSlots;
             }
 
-            // 4. Animal Auto-Process (UPDATED LOGIC: Storage limit 3)
+            // 4. Animal Auto-Process
             if (prev.livestockSlots) {
                 const updatedSlots = prev.livestockSlots.map(slot => {
                     if (slot.animalId) {
@@ -252,27 +274,17 @@ export const useFarmGame = (
                             let newQueue = slot.queue || 0;
                             let slotChanged = false;
 
-                            // 1. Check if current feeding is done
                             if (newFedAt) {
                                 const elapsed = (currentTime - newFedAt) / 1000;
                                 if (elapsed >= animal.produceTime) {
-                                    // Only move to storage if storage < 3
                                     if (newStorage.length < 3) {
                                         newStorage.push(animal.produceId);
-                                        newFedAt = null; // Feeding done and stored
+                                        newFedAt = null; 
                                         slotChanged = true;
-                                    } else {
-                                        // Storage full, item stays "in progress/ready" 
-                                        // effectively pausing the animal until space is made
-                                        // No change here, wait for user to harvest
                                     }
                                 }
                             }
 
-                            // 2. Check if we should start next feeding from queue
-                            // Condition: Not currently active AND queue has food AND storage is not full
-                            // Note: Even if storage is 2/3, we can start next. If storage is 3/3, we shouldn't start (or we start but can't collect).
-                            // Let's allow starting if storage < 3.
                             if (!newFedAt && newQueue > 0 && newStorage.length < 3) {
                                 newQueue--;
                                 newFedAt = currentTime;
@@ -388,15 +400,33 @@ export const useFarmGame = (
           if (currency === 'STAR') newState.stars = (prev.stars || 0) - totalCost;
           else newState.coins = prev.coins - totalCost;
           
-          newState.inventory = { ...prev.inventory, [item.id]: (prev.inventory[item.id] || 0) + amount };
-          
           if (item.type === 'DECOR') {
               if (!newState.decorations?.includes(item.id)) {
                   newState.decorations = [...(newState.decorations || []), item.id];
               }
+          } else {
+              newState.inventory = { ...prev.inventory, [item.id]: (prev.inventory[item.id] || 0) + amount };
           }
           return newState;
       });
+      return { success: true };
+  };
+
+  const placeDecor = (slotId: number, decorId: string) => {
+      onUpdateState(prev => ({
+          ...prev,
+          decorSlots: prev.decorSlots?.map(s => s.id === slotId ? { ...s, decorId } : s)
+      }));
+      playSFX('click');
+      return { success: true };
+  };
+
+  const removeDecor = (slotId: number) => {
+      onUpdateState(prev => ({
+          ...prev,
+          decorSlots: prev.decorSlots?.map(s => s.id === slotId ? { ...s, decorId: null } : s)
+      }));
+      playSFX('click');
       return { success: true };
   };
 
@@ -406,6 +436,12 @@ export const useFarmGame = (
       
       if (count <= 0) return { success: false, msg: "Hết hạt giống rồi bé ơi! Hãy vào Cửa Hàng mua thêm." };
       
+      // Calculate reduction based on TIME buff
+      const timeBonus = getDecorBonus('TIME');
+      const crop = CROPS.find(c => c.id === seedId);
+      const growthTime = crop?.growthTime || 0;
+      const reduceSeconds = (growthTime * timeBonus) / 100;
+      
       playSFX('click');
       onUpdateState(prev => ({
           ...prev,
@@ -413,7 +449,8 @@ export const useFarmGame = (
           farmPlots: prev.farmPlots.map(p => p.id === plotId ? { 
               ...p, 
               cropId: seedId, 
-              plantedAt: Date.now(), 
+              // Apply reduction by shifting plantedAt back in time
+              plantedAt: Date.now() - (reduceSeconds * 1000), 
               isWatered: prev.weather === 'RAINY',
               hasWeed: Math.random() < 0.1, 
               hasBug: false, 
@@ -520,12 +557,17 @@ export const useFarmGame = (
 
   const harvestPlot = (plotId: number, crop: Crop) => {
       playSFX('harvest');
+      
+      const expBonus = getDecorBonus('EXP');
+      const bonusExp = Math.floor(crop.exp * (expBonus / 100));
+      const finalExp = crop.exp + bonusExp;
+
       onUpdateState(prev => {
           const currentHarvest = prev.harvestedCrops || {};
           const newHarvest = { ...currentHarvest };
           newHarvest[crop.id] = (newHarvest[crop.id] || 0) + 1;
           
-          let newExp = (prev.farmExp || 0) + crop.exp;
+          let newExp = (prev.farmExp || 0) + finalExp;
           let newLevel = prev.farmLevel || 1;
           const XP_NEEDED = newLevel * 100;
           if (newExp >= XP_NEEDED) { newLevel += 1; newExp -= XP_NEEDED; }
@@ -550,6 +592,8 @@ export const useFarmGame = (
       let expGained = 0;
       const newHarvestedCrops = { ...(userState.harvestedCrops || {}) };
       const newFarmPlots = [...userState.farmPlots];
+      
+      const expBonusPercent = getDecorBonus('EXP');
 
       newFarmPlots.forEach((plot, index) => {
           if (plot.cropId && plot.plantedAt && !plot.hasBug && !plot.hasWeed) { 
@@ -558,7 +602,10 @@ export const useFarmGame = (
                   const elapsed = (now - plot.plantedAt) / 1000;
                   if (elapsed >= crop.growthTime) {
                       harvestedCount++;
-                      expGained += crop.exp;
+                      
+                      const bonusExp = Math.floor(crop.exp * (expBonusPercent / 100));
+                      expGained += (crop.exp + bonusExp);
+                      
                       newHarvestedCrops[crop.id] = (newHarvestedCrops[crop.id] || 0) + 1;
                       
                       newFarmPlots[index] = { 
@@ -601,60 +648,6 @@ export const useFarmGame = (
       return { success: false, count: 0 };
   };
 
-  const feedAnimal = (slotId: number) => {
-      const slot = userState.livestockSlots?.find(s => s.id === slotId);
-      if (!slot || !slot.animalId) return;
-      const animal = ANIMALS.find(a => a.id === slot.animalId);
-      if (!animal) return;
-
-      // Check Limits: Queue + Storage (max 3)
-      // Note: `fedAt` implies one is being made. `queue` implies others are waiting. `storage` implies finished ones.
-      // Maximum capacity of "products pending" is 3 (Storage max).
-      // So if (active + queue + storage) >= 3, we are full.
-      const currentActive = slot.fedAt ? 1 : 0;
-      const currentQueue = slot.queue || 0;
-      const currentStorage = slot.storage?.length || 0;
-      
-      if ((currentActive + currentQueue + currentStorage) >= 3) {
-          return { success: false, msg: "Chuồng đầy rồi! Hãy thu hoạch trước khi cho ăn tiếp." };
-      }
-
-      const feedCrop = CROPS.find(c => c.id === animal.feedCropId);
-      const feedName = feedCrop?.name || 'thức ăn';
-      const feedEmoji = feedCrop?.emoji || '🥕';
-      const userFeedAmount = userState.harvestedCrops?.[animal.feedCropId] || 0;
-
-      if (userFeedAmount < animal.feedAmount) {
-          return { 
-              success: false, 
-              msg: `Bé cần ${animal.feedAmount} ${feedName} để cho ${animal.name} ăn. Bé đang có ${userFeedAmount}.` 
-          };
-      }
-
-      playSFX('eat'); 
-      onUpdateState(prev => {
-          let newSlot = { ...slot };
-          // If not currently working, start immediately
-          if (!slot.fedAt) {
-              newSlot.fedAt = Date.now();
-          } else {
-              // Add to queue
-              newSlot.queue = (slot.queue || 0) + 1;
-          }
-
-          return {
-            ...prev,
-            harvestedCrops: {
-                ...prev.harvestedCrops,
-                [animal.feedCropId]: (prev.harvestedCrops?.[animal.feedCropId] || 0) - animal.feedAmount
-            },
-            livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? newSlot : s)
-          }
-      });
-      updateMissionProgress('FEED', 1);
-      return { success: true, msg: `Đã cho ${animal.name} ăn!`, feedEmoji: feedEmoji, amount: animal.feedAmount };
-  };
-
   const collectProduct = (slotId: number) => {
       const slot = userState.livestockSlots?.find(s => s.id === slotId);
       if (!slot) return { success: false, msg: "Lỗi chuồng" };
@@ -665,17 +658,20 @@ export const useFarmGame = (
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if (!animal) return { success: false, msg: "Lỗi vật nuôi" };
 
+      const expBonusPercent = getDecorBonus('EXP');
+      const baseExp = animal.exp * storedItems.length;
+      const finalExp = baseExp + Math.floor(baseExp * (expBonusPercent / 100));
+
       playSFX('harvest');
       onUpdateState(prev => {
           const currentHarvest = prev.harvestedCrops || {};
           const newHarvest = { ...currentHarvest };
           const itemsCount = storedItems.length;
           
-          // Add products to inventory
           const productId = animal.produceId;
           newHarvest[productId] = (newHarvest[productId] || 0) + itemsCount;
 
-          let newExp = (prev.farmExp || 0) + (animal.exp * itemsCount);
+          let newExp = (prev.farmExp || 0) + finalExp;
           let newLevel = prev.farmLevel || 1;
           while (newExp >= newLevel * 100 && newLevel < 50) { newExp -= newLevel * 100; newLevel++; }
 
@@ -684,7 +680,6 @@ export const useFarmGame = (
               harvestedCrops: newHarvest,
               farmExp: newExp,
               farmLevel: newLevel,
-              // Clear storage
               livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, storage: [] } : s)
           };
       });
@@ -739,17 +734,25 @@ export const useFarmGame = (
       const storedItems = slot.storage || [];
       if (storedItems.length === 0) return { success: false, msg: "Không có gì để thu hoạch" };
 
+      const expBonusPercent = getDecorBonus('EXP');
+      let expGained = 0;
+      storedItems.forEach(recipeId => {
+          const recipe = RECIPES.find(r => r.id === recipeId);
+          if (recipe) {
+              expGained += recipe.exp;
+          }
+      });
+      expGained += Math.floor(expGained * (expBonusPercent / 100));
+
       playSFX('harvest');
       onUpdateState(prev => {
           const currentHarvest = prev.harvestedCrops || {};
           const newHarvest = { ...currentHarvest };
           
-          let expGained = 0;
           storedItems.forEach(recipeId => {
               const recipe = RECIPES.find(r => r.id === recipeId);
               if (recipe) {
                   newHarvest[recipe.outputId] = (newHarvest[recipe.outputId] || 0) + 1;
-                  expGained += recipe.exp;
               }
           });
 
@@ -818,7 +821,7 @@ export const useFarmGame = (
       }));
   };
 
-  // --- SPEED UP LOGIC (Updated to reduce 50% remaining time) ---
+  // --- SPEED UP LOGIC ---
   const speedUpItem = (type: 'CROP' | 'ANIMAL' | 'MACHINE', slotId: number) => {
       const now = Date.now();
       playSFX('powerup');
@@ -832,7 +835,6 @@ export const useFarmGame = (
                   const remaining = Math.max(0, duration - elapsed);
                   const reduction = remaining * 0.5; // Reduce remaining by 50%
                   
-                  // To achieve this, we fake `plantedAt` being earlier
                   return {
                       ...prev,
                       farmPlots: prev.farmPlots.map(p => p.id === slotId ? { ...p, plantedAt: (p.plantedAt || 0) - reduction } : p)
@@ -873,6 +875,51 @@ export const useFarmGame = (
       });
   };
 
+  const feedAnimal = (slotId: number) => {
+      const slot = userState.livestockSlots?.find(s => s.id === slotId);
+      if (!slot || !slot.animalId) return { success: false, msg: "Lỗi chuồng" };
+      
+      const animal = ANIMALS.find(a => a.id === slot.animalId);
+      if (!animal) return { success: false, msg: "Lỗi vật nuôi" };
+
+      // Queue limit check (max 3 in queue + 1 active)
+      const currentQueue = slot.queue || 0;
+      if (currentQueue >= 3) return { success: false, msg: "Hàng chờ đã đầy!" };
+
+      const currentHarvest = userState.harvestedCrops || {};
+      const feedCount = currentHarvest[animal.feedCropId] || 0;
+      
+      if (feedCount < animal.feedAmount) {
+          const feedItem = [...CROPS, ...PRODUCTS].find(i => i.id === animal.feedCropId);
+          return { success: false, msg: `Thiếu ${animal.feedAmount} ${feedItem?.name || 'thức ăn'}!` };
+      }
+
+      playSFX('eat');
+      
+      onUpdateState(prev => {
+          const newHarvested = { ...(prev.harvestedCrops || {}) };
+          newHarvested[animal.feedCropId] = (newHarvested[animal.feedCropId] || 0) - animal.feedAmount;
+
+          let newSlot = { ...slot };
+          if (!slot.fedAt) {
+              newSlot.fedAt = Date.now();
+          } else {
+              newSlot.queue = (slot.queue || 0) + 1;
+          }
+
+          return {
+              ...prev,
+              harvestedCrops: newHarvested,
+              livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? newSlot : s)
+          };
+      });
+      
+      updateMissionProgress('FEED', 1);
+      
+      const feedItem = [...CROPS, ...PRODUCTS].find(i => i.id === animal.feedCropId);
+      return { success: true, amount: animal.feedAmount, feedEmoji: feedItem?.emoji };
+  };
+
   return { 
       now, 
       plantSeed, 
@@ -895,6 +942,8 @@ export const useFarmGame = (
       updateMissionProgress, 
       checkWellUsage, 
       useWell,
-      speedUpItem // Exported
+      speedUpItem,
+      placeDecor,
+      removeDecor
   };
 };

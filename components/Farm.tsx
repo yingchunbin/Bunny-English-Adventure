@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { UserState, FarmPlot } from '../types';
+import { UserState, FarmPlot, Decor } from '../types';
 import { CROPS, ANIMALS, MACHINES, DECORATIONS, RECIPES, PRODUCTS } from '../data/farmData';
 import { PlotModal } from './farm/PlotModal';
 import { ShopModal } from './farm/ShopModal';
@@ -13,7 +13,7 @@ import { ItemManageModal } from './farm/ItemManageModal';
 import { MachineProductionModal } from './farm/MachineProductionModal'; 
 import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, ArrowUpCircle, Sparkles, Settings, Layers } from 'lucide-react';
+import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, Settings, Layers, Armchair, Plus, Sparkles } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 
 interface FarmProps {
@@ -24,7 +24,7 @@ interface FarmProps {
   levels: any;
 }
 
-type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES';
+type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
 interface FlyingItem {
     id: number;
@@ -37,19 +37,19 @@ interface FlyingItem {
 
 interface FloatingText {
     id: number;
-    text: React.ReactNode; // Changed to allow JSX/Icons
+    text: React.ReactNode; 
     x: number;
     y: number;
     color: string;
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
   const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER', plotId?: number, slotId?: number, entityType?: 'CROP' | 'ANIMAL' | 'MACHINE' } | null>(null);
-  const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE'>('VIEW');
+  const [inventoryMode, setInventoryMode] = useState<'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE' | 'SELECT_DECOR'>('VIEW');
   const [initialInvTab, setInitialInvTab] = useState<'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR'>('SEEDS');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [manageItemConfig, setManageItemConfig] = useState<{ type: 'ANIMAL' | 'MACHINE', slotId: number, itemId: string } | null>(null);
@@ -127,16 +127,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   // --- EXPANSION LOGIC ---
-  const handleExpand = (type: 'PLOT' | 'PEN' | 'MACHINE') => {
+  const handleExpand = (type: 'PLOT' | 'PEN' | 'MACHINE' | 'DECOR') => {
       const baseCost = 500;
       let currentCount = 0;
-      if (type === 'PLOT') {
-          currentCount = userState.farmPlots.length; 
-      }
+      if (type === 'PLOT') currentCount = userState.farmPlots.length; 
       if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
       if (type === 'MACHINE') currentCount = userState.machineSlots?.length || 0;
+      if (type === 'DECOR') currentCount = userState.decorSlots?.length || 0;
 
-      const threshold = type === 'PLOT' ? 6 : 2;
+      const threshold = type === 'PLOT' ? 6 : type === 'DECOR' ? 3 : 2;
       const cost = baseCost * Math.pow(1.5, Math.max(0, currentCount - threshold)); 
       const finalCost = Math.floor(cost / 100) * 100; 
 
@@ -150,15 +149,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       const newState = { ...prev, coins: prev.coins - finalCost };
                       
                       if (type === 'PLOT') {
-                          const lockedPlotIndex = prev.farmPlots.findIndex(p => !p.isUnlocked);
-                          if (lockedPlotIndex !== -1) {
-                              const newPlots = [...prev.farmPlots];
-                              newPlots[lockedPlotIndex] = { ...newPlots[lockedPlotIndex], isUnlocked: true };
-                              newState.farmPlots = newPlots;
-                          } else {
-                              const newId = Date.now();
-                              newState.farmPlots = [...prev.farmPlots, { id: newId, isUnlocked: true, cropId: null, plantedAt: null }];
-                          }
+                          const locked = prev.farmPlots.find(p => !p.isUnlocked);
+                          if (locked) newState.farmPlots = prev.farmPlots.map(p => p.id === locked.id ? { ...p, isUnlocked: true } : p);
+                          else newState.farmPlots = [...prev.farmPlots, { id: Date.now(), isUnlocked: true, cropId: null, plantedAt: null }];
                       }
                       else if (type === 'PEN') {
                           const newId = Date.now();
@@ -167,6 +160,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       else if (type === 'MACHINE') {
                           const newId = Date.now();
                           newState.machineSlots = [...(prev.machineSlots || []), { id: newId, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null }];
+                      }
+                      else if (type === 'DECOR') {
+                          const locked = prev.decorSlots?.find(s => !s.isUnlocked);
+                          if (locked) newState.decorSlots = prev.decorSlots?.map(s => s.id === locked.id ? { ...s, isUnlocked: true } : s);
+                          else newState.decorSlots = [...(prev.decorSlots || []), { id: Date.now(), isUnlocked: true, decorId: null }];
                       }
                       return newState;
                   });
@@ -301,11 +299,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   // --- RENDERERS ---
 
   const renderSectionTabs = () => (
-      <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1">
+      <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1 overflow-x-auto no-scrollbar">
           {[
               { id: 'CROPS', label: 'Trồng Trọt', icon: <Tractor size={20}/>, color: 'text-green-600 bg-green-50' },
               { id: 'ANIMALS', label: 'Chăn Nuôi', icon: <Bird size={20}/>, color: 'text-orange-600 bg-orange-50' },
               { id: 'MACHINES', label: 'Chế Biến', icon: <Factory size={20}/>, color: 'text-blue-600 bg-blue-50' },
+              { id: 'DECOR', label: 'Trang Trí', icon: <Armchair size={20}/>, color: 'text-purple-600 bg-purple-50' },
               { id: 'SHOP', label: 'Cửa Hàng', icon: <ShoppingBasket size={20}/>, color: 'text-pink-600 bg-pink-50' },
           ].map(tab => (
               <button
@@ -315,7 +314,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       else setActiveSection(tab.id as FarmSection);
                       playSFX('click');
                   }}
-                  className={`flex-1 py-3 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
+                  className={`flex-1 min-w-[70px] py-3 rounded-xl text-[10px] font-black transition-all flex flex-col items-center gap-1 leading-tight ${
                       (activeSection as string) === tab.id && tab.id !== 'SHOP'
                       ? `${tab.color.replace('text', 'bg').replace('bg', 'text-white').replace('50', '500')} shadow-md scale-105 border-b-4 border-black/10` 
                       : 'text-slate-400 hover:bg-slate-100'
@@ -340,8 +339,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {userState.missions?.some(m => m.completed && !m.claimed) && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
           </button>
           
-          <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-md border-2 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all">
+          <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-md border-2 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all relative">
               <Truck size={16} /> Đơn Hàng
+              {userState.activeOrders?.some(o => o.expiresAt > now) && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center border border-white animate-pulse">!</span>}
           </button>
           
           <button id="well-btn" onClick={handleWellClick} className="w-12 h-12 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
@@ -698,6 +698,81 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       );
   };
 
+  const renderDecors = () => {
+      const slots = userState.decorSlots || [];
+      return (
+          <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
+              {slots.map(slot => {
+                  const decor = slot.decorId ? DECORATIONS.find(d => d.id === slot.decorId) : null;
+                  
+                  // Animation classes based on decor type (simple heuristic or manual mapping)
+                  let animClass = "";
+                  if (decor?.id === 'fountain') animClass = "animate-bounce";
+                  else if (decor?.id === 'lamp_post') animClass = "animate-pulse";
+                  else if (decor?.id === 'scarecrow') animClass = "animate-swing origin-bottom";
+                  else if (decor?.id === 'flower_pot') animClass = "animate-wiggle";
+
+                  return (
+                      <button 
+                        key={slot.id}
+                        onClick={() => {
+                            if (slot.isUnlocked) {
+                                setSelectedId(slot.id);
+                                if (!decor) {
+                                    setInventoryMode('SELECT_DECOR');
+                                    setInitialInvTab('DECOR');
+                                    setActiveModal('INVENTORY');
+                                } else {
+                                    setConfirmConfig({
+                                        isOpen: true,
+                                        message: `Bạn có muốn cất "${decor.name}" vào kho không?`,
+                                        onConfirm: () => {
+                                            removeDecor(slot.id);
+                                            setConfirmConfig(null);
+                                        }
+                                    });
+                                }
+                            } else {
+                                // Locked slot logic if we add cost later
+                            }
+                        }}
+                        className={`
+                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-lg overflow-hidden flex flex-col items-center justify-center
+                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !decor ? 'bg-purple-50 border-purple-200 border-dashed' : 'bg-[#F3E5F5] border-[#E1BEE7]'}
+                        `}
+                      >
+                          {!slot.isUnlocked ? (
+                              <Lock className="text-slate-400" />
+                          ) : !decor ? (
+                              <>
+                                <div className="text-3xl opacity-30 mb-2">✨</div>
+                                <span className="text-[10px] font-black text-purple-400 uppercase">Trống</span>
+                              </>
+                          ) : (
+                              <>
+                                  <div className={`text-7xl z-10 transition-all drop-shadow-md ${animClass}`}>
+                                      {decor.emoji}
+                                  </div>
+                                  
+                                  {/* Decor Name & Buff */}
+                                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/80 px-2 py-1 rounded-lg backdrop-blur-sm border border-purple-100 shadow-sm flex flex-col items-center min-w-[80px]">
+                                      <span className="text-[9px] font-black text-slate-700 uppercase tracking-tighter truncate max-w-[70px]">{decor.name}</span>
+                                      {decor.buff && (
+                                          <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-1 rounded flex items-center gap-0.5">
+                                              <Plus size={6}/>{decor.buff.value}% {decor.buff.type}
+                                          </span>
+                                      )}
+                                  </div>
+                              </>
+                          )}
+                      </button>
+                  )
+              })}
+              {renderEmptySlot("Mở Ô Mới", () => handleExpand('DECOR'))}
+          </div>
+      );
+  };
+
   const getReadyCount = () => {
       let count = 0;
       userState.farmPlots.forEach(p => {
@@ -726,6 +801,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 50% { transform: translateY(-3px); }
             }
             .animate-bounce-slight { animation: bounce-slight 1s infinite; }
+            @keyframes swing {
+                0%, 100% { transform: rotate(-5deg); }
+                50% { transform: rotate(5deg); }
+            }
+            .animate-swing { animation: swing 2s ease-in-out infinite; }
+            @keyframes wiggle {
+                0%, 100% { transform: rotate(-3deg); }
+                50% { transform: rotate(3deg); }
+            }
+            .animate-wiggle { animation: wiggle 1s ease-in-out infinite; }
         `}</style>
 
         {/* HEADER WITH LV AND XP */}
@@ -759,6 +844,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             {activeSection === 'CROPS' && renderCrops()}
             {activeSection === 'ANIMALS' && renderAnimals()}
             {activeSection === 'MACHINES' && renderMachines()}
+            {activeSection === 'DECOR' && renderDecors()}
         </div>
 
         {/* BOTTOM TABS */}
@@ -1040,7 +1126,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 decorations={DECORATIONS} 
                 ownedAnimals={userState.livestockSlots || []} 
                 ownedMachines={userState.machineSlots || []} 
-                ownedDecorations={userState.decorations || []} 
+                ownedDecorations={userState.decorations || []}
+                activeDecorIds={userState.decorSlots?.map(s => s.decorId).filter(id => id !== null) as string[]} 
                 allItems={[...CROPS, ...PRODUCTS]} 
                 mode={inventoryMode}
                 onSelectSeed={(seedId) => {
@@ -1062,6 +1149,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         const res = placeMachine(selectedId, machineId);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
                         else { handleShowAlert(res.msg); }
+                    }
+                }}
+                onToggleDecor={(decorId) => {
+                    if (selectedId) {
+                        const res = placeDecor(selectedId, decorId);
+                        if(res.success) { playSFX('success'); setActiveModal('NONE'); }
                     }
                 }}
                 onGoToShop={() => { setActiveModal('SHOP'); }}

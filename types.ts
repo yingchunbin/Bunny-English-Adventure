@@ -111,6 +111,11 @@ export interface ProcessingRecipe {
 export interface Decor extends FarmItem {
   type: 'DECOR';
   effect?: string; 
+  buff?: {
+      type: 'EXP' | 'COIN' | 'TIME' | 'PEST'; 
+      value: number; 
+      desc: string;
+  }
 }
 
 export interface FarmPlot {
@@ -143,6 +148,13 @@ export interface MachineSlot {
     queue?: string[]; // Array of recipeIds waiting in line
     storage?: string[]; // Array of recipeIds that are finished and waiting to be collected
     isReady?: boolean;
+}
+
+// NEW: Slot specifically for placing decorations
+export interface DecorSlot {
+    id: number;
+    isUnlocked: boolean;
+    decorId: string | null;
 }
 
 export interface FarmOrder {
@@ -196,7 +208,8 @@ export interface UserState {
   waterDrops: number; 
   weather?: 'SUNNY' | 'RAINY'; 
   lastWeatherUpdate?: number; 
-  decorations?: string[]; 
+  decorations?: string[]; // Owned decoration IDs
+  decorSlots?: DecorSlot[]; // Placed decorations logic
   
   farmLevel?: number;
   farmExp?: number;

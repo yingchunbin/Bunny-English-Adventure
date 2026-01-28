@@ -46,6 +46,11 @@ const DEFAULT_USER_STATE: UserState = {
       { id: 1, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, storage: [], queue: [] },
       { id: 2, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, storage: [], queue: [] },
   ],
+  decorSlots: [
+      { id: 1, isUnlocked: true, decorId: null },
+      { id: 2, isUnlocked: true, decorId: null },
+      { id: 3, isUnlocked: false, decorId: null },
+  ],
   inventory: { 'carrot': 2, 'wheat': 2 }, 
   harvestedCrops: {},
   fertilizers: 3,
@@ -66,7 +71,7 @@ const DEFAULT_USER_STATE: UserState = {
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        const saved = localStorage.getItem('turtle_english_state_v8'); // Bump version
+        const saved = localStorage.getItem('turtle_english_state_v9'); // Bump version to 9 for schema change
         return saved ? JSON.parse(saved) : DEFAULT_USER_STATE;
       } catch (e) {
         return DEFAULT_USER_STATE;
@@ -83,7 +88,7 @@ export default function App() {
   const [showConfirmBook, setShowConfirmBook] = useState(false); // State for confirm modal
 
   useEffect(() => {
-      localStorage.setItem('turtle_english_state_v8', JSON.stringify(userState));
+      localStorage.setItem('turtle_english_state_v9', JSON.stringify(userState));
   }, [userState]);
 
   useEffect(() => {
@@ -309,7 +314,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
-                      localStorage.removeItem('turtle_english_state_v8');
+                      localStorage.removeItem('turtle_english_state_v9');
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
