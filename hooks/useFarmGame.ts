@@ -11,7 +11,6 @@ export const useFarmGame = (
   const [now, setNow] = useState(Date.now());
   
   // Helper: Calculate total buff for a type from active slots
-  // Updated to handle multiple buffs per item
   const getDecorBonus = (type: 'EXP' | 'COIN' | 'TIME' | 'PEST'): number => {
       const activeSlots = userState.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
       if (activeSlots.length === 0) return 0;
@@ -19,12 +18,8 @@ export const useFarmGame = (
       let total = 0;
       activeSlots.forEach(slot => {
           const decor = DECORATIONS.find(d => d.id === slot.decorId);
-          if (decor && decor.buffs) {
-              decor.buffs.forEach(buff => {
-                  if (buff.type === type) {
-                      total += buff.value;
-                  }
-              });
+          if (decor && decor.buff && decor.buff.type === type) {
+              total += decor.buff.value;
           }
       });
       return total;
@@ -216,11 +211,7 @@ export const useFarmGame = (
             let pestReduction = 0;
             activeSlots.forEach(slot => {
                 const decor = DECORATIONS.find(d => d.id === slot.decorId);
-                if (decor && decor.buffs) {
-                    decor.buffs.forEach(buff => {
-                        if (buff.type === 'PEST') pestReduction += buff.value;
-                    });
-                }
+                if (decor?.buff?.type === 'PEST') pestReduction += decor.buff.value;
             });
             // Cap reduction at 90%
             bugChance = bugChance * (1 - Math.min(0.9, pestReduction / 100));

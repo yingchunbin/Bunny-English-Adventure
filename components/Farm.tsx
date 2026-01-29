@@ -82,6 +82,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
 
+  // ... (Keep existing helpers) ...
+  
   const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
       playSFX('wrong');
       setAlertConfig({ isOpen: true, message: msg, type });
@@ -385,73 +387,78 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       </button>
   );
 
-  const renderCrops = () => {
-      const plots = userState.farmPlots;
-      return (
-          <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
-              {plots.map(plot => {
-                  const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
-                  const imgUrl = resolveImage(crop?.imageUrl);
-                  
-                  const elapsed = crop && plot.plantedAt ? (now - plot.plantedAt) / 1000 : 0;
-                  const progress = crop ? Math.min(100, (elapsed / crop.growthTime) * 100) : 0;
-                  const isReady = progress >= 100;
-                  
-                  return (
-                      <button 
-                        key={plot.id}
-                        onClick={(e) => handlePlotClick(plot, e)}
-                        className={`
-                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 shadow-lg overflow-hidden flex flex-col items-center justify-center
-                            ${!plot.isUnlocked 
-                                ? 'bg-slate-200 border-b-[6px] border-slate-300' 
-                                : !crop 
-                                    ? 'bg-[#F0F4C3] border-b-[6px] border-[#DCE775]' 
-                                    : isReady 
-                                        ? 'bg-gradient-to-b from-amber-200 to-amber-400 border-b-[6px] border-amber-600' 
-                                        : 'bg-[#C8E6C9] border-b-[6px] border-[#81C784]'}
-                        `}
-                      >
-                          {!plot.isUnlocked ? (
-                              <Lock className="text-slate-400" />
-                          ) : !crop ? (
-                              <div className="text-3xl opacity-30">🌱</div>
-                          ) : (
-                              <>
-                                  <div className={`text-6xl z-10 transition-transform ${isReady ? 'animate-bounce' : 'scale-90'}`}>
-                                      {imgUrl ? <img src={imgUrl} alt={crop.name} className="w-full h-full object-contain" /> : crop.emoji}
-                                  </div>
-                                  
-                                  {/* Status Indicators */}
-                                  <div className="absolute top-2 right-2 flex flex-col gap-1">
-                                      {plot.hasBug && <div className="bg-red-500 text-white p-1 rounded-full animate-bounce shadow-sm"><Bug size={12}/></div>}
-                                      {plot.isWatered && !isReady && <div className="bg-blue-500 text-white p-1 rounded-full shadow-sm"><Droplets size={12}/></div>}
-                                  </div>
+  const renderCrops = () => (
+      <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
+          {userState.farmPlots.map(plot => {
+              const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
+              const elapsed = crop && plot.plantedAt ? (now - plot.plantedAt) / 1000 : 0;
+              const progress = crop ? Math.min(100, (elapsed / crop.growthTime) * 100) : 0;
+              const isReady = progress >= 100;
+              const isWatered = plot.isWatered || userState.weather === 'RAINY';
+              const hasPest = plot.hasBug || plot.hasWeed;
+              const imgUrl = resolveImage(crop?.imageUrl);
 
-                                  {/* Progress Bar or Ready Text */}
-                                  {isReady ? (
-                                      <div className="absolute bottom-3 bg-white/90 px-3 py-1 rounded-full text-[10px] font-black text-green-600 shadow-sm border border-green-200 animate-pulse">
-                                          THU HOẠCH
-                                      </div>
-                                  ) : (
-                                      <div className="absolute bottom-4 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
-                                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
-                                      </div>
-                                  )}
+              return (
+                  <button 
+                    key={plot.id}
+                    onClick={(e) => handlePlotClick(plot, e)}
+                    className={`
+                        relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] group overflow-hidden
+                        ${!plot.isUnlocked ? 'bg-slate-200 border-slate-300' : isWatered ? 'bg-[#795548] border-[#5D4037]' : 'bg-[#A1887F] border-[#8D6E63]'}
+                        shadow-lg flex flex-col items-center justify-center
+                    `}
+                  >
+                      {!plot.isUnlocked ? (
+                          <div className="flex flex-col items-center opacity-40">
+                              <Lock className="text-slate-500 mb-1" size={32}/>
+                              <div className="text-[10px] font-black text-slate-500 bg-slate-300 px-2 py-1 rounded-lg">Mở Khóa</div>
+                          </div>
+                      ) : crop ? (
+                          <>
+                              {hasPest && (
+                                  <div className="absolute top-2 right-2 z-30 animate-bounce">
+                                      {plot.hasBug ? 
+                                        <div className="bg-red-500 text-white p-1 rounded-full border-2 border-white shadow-sm"><Bug size={16}/></div> : 
+                                        <div className="bg-green-600 text-white p-1 rounded-full border-2 border-white shadow-sm"><AlertTriangle size={16}/></div>
+                                      }
+                                  </div>
+                              )}
+                              
+                              {!isReady && !hasPest && renderSpeedUpButton('CROP', plot.id)}
 
-                                  {/* Speed Up */}
-                                  {!isReady && !plot.hasBug && (
-                                      renderSpeedUpButton('CROP', plot.id)
-                                  )}
-                              </>
-                          )}
-                      </button>
-                  )
-              })}
-              {renderEmptySlot("Mở Đất Mới", () => handleExpand('PLOT'))}
-          </div>
-      );
-  };
+                              {imgUrl ? (
+                                  <img 
+                                    src={imgUrl} 
+                                    alt={crop.name} 
+                                    className={`w-2/3 h-2/3 object-contain z-10 transition-all duration-500 ${isReady ? 'scale-110 drop-shadow-2xl' : 'scale-75 opacity-90'}`} 
+                                  />
+                              ) : (
+                                  <div className={`text-7xl transition-all duration-500 z-10 ${isReady ? 'scale-110 drop-shadow-2xl' : 'scale-75 opacity-90 grayscale-[0.3]'}`}>
+                                      {crop.emoji}
+                                  </div>
+                              )}
+                              
+                              {!isReady && (
+                                  <div className="absolute bottom-6 w-16 h-2 bg-black/20 rounded-full overflow-hidden border border-white/20 backdrop-blur-sm z-10">
+                                      <div className="h-full bg-green-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
+                                  </div>
+                              )}
+                              
+                              {isReady && !hasPest && renderHarvestButton()}
+                              
+                              {isWatered && !isReady && !hasPest && (
+                                  <div className="absolute top-3 right-3 text-blue-300 opacity-90 bg-blue-500/20 p-1 rounded-full"><Droplets size={16} fill="currentColor" /></div>
+                              )}
+                          </>
+                      ) : (
+                          <div className="text-white/30 text-xs font-black uppercase border-2 border-white/30 px-3 py-1 rounded-full pointer-events-none">Đất Trống</div>
+                      )}
+                  </button>
+              );
+          })}
+          {renderEmptySlot("Mở Đất Mới", () => handleExpand('PLOT'))}
+      </div>
+  );
 
   const renderAnimals = () => {
       const slots = userState.livestockSlots || [];
@@ -459,107 +466,113 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
               {slots.map(slot => {
                   const animal = slot.animalId ? ANIMALS.find(a => a.id === slot.animalId) : null;
-                  const product = animal ? PRODUCTS.find(p => p.id === animal.produceId) : null;
+                  const isFed = !!slot.fedAt;
+                  const progress = animal && isFed ? Math.min(100, ((now - (slot.fedAt || 0))/1000 / animal.produceTime) * 100) : 0;
+                  const storageItems = slot.storage || [];
+                  const hasStorage = storageItems.length > 0;
+                  const queueCount = slot.queue || 0;
+                  
+                  const produce = animal ? PRODUCTS.find(p => p.id === animal.produceId) : null;
                   const feedItem = animal ? [...CROPS, ...PRODUCTS].find(c => c.id === animal.feedCropId) : null;
-                  const userHasFeed = animal ? (userState.harvestedCrops?.[animal.feedCropId] || 0) : 0;
-                  const canFeed = animal && userHasFeed >= animal.feedAmount;
-
+                  const userHas = animal ? (userState.harvestedCrops?.[animal.feedCropId] || 0) : 0;
+                  const canFeed = animal && userHas >= animal.feedAmount;
+                  
                   const imgUrl = resolveImage(animal?.imageUrl);
-                  
-                  const isProducing = slot.fedAt !== null;
-                  let progress = 0;
-                  
-                  if (isProducing && animal && slot.fedAt) {
-                      const elapsed = (now - slot.fedAt) / 1000;
-                      progress = Math.min(100, (elapsed / animal.produceTime) * 100);
-                  }
-
-                  const hasProduct = (slot.storage?.length || 0) > 0;
-                  // Critical: Animal is hungry if NOT currently producing AND NOT holding product
-                  const isHungry = !isProducing && !hasProduct && animal;
 
                   return (
                       <button 
                         key={slot.id}
                         onClick={(e) => {
-                            if (!slot.isUnlocked) return;
-                            if (!animal) {
-                                setSelectedId(slot.id);
+                            if (!animal) { 
+                                setSelectedId(slot.id); 
                                 setInventoryMode('PLACE_ANIMAL');
                                 setInitialInvTab('ANIMALS');
-                                setActiveModal('INVENTORY');
-                            } else if (hasProduct) {
-                                handleCollectProduct(slot, e);
-                            } else if (isHungry) {
-                                handleFeedAnimal(slot, e);
-                            } else {
-                                // Manage mode (sell/store)
-                                setManageItemConfig({ type: 'ANIMAL', slotId: slot.id, itemId: animal.id });
-                                setActiveModal('MANAGE_ITEM');
+                                setActiveModal('INVENTORY'); 
                             }
+                            else if (hasStorage) handleCollectProduct(slot, e);
+                            else handleFeedAnimal(slot, e); 
                         }}
                         className={`
-                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 shadow-lg overflow-hidden flex flex-col items-center justify-center
-                            ${!slot.isUnlocked 
-                                ? 'bg-slate-200 border-b-[6px] border-slate-300' 
-                                : !animal 
-                                    ? 'bg-[#FFE0B2] border-b-[6px] border-[#FFB74D] border-dashed' 
-                                    : hasProduct 
-                                        ? 'bg-gradient-to-b from-orange-200 to-orange-400 border-b-[6px] border-orange-600' 
-                                        : 'bg-[#FFF3E0] border-b-[6px] border-[#FFCC80]'}
+                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-md overflow-hidden flex flex-col items-center justify-center
+                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !animal ? 'bg-amber-50 border-amber-200 border-dashed' : 'bg-[#FFF3E0] border-[#FFE0B2]'}
                         `}
                       >
+                          {animal && (
+                              <div 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setManageItemConfig({ type: 'ANIMAL', slotId: slot.id, itemId: animal.id }); 
+                                    setActiveModal('MANAGE_ITEM'); 
+                                }} 
+                                className="absolute top-2 right-2 z-30 bg-white/80 p-1.5 rounded-full shadow-sm hover:bg-white text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                  <Settings size={14} />
+                              </div>
+                          )}
+
+                          {animal && isFed && renderSpeedUpButton('ANIMAL', slot.id, 'absolute bottom-2 left-2')}
+
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !animal ? (
                               <>
-                                <div className="text-3xl opacity-30 mb-2">🐾</div>
-                                <span className="text-[10px] font-black text-orange-400 uppercase">Trống</span>
+                                <div className="text-3xl opacity-30 mb-2">🛖</div>
+                                <span className="text-[10px] font-black text-amber-400 uppercase">Chuồng Trống</span>
                               </>
                           ) : (
                               <>
-                                  <div className={`text-6xl z-10 transition-transform ${hasProduct ? 'animate-bounce' : 'scale-90'}`}>
-                                      {imgUrl ? <img src={imgUrl} alt={animal.name} className="w-full h-full object-contain" /> : animal.emoji}
+                                  <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex gap-1 bg-white/50 px-1.5 py-1 rounded-full backdrop-blur-sm border border-white/50 shadow-sm">
+                                      {[...Array(3)].map((_, i) => (
+                                          <div key={i} className={`w-5 h-5 rounded-full flex items-center justify-center border ${i < storageItems.length ? 'bg-white border-green-200 shadow-sm' : 'bg-slate-100/50 border-slate-200 border-dashed'}`}>
+                                              {i < storageItems.length ? <span className="text-xs">{produce?.emoji}</span> : null}
+                                          </div>
+                                      ))}
                                   </div>
+
+                                  {queueCount > 0 && (
+                                      <div className="absolute top-2 left-2 z-20 flex items-center justify-center w-6 h-6 bg-orange-100 rounded-full border border-orange-200 shadow-sm">
+                                          <span className="text-[9px] font-black text-orange-600">+{queueCount}</span>
+                                      </div>
+                                  )}
+
+                                  {imgUrl ? (
+                                      <img 
+                                        src={imgUrl} 
+                                        alt={animal.name} 
+                                        className={`w-2/3 h-2/3 object-contain z-10 transition-all mt-4 ${!isFed ? 'scale-90' : 'animate-walk'}`} 
+                                      />
+                                  ) : (
+                                      <div className={`text-7xl z-10 transition-all mt-4 ${!isFed ? 'scale-90' : 'animate-walk'}`}>
+                                          {animal.emoji}
+                                      </div>
+                                  )}
                                   
-                                  {/* Hungry Indicator with Feed */}
-                                  {isHungry && (
-                                      <div className={`absolute bottom-3 bg-white/90 px-2 py-1 rounded-full text-[9px] font-black shadow-sm border border-orange-200 flex items-center gap-1 z-20 ${!canFeed ? 'opacity-70 grayscale' : 'animate-pulse'}`}>
-                                          <span className="text-xs">{feedItem?.emoji}</span>
-                                          <span className={canFeed ? 'text-green-600' : 'text-red-500'}>{animal.feedAmount}</span>
+                                  {hasStorage && (
+                                      <div className="absolute top-12 z-30 animate-bounce bg-green-500 text-white p-1.5 rounded-full shadow-md border-2 border-white">
+                                          <Hand size={16} fill="currentColor" />
                                       </div>
                                   )}
 
-                                  {hasProduct && (
-                                      <div className="absolute top-2 right-2 bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md animate-bounce border-2 border-white">
-                                          {product?.emoji}
+                                  {!isFed && !hasStorage && (
+                                      <div className="absolute bottom-3 z-20">
+                                          <div className={`px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border-2 border-white transition-all ${canFeed ? 'bg-green-500 text-white animate-pulse' : 'bg-white/90 text-slate-600 backdrop-blur-sm'}`}>
+                                              <span className="text-xs leading-none filter drop-shadow-sm">{feedItem?.emoji}</span>
+                                              <span className={`${!canFeed ? 'text-red-500' : ''}`}>x{animal.feedAmount}</span>
+                                          </div>
                                       </div>
                                   )}
-
-                                  {/* Progress Bar */}
-                                  {isProducing && !hasProduct && (
-                                      <div className="absolute bottom-4 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
-                                          <div className="h-full bg-orange-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                  
+                                  {isFed && (
+                                      <div className="absolute bottom-6 w-16 h-2 bg-black/10 rounded-full overflow-hidden border border-white z-10">
+                                          <div className="h-full bg-orange-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
-                                  )}
-
-                                  {/* Queue */}
-                                  {slot.queue && slot.queue > 0 && (
-                                      <div className="absolute bottom-2 left-2 bg-blue-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold border border-white">
-                                          {slot.queue}
-                                      </div>
-                                  )}
-
-                                  {/* Speed Up - CRITICAL: Ensure this renders */}
-                                  {isProducing && !hasProduct && (
-                                      renderSpeedUpButton('ANIMAL', slot.id)
                                   )}
                               </>
                           )}
                       </button>
                   )
               })}
-              {renderEmptySlot("Mở Chuồng", () => handleExpand('PEN'))}
+              {renderEmptySlot("Xây Chuồng", () => handleExpand('PEN'))}
           </div>
       );
   };
@@ -571,117 +584,121 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {slots.map(slot => {
                   const machine = slot.machineId ? MACHINES.find(m => m.id === slot.machineId) : null;
                   const recipe = slot.activeRecipeId ? RECIPES.find(r => r.id === slot.activeRecipeId) : null;
-                  const product = recipe ? PRODUCTS.find(p => p.id === recipe.outputId) : null;
-                  const imgUrl = resolveImage(machine?.imageUrl);
+                  const progress = recipe && slot.startedAt ? Math.min(100, ((now - slot.startedAt)/1000 / recipe.duration) * 100) : 0;
+                  const storageItems = slot.storage || [];
+                  const hasStorage = storageItems.length > 0;
                   
-                  const isProcessing = !!slot.startedAt && !!recipe;
-                  let progress = 0;
-                  
-                  if (isProcessing && recipe && slot.startedAt) {
-                      const elapsed = (now - slot.startedAt) / 1000;
-                      progress = Math.min(100, (elapsed / recipe.duration) * 100);
-                  }
+                  const storedRecipeId = storageItems[storageItems.length - 1];
+                  const storedRecipe = storedRecipeId ? RECIPES.find(r => r.id === storedRecipeId) : null;
+                  const storedProduct = storedRecipe ? PRODUCTS.find(p => p.id === storedRecipe.outputId) : null;
 
-                  const hasProduct = (slot.storage?.length || 0) > 0;
+                  const possibleOutputs = machine ? RECIPES.filter(r => r.machineId === machine.id).map(r => r.outputId) : [];
+                  const uniqueOutputs = [...new Set(possibleOutputs)]; 
+                  const outputProducts = uniqueOutputs.map(oid => PRODUCTS.find(p => p.id === oid)).filter(Boolean);
+                  
+                  const imgUrl = resolveImage(machine?.imageUrl);
 
                   return (
                       <button 
                         key={slot.id}
                         onClick={(e) => {
-                            if (!slot.isUnlocked) return;
-                            if (!machine) {
-                                setSelectedId(slot.id);
+                            if (!machine) { 
+                                setSelectedId(slot.id); 
                                 setInventoryMode('PLACE_MACHINE');
                                 setInitialInvTab('MACHINES');
-                                setActiveModal('INVENTORY');
-                            } else if (hasProduct) {
-                                handleCollectMachine(slot, e);
-                            } else if (!isProcessing) {
+                                setActiveModal('INVENTORY'); 
+                            }
+                            else if (hasStorage) handleCollectMachine(slot, e);
+                            else { 
                                 setProductionConfig({ slotId: slot.id, machineId: machine.id });
                                 setActiveModal('PRODUCTION');
-                            } else {
-                                // Processing click -> maybe show info or speed up
-                                // Or allow manage if idle
-                                if(!isProcessing && !hasProduct) {
-                                    setManageItemConfig({ type: 'MACHINE', slotId: slot.id, itemId: machine.id });
-                                    setActiveModal('MANAGE_ITEM');
-                                }
                             }
                         }}
                         className={`
-                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 shadow-lg overflow-hidden flex flex-col items-center justify-center
-                            ${!slot.isUnlocked 
-                                ? 'bg-slate-200 border-b-[6px] border-slate-300' 
-                                : !machine 
-                                    ? 'bg-[#E3F2FD] border-b-[6px] border-[#90CAF9] border-dashed' 
-                                    : hasProduct 
-                                        ? 'bg-gradient-to-b from-blue-200 to-blue-400 border-b-[6px] border-blue-600' 
-                                        : isProcessing
-                                            ? 'bg-[#BBDEFB] border-b-[6px] border-[#64B5F6] animate-pulse-slow'
-                                            : 'bg-[#E3F2FD] border-b-[6px] border-[#90CAF9]'}
+                            relative aspect-square rounded-[2.5rem] transition-all duration-200 active:scale-95 border-b-[6px] shadow-lg overflow-hidden flex flex-col items-center justify-center
+                            ${!slot.isUnlocked ? 'bg-slate-200 border-slate-300' : !machine ? 'bg-blue-50 border-blue-200 border-dashed' : 'bg-slate-100 border-slate-300'}
                         `}
                       >
+                          {machine && (
+                              <div 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setManageItemConfig({ type: 'MACHINE', slotId: slot.id, itemId: machine.id }); 
+                                    setActiveModal('MANAGE_ITEM'); 
+                                }} 
+                                className="absolute top-2 right-2 z-30 bg-white/80 p-1.5 rounded-full shadow-sm hover:bg-white text-slate-400 hover:text-slate-600 transition-colors"
+                              >
+                                  <Settings size={14} />
+                              </div>
+                          )}
+
+                          {machine && recipe && renderSpeedUpButton('MACHINE', slot.id, 'absolute bottom-2 left-2')}
+
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !machine ? (
                               <>
-                                <div className="text-3xl opacity-30 mb-2">⚙️</div>
-                                <span className="text-[10px] font-black text-blue-400 uppercase">Trống</span>
+                                <div className="text-3xl opacity-30 mb-2">🏗️</div>
+                                <span className="text-[10px] font-black text-blue-400 uppercase">Nền Móng</span>
                               </>
                           ) : (
                               <>
-                                  <div className={`text-6xl z-10 transition-transform ${hasProduct ? 'animate-bounce' : 'scale-90'} ${isProcessing ? 'animate-wiggle' : ''}`}>
-                                      {imgUrl ? <img src={imgUrl} alt={machine.name} className="w-full h-full object-contain" /> : machine.emoji}
+                                  {!recipe && !hasStorage && (
+                                      <div className="absolute top-8 left-1/2 -translate-x-1/2 flex flex-wrap justify-center gap-1 z-10 max-w-[80%]">
+                                          {outputProducts.map(p => (
+                                              <span key={p?.id} className="text-sm leading-none filter drop-shadow-sm bg-white/50 rounded-full p-0.5">{p?.emoji}</span>
+                                          ))}
+                                      </div>
+                                  )}
+
+                                  {imgUrl ? (
+                                      <img 
+                                        src={imgUrl} 
+                                        alt={machine.name} 
+                                        className={`w-2/3 h-2/3 object-contain z-10 relative drop-shadow-md transition-all mt-6 ${recipe ? 'animate-bounce-slight' : ''}`} 
+                                      />
+                                  ) : (
+                                      <div className={`text-6xl z-10 relative drop-shadow-md transition-all mt-6 ${recipe ? 'animate-bounce-slight' : ''}`}>
+                                          {machine.emoji}
+                                      </div>
+                                  )}
+                                  
+                                  <div className="absolute bottom-2 z-10 bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-black text-slate-600 truncate max-w-[80%] uppercase tracking-tighter backdrop-blur-sm">
+                                      {machine.name}
                                   </div>
                                   
-                                  {/* Product Ready Indicator */}
-                                  {hasProduct && (
-                                      <div className="absolute -top-1 -right-1 bg-white p-1 rounded-full shadow-md border-2 border-blue-200 z-20">
-                                          <div className="w-8 h-8 flex items-center justify-center text-xl bg-blue-100 rounded-full">
-                                              {/* Just show icon of last produced item if possible, else generic */}
-                                              🎁
+                                  {recipe && (
+                                      <>
+                                          <div className="absolute -top-4 right-0 text-xl animate-float-smoke opacity-70 pointer-events-none">💨</div>
+                                          <div className="absolute bottom-2 right-2 text-slate-400 animate-spin-slow pointer-events-none"><Settings size={18} /></div>
+                                      </>
+                                  )}
+
+                                  {hasStorage && (
+                                      <div className="absolute inset-0 bg-white/60 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
+                                          <div className="text-6xl animate-bounce mb-2 drop-shadow-lg relative">
+                                              {storedProduct?.emoji}
+                                              {storageItems.length > 1 && (
+                                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-2 py-0.5 rounded-full border border-white">
+                                                      x{storageItems.length}
+                                                  </span>
+                                              )}
                                           </div>
-                                          <span className="absolute -bottom-1 -right-1 bg-red-500 text-white text-[8px] w-4 h-4 rounded-full flex items-center justify-center border border-white">
-                                              {slot.storage?.length}
-                                          </span>
+                                          {renderHarvestButton()}
                                       </div>
                                   )}
 
-                                  {/* Progress Bar */}
-                                  {isProcessing && !hasProduct && (
-                                      <div className="absolute bottom-4 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-slate-300">
-                                          <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                  {recipe && (
+                                      <div className="absolute bottom-8 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
+                                          <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
                                   )}
 
-                                  {/* Queue */}
                                   {slot.queue && slot.queue.length > 0 && (
-                                      <div className="absolute bottom-2 left-2 flex -space-x-2">
-                                          {slot.queue.map((rid, i) => {
-                                              // Find product to show icon
-                                              const r = RECIPES.find(rec => rec.id === rid);
-                                              const p = PRODUCTS.find(prod => prod.id === r?.outputId);
-                                              return (
-                                                  <div key={i} className="w-5 h-5 bg-white rounded-full border border-slate-200 flex items-center justify-center text-[10px] shadow-sm">
-                                                      {p?.emoji || '•'}
-                                                  </div>
-                                              )
-                                          })}
-                                      </div>
-                                  )}
-
-                                  {/* Speed Up */}
-                                  {isProcessing && !hasProduct && (
-                                      renderSpeedUpButton('MACHINE', slot.id)
-                                  )}
-                                  
-                                  {!isProcessing && !hasProduct && (
-                                      <div className="absolute top-2 right-2 bg-white/50 p-1 rounded-full cursor-pointer hover:bg-white transition-colors" onClick={(e) => {
-                                          e.stopPropagation();
-                                          setManageItemConfig({ type: 'MACHINE', slotId: slot.id, itemId: machine.id });
-                                          setActiveModal('MANAGE_ITEM');
-                                      }}>
-                                          <Settings size={12} className="text-slate-400"/>
+                                      <div className="absolute top-2 left-2 z-20 flex gap-1">
+                                          {[...Array(slot.queue.length)].map((_, i) => (
+                                              <div key={i} className="w-3 h-3 bg-blue-500 rounded-full border border-white shadow-sm" />
+                                          ))}
                                       </div>
                                   )}
                               </>
@@ -689,7 +706,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                       </button>
                   )
               })}
-              {renderEmptySlot("Mở Ô Máy", () => handleExpand('MACHINE'))}
+              {renderEmptySlot("Thêm Máy", () => handleExpand('MACHINE'))}
           </div>
       );
   };
@@ -763,20 +780,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                       </div>
                                   )}
                                   
-                                  {/* Multi-buff visual indicator */}
-                                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex flex-col gap-0.5 items-center z-20">
-                                      <div className="bg-white/90 px-2 py-0.5 rounded-lg backdrop-blur-sm border border-purple-100 shadow-sm min-w-[60px] text-center">
-                                          <span className="text-[9px] font-black text-slate-700 uppercase tracking-tighter truncate">{decor.name}</span>
-                                      </div>
-                                      {decor.buffs && decor.buffs.length > 0 && (
-                                          <div className="flex gap-1">
-                                              {decor.buffs.slice(0, 2).map((b, i) => (
-                                                  <span key={i} className="text-[7px] font-bold text-white bg-purple-500 px-1.5 py-0.5 rounded-full shadow-sm">
-                                                      {b.value}% {b.type}
-                                                  </span>
-                                              ))}
-                                              {decor.buffs.length > 2 && <span className="text-[7px] bg-purple-500 text-white px-1 rounded-full">+</span>}
-                                          </div>
+                                  {/* Decor Name & Buff - Only show label if it's emoji or to clarify */}
+                                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 px-2 py-1 rounded-lg backdrop-blur-sm border border-purple-100 shadow-sm flex flex-col items-center min-w-[80px] z-20">
+                                      <span className="text-[9px] font-black text-slate-700 uppercase tracking-tighter truncate max-w-[70px]">{decor.name}</span>
+                                      {decor.buff && (
+                                          <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-1 rounded flex items-center gap-0.5">
+                                              <Plus size={6}/>{decor.buff.value}% {decor.buff.type}
+                                          </span>
                                       )}
                                   </div>
                               </>

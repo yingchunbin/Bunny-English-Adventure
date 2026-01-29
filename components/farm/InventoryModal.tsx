@@ -103,7 +103,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       if (activeTab === 'DECOR') {
           const decor = decorations.find(d => d.id === item.id);
-          const buffText = decor?.buffs?.[0]?.desc || ""; // Correctly access first buff description
+          const buffText = decor?.buff?.desc || "";
           
           // Apply Rarity Glow Logic
           const rarity = getRarityStyle(decor?.cost || 0);
