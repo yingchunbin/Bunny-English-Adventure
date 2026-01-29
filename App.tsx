@@ -18,11 +18,12 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// TARGET KEY FOR THE APP
-const CURRENT_VERSION_KEY = 'turtle_english_state_v11';
+// TARGET KEY FOR THE APP - BUMPED TO V12 TO FORCE CLEAN MIGRATION
+const CURRENT_VERSION_KEY = 'turtle_english_state_v12';
 
 // ALL POSSIBLE KEYS TO SCAN (Current + Legacy)
 const ALL_STORAGE_KEYS = [
+    'turtle_english_state_v12',
     'turtle_english_state_v11',
     'turtle_english_state_v10',
     'turtle_english_state_v9',
@@ -85,37 +86,77 @@ const migrateState = (oldState: any): UserState => {
   // 1. Merge with default to ensure all new fields exist
   let newState = { ...DEFAULT_USER_STATE, ...oldState };
 
-  // 2. Decor Slots Migration (v8 -> v9/v10)
-  if ((!newState.decorSlots || newState.decorSlots.length === 0) && oldState.activeDecorIds) {
-      const defaultSlots = [
-          { id: 1, isUnlocked: true, decorId: null },
-          { id: 2, isUnlocked: true, decorId: null },
-          { id: 3, isUnlocked: false, decorId: null },
-      ];
-      
-      if (Array.isArray(oldState.activeDecorIds)) {
-          oldState.activeDecorIds.forEach((dId: string, idx: number) => {
-              if (idx < defaultSlots.length) {
-                  defaultSlots[idx] = { ...defaultSlots[idx], isUnlocked: true, decorId: dId };
+  // 2. Decor Slots Migration (Strict merge)
+  // Ensure we keep old slots if they exist and are populated
+  if (oldState.decorSlots && Array.isArray(oldState.decorSlots)) {
+      // If the old state has slots, we use them, but we might want to ensure they conform to new structure if needed
+      // For now, trust the old array if it has content
+      const hasContent = oldState.decorSlots.some((s: any) => s.decorId !== null);
+      if (hasContent) {
+          newState.decorSlots = oldState.decorSlots;
+      } else {
+          // If old state had empty slots, check if we should keep them (e.g. unlocked status)
+          // Merge logic: Keep unlocked status from old, keep decorId if present
+          newState.decorSlots = DEFAULT_USER_STATE.decorSlots.map((defSlot, idx) => {
+              const oldSlot = oldState.decorSlots[idx];
+              if (oldSlot) {
+                  return {
+                      ...defSlot,
+                      isUnlocked: oldSlot.isUnlocked || defSlot.isUnlocked,
+                      decorId: oldSlot.decorId || defSlot.decorId
+                  };
               }
+              return defSlot;
           });
       }
-      newState.decorSlots = defaultSlots;
   }
 
-  // 3. Ensure critical arrays exist and preserve machine data
-  // Critical fix: Ensure machineSlots from oldState are respected if they exist, to prevent loss on reload
-  if (oldState.machineSlots && Array.isArray(oldState.machineSlots) && oldState.machineSlots.length > 0) {
-      newState.machineSlots = oldState.machineSlots;
-  } else {
-      newState.machineSlots = DEFAULT_USER_STATE.machineSlots;
+  // 3. Machine Slots Migration (Strict merge)
+  if (oldState.machineSlots && Array.isArray(oldState.machineSlots)) {
+      const hasContent = oldState.machineSlots.some((s: any) => s.machineId !== null);
+      if (hasContent) {
+          newState.machineSlots = oldState.machineSlots;
+      } else {
+           newState.machineSlots = DEFAULT_USER_STATE.machineSlots.map((defSlot, idx) => {
+              const oldSlot = oldState.machineSlots[idx];
+              if (oldSlot) {
+                  return {
+                      ...defSlot,
+                      isUnlocked: oldSlot.isUnlocked || defSlot.isUnlocked,
+                      machineId: oldSlot.machineId || defSlot.machineId,
+                      // Preserve other fields if machine exists
+                      activeRecipeId: oldSlot.machineId ? oldSlot.activeRecipeId : null,
+                      startedAt: oldSlot.machineId ? oldSlot.startedAt : null,
+                      storage: oldSlot.machineId ? (oldSlot.storage || []) : [],
+                      queue: oldSlot.machineId ? (oldSlot.queue || []) : []
+                  };
+              }
+              return defSlot;
+          });
+      }
   }
 
-  if (!newState.decorSlots) newState.decorSlots = DEFAULT_USER_STATE.decorSlots;
+  // 4. Ensure other arrays exist
   if (!newState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels || DEFAULT_USER_STATE.unlockedLevels;
   if (!newState.completedLevels) newState.completedLevels = oldState.completedLevels || DEFAULT_USER_STATE.completedLevels;
-  if (!newState.farmPlots) newState.farmPlots = oldState.farmPlots || DEFAULT_USER_STATE.farmPlots;
   
+  // 5. Farm Plots Migration (Keep unlocked status and crops)
+  if (oldState.farmPlots && Array.isArray(oldState.farmPlots)) {
+      newState.farmPlots = oldState.farmPlots.map((p: any, idx: number) => {
+          // Ensure structure matches modern expectation
+          return {
+              id: p.id || (idx + 1),
+              isUnlocked: p.isUnlocked ?? false,
+              cropId: p.cropId || null,
+              plantedAt: p.plantedAt || null,
+              isWatered: p.isWatered || false,
+              hasBug: p.hasBug || false,
+              hasWeed: p.hasWeed || false,
+              hasMysteryBox: p.hasMysteryBox || false
+          };
+      });
+  }
+
   return newState;
 };
 
@@ -190,7 +231,7 @@ export default function App() {
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
   useEffect(() => {
-      // Save to the CURRENT v11 key, ensuring future reloads pick this up
+      // Save to the CURRENT v12 key, ensuring future reloads pick this up
       localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userState));
   }, [userState]);
 

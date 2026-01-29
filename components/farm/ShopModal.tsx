@@ -284,7 +284,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
-                {/* DECOR - GLOW EFFECTS ADDED */}
+                {/* DECOR - UPDATED FOR MULTI-BUFFS */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedDecor.map(decor => {
@@ -311,11 +311,15 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                                     
                                     <div className="flex-1 z-10">
                                         <div className={`font-black text-sm uppercase tracking-tight ${style.text}`}>{decor.name}</div>
-                                        {decor.buff && (
-                                            <div className={`text-[10px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm backdrop-blur-sm ${style.badge} border-white/50`}>
-                                                <Plus size={8}/> {decor.buff.desc}
-                                            </div>
-                                        )}
+                                        
+                                        {/* Multi-buff rendering */}
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {decor.buffs?.map((buff, idx) => (
+                                                <div key={idx} className={`text-[9px] font-bold px-2 py-0.5 rounded-lg inline-flex items-center gap-1 border shadow-sm backdrop-blur-sm ${style.badge} border-white/50`}>
+                                                    <Plus size={8}/> {buff.desc}
+                                                </div>
+                                            ))}
+                                        </div>
                                         
                                         {!owned ? (
                                             <div className="mt-2">

@@ -112,11 +112,12 @@ export interface ProcessingRecipe {
 export interface Decor extends FarmItem {
   type: 'DECOR';
   effect?: string; 
-  buff?: {
+  // Changed to array to support multiple buffs per item
+  buffs?: {
       type: 'EXP' | 'COIN' | 'TIME' | 'PEST'; 
       value: number; 
       desc: string;
-  }
+  }[]
 }
 
 export interface FarmPlot {
