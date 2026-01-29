@@ -1,21 +1,20 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Word } from '../types';
-import { Clock, Zap, Home, Skull, Sword, Snowflake, Bomb, Heart, Volume2, Check, X, Image as ImageIcon, Type, Rocket, Star, Shield, Lock as LockIcon, ArrowRight, RefreshCcw, Candy, Bot } from 'lucide-react';
+import { Clock, Zap, Home, Skull, Sword, Snowflake, Bomb, Heart, Volume2, Check, X, Type, Star, Shield, Lock, ArrowRight, RefreshCcw, Play, Trophy, Sparkles, Coins } from 'lucide-react';
 import { playSFX } from '../utils/sound';
-import { WordImage } from './WordImage';
 
 interface TimeAttackGameProps {
   words: Word[];
   onComplete: (score: number) => void;
   onExit: () => void;
-  mode?: 'CLASSIC' | 'BOSS'; 
 }
 
-type QuestionType = 'IMAGE_TO_EN' | 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN' | 'SPELLING' | 'TRUE_FALSE' | 'MIXED';
+type QuestionType = 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN' | 'SPELLING' | 'TRUE_FALSE' | 'MIXED';
 
 interface StageConfig {
     id: number;
+    globalId: number; // 1 to 50
     name: string;
     type: QuestionType;
     target: number; 
@@ -51,95 +50,87 @@ const generateMisspelling = (word: string): string => {
     return chars.join('');
 };
 
-export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplete, onExit }) => {
-  // Use useMemo to prevent regeneration on every render
-  const DOORS = useMemo<DoorConfig[]>(() => [
-        {
-            id: 1,
-            name: "Rừng Rậm Khởi Đầu",
-            bg: "bg-emerald-900",
-            bossEmoji: "🦍",
-            stages: [
-                { id: 1, name: "Nhìn Hình Đoán Chữ", type: 'IMAGE_TO_EN', target: 5, timeAdd: 5, desc: "Hình này là từ gì?", icon: ImageIcon },
-                { id: 2, name: "Từ Vựng Cơ Bản", type: 'EN_TO_VI', target: 5, timeAdd: 5, desc: "Dịch từ sang tiếng Việt", icon: Type },
-                { id: 3, name: "BOSS: King Kong", type: 'MIXED', target: 10, timeAdd: 3, desc: "Đánh bại trùm!", icon: Skull }
-            ]
-        },
-        {
-            id: 2,
-            name: "Sa Mạc Khô Cằn",
-            bg: "bg-amber-900",
-            bossEmoji: "🦂",
-            stages: [
-                { id: 1, name: "Chính Tả", type: 'SPELLING', target: 6, timeAdd: 4, desc: "Chọn từ viết đúng", icon: Type },
-                { id: 2, name: "Dịch Ngược", type: 'VI_TO_EN', target: 6, timeAdd: 4, desc: "Dịch Việt -> Anh", icon: Type },
-                { id: 3, name: "BOSS: Vua Bọ Cạp", type: 'MIXED', target: 15, timeAdd: 2, desc: "Cẩn thận nọc độc!", icon: Skull }
-            ]
-        },
-        {
-            id: 3,
-            name: "Đại Dương Sâu Thẳm",
-            bg: "bg-blue-950",
-            bossEmoji: "🐙",
-            stages: [
-                { id: 1, name: "Luyện Nghe", type: 'LISTEN', target: 8, timeAdd: 4, desc: "Nghe và chọn đáp án", icon: Volume2 },
-                { id: 2, name: "Phản Xạ Đúng Sai", type: 'TRUE_FALSE', target: 10, timeAdd: 3, desc: "Hình & Chữ có khớp không?", icon: Check },
-                { id: 3, name: "BOSS: Bạch Tuộc", type: 'MIXED', target: 20, timeAdd: 2, desc: "Trùm vùng biển", icon: Skull }
-            ]
-        },
-        {
-            id: 4,
-            name: "Vùng Băng Giá",
-            bg: "bg-cyan-900",
-            bossEmoji: "🥶", 
-            stages: [
-                { id: 1, name: "Siêu Tốc Độ", type: 'IMAGE_TO_EN', target: 10, timeAdd: 3, desc: "Nhanh tay lẹ mắt", icon: Zap },
-                { id: 2, name: "Bão Tuyết", type: 'SPELLING', target: 8, timeAdd: 3, desc: "Đừng sai chính tả", icon: Snowflake },
-                { id: 3, name: "BOSS: Người Tuyết", type: 'MIXED', target: 25, timeAdd: 2, desc: "Lạnh buốt xương!", icon: Skull }
-            ]
-        },
-        {
-            id: 5,
-            name: "Núi Lửa Hủy Diệt",
-            bg: "bg-red-950",
-            bossEmoji: "🐉",
-            stages: [
-                { id: 1, name: "Hỗn Loạn", type: 'MIXED', target: 12, timeAdd: 2, desc: "Tất cả các dạng bài", icon: Star },
-                { id: 2, name: "Sinh Tồn", type: 'TRUE_FALSE', target: 15, timeAdd: 2, desc: "Sai là thua", icon: Shield },
-                { id: 3, name: "BOSS: Rồng Lửa", type: 'MIXED', target: 35, timeAdd: 1, desc: "Trùm cực mạnh", icon: Skull }
-            ]
-        },
-        {
-            id: 6,
-            name: "Vương Quốc Kẹo Ngọt",
-            bg: "bg-pink-900",
-            bossEmoji: "🧸",
-            stages: [
-                { id: 1, name: "Mưa Kẹo", type: 'IMAGE_TO_EN', target: 15, timeAdd: 2, desc: "Nhìn hình thật nhanh", icon: Candy },
-                { id: 2, name: "Đường Ngọt", type: 'TRUE_FALSE', target: 15, timeAdd: 2, desc: "Phân biệt thật giả", icon: Check },
-                { id: 3, name: "BOSS: Gấu Gummy", type: 'MIXED', target: 40, timeAdd: 1, desc: "Đừng để bị dính!", icon: Skull }
-            ]
-        },
-        {
-            id: 7,
-            name: "Thành Phố Công Nghệ",
-            bg: "bg-indigo-950",
-            bossEmoji: "🤖",
-            stages: [
-                { id: 1, name: "Mã Hóa", type: 'SPELLING', target: 20, timeAdd: 2, desc: "Gõ đúng từ vựng", icon: Type },
-                { id: 2, name: "Tín Hiệu", type: 'LISTEN', target: 20, timeAdd: 2, desc: "Nghe âm thanh", icon: Volume2 },
-                { id: 3, name: "BOSS: Mecha Robot", type: 'MIXED', target: 50, timeAdd: 1, desc: "Trùm cuối siêu cấp", icon: Bot }
-            ]
+// Algorithmic Level Generation for 50 Levels (10 Worlds x 5 Stages)
+const generateLevelData = (): DoorConfig[] => {
+    const worlds = [
+        { name: "Khu Rừng Nhỏ", bg: "bg-emerald-900", boss: "🌲" },
+        { name: "Hang Động Đá", bg: "bg-stone-800", boss: "🦇" },
+        { name: "Sa Mạc Nóng", bg: "bg-amber-900", boss: "🦂" },
+        { name: "Biển Sâu", bg: "bg-blue-950", boss: "🐙" },
+        { name: "Vùng Băng Giá", bg: "bg-cyan-900", boss: "🥶" },
+        { name: "Núi Lửa", bg: "bg-red-950", boss: "🐉" },
+        { name: "Lâu Đài Ma", bg: "bg-purple-950", boss: "👻" },
+        { name: "Thế Giới Kẹo", bg: "bg-pink-900", boss: "🍭" },
+        { name: "Thành Phố Máy", bg: "bg-slate-900", boss: "🤖" },
+        { name: "Vũ Trụ", bg: "bg-indigo-950", boss: "👽" },
+    ];
+
+    let globalCounter = 1;
+
+    return worlds.map((world, wIdx) => {
+        const stages: StageConfig[] = [];
+        const baseTarget = 5 + wIdx * 2; 
+        const timeBonus = Math.max(2, 6 - Math.ceil(wIdx / 2)); 
+
+        for (let s = 1; s <= 5; s++) {
+            let type: QuestionType = 'EN_TO_VI';
+            let icon = Type;
+            let name = `Màn ${s}`;
+            let desc = "Cố lên!";
+
+            // Determine stage type pattern
+            if (s === 1) { type = 'EN_TO_VI'; icon = Type; desc = "Dịch Việt"; }
+            else if (s === 2) { type = 'VI_TO_EN'; icon = Type; desc = "Dịch Anh"; }
+            else if (s === 3) { type = 'LISTEN'; icon = Volume2; desc = "Luyện nghe"; }
+            else if (s === 4) { type = 'TRUE_FALSE'; icon = Check; desc = "Đúng hay Sai?"; }
+            else if (s === 5) { type = 'MIXED'; icon = Skull; desc = "Đấu Trùm!"; } 
+
+            stages.push({
+                id: s,
+                globalId: globalCounter++,
+                name: s === 5 ? `BOSS` : name,
+                type,
+                target: s === 5 ? baseTarget * 1.5 : baseTarget,
+                timeAdd: timeBonus,
+                desc,
+                icon
+            });
         }
-  ], []);
+
+        return {
+            id: wIdx + 1,
+            name: world.name,
+            bg: world.bg,
+            bossEmoji: world.boss,
+            stages
+        };
+    });
+};
+
+export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplete, onExit }) => {
+  const DOORS = useMemo<DoorConfig[]>(() => generateLevelData(), []);
+
+  // Persistent progress (in a real app this would be in userState, local storage for now)
+  const [maxUnlockedLevel, setMaxUnlockedLevel] = useState(() => {
+      const saved = localStorage.getItem('time_attack_progress');
+      return saved ? parseInt(saved) : 1;
+  });
 
   // States
   const [gameState, setGameState] = useState<'INTRO' | 'DOOR_TRANSITION' | 'PLAYING' | 'GAME_OVER' | 'VICTORY'>('INTRO');
+  
+  // Selection State
+  const [selectedWorldIdx, setSelectedWorldIdx] = useState(0);
+
+  // Gameplay State
   const [currentDoorIdx, setCurrentDoorIdx] = useState(0);
   const [currentStageIdx, setCurrentStageIdx] = useState(0);
   const [timeLeft, setTimeLeft] = useState(60); 
   const [score, setScore] = useState(0);
   const [progress, setProgress] = useState(0);
+  
+  // Reward animation state
+  const [showReward, setShowReward] = useState(false);
   
   // Question Data
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
@@ -164,6 +155,10 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
   const currentStage = currentDoor.stages[currentStageIdx];
   const isBossStage = currentStageIdx === currentDoor.stages.length - 1;
   const isFever = combo >= 5;
+
+  useEffect(() => {
+      localStorage.setItem('time_attack_progress', maxUnlockedLevel.toString());
+  }, [maxUnlockedLevel]);
 
   useEffect(() => {
       if (words.length < 4) {
@@ -195,50 +190,38 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
       playSFX('wrong');
   };
 
+  const initLevel = (doorIdx: number, stageIdx: number) => {
+      setCurrentDoorIdx(doorIdx);
+      setCurrentStageIdx(stageIdx);
+      setGameState('DOOR_TRANSITION');
+      
+      // Reset stats for new run
+      setScore(0);
+      setCombo(0);
+      setTimeLeft(60); 
+      setPowerUps({ freeze: 1, bomb: 1, time: 1 });
+  };
+
   const startLevel = () => {
       setGameState('PLAYING');
       setProgress(0);
       setIsPaused(false);
-      // Give initial boosts for starting
-      if (currentStageIdx === 0 && currentDoorIdx === 0) {
-          setTimeLeft(60);
-      } else if (currentStageIdx === 0) {
-          // Bonus items when entering new door
-          setPowerUps(prev => ({
-              freeze: Math.max(prev.freeze, 1),
-              bomb: Math.max(prev.bomb, 1),
-              time: Math.max(prev.time, 1)
-          }));
-          setTimeLeft(prev => Math.min(prev + 30, 99)); 
-      }
       nextQuestion();
   };
 
   const nextQuestion = () => {
-      setIsPaused(false); // Resume timer
+      setIsPaused(false);
       let type = currentStage.type;
       
       if (type === 'MIXED') {
-          const types: QuestionType[] = ['EN_TO_VI', 'VI_TO_EN', 'LISTEN', 'IMAGE_TO_EN', 'TRUE_FALSE', 'SPELLING'];
+          const types: QuestionType[] = ['EN_TO_VI', 'VI_TO_EN', 'LISTEN', 'TRUE_FALSE', 'SPELLING'];
           type = types[Math.floor(Math.random() * types.length)];
-      }
-
-      // Smart Filtering based on available data
-      if (type === 'IMAGE_TO_EN' || type === 'TRUE_FALSE') {
-          const wordsWithEmoji = words.filter(w => !!w.emoji);
-          if (wordsWithEmoji.length < 4) type = 'EN_TO_VI';
       }
 
       setQuestionType(type);
 
-      let validTargets = words;
-      if (type === 'IMAGE_TO_EN' || type === 'TRUE_FALSE') {
-          validTargets = words.filter(w => !!w.emoji);
-          if (validTargets.length === 0) validTargets = words; 
-      }
-
-      const randomIdx = Math.floor(Math.random() * validTargets.length);
-      const target = validTargets[randomIdx];
+      const randomIdx = Math.floor(Math.random() * words.length);
+      const target = words[randomIdx];
       setCurrentWord(target);
       
       setDisabledOptions([]);
@@ -251,10 +234,8 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
           if (isCorrect) {
               setFakeWord(null); 
           } else {
-              const fakePool = words.filter(w => w.id !== target.id && (!!w.emoji));
-              const fallbackPool = words.filter(w => w.id !== target.id);
-              const finalFakePool = fakePool.length > 0 ? fakePool : fallbackPool;
-              let fake = finalFakePool[Math.floor(Math.random() * finalFakePool.length)];
+              const fakePool = words.filter(w => w.id !== target.id);
+              let fake = fakePool[Math.floor(Math.random() * fakePool.length)];
               setFakeWord(fake);
           }
           setOptions([true, false]);
@@ -277,7 +258,6 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
                                    .sort(() => 0.5 - Math.random())
                                    .slice(0, 3);
           const fullOptions = [target, ...distractors].sort(() => 0.5 - Math.random());
-          // CRITICAL FIX: Ensure max 4 options
           setOptions(fullOptions.slice(0, 4));
       }
 
@@ -294,7 +274,6 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
   }
 
   const handleAnswer = (answer: any) => {
-      // Prevent multiple clicks or clicks during pause
       if (gameState !== 'PLAYING' || !currentWord || isPaused) return;
 
       let isCorrect = false;
@@ -304,7 +283,7 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
 
       if (isCorrect) {
           playSFX('correct');
-          setIsPaused(true); // Freeze timer immediately on correct answer
+          setIsPaused(true); 
           
           const comboBonus = Math.floor(combo / 3) * 10;
           const feverMultiplier = isFever ? 2 : 1;
@@ -318,34 +297,32 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
 
           if (isBossStage) {
               setBossShake(true);
-              // Boss damage effect sound
               if (newProgress % 2 === 0) playSFX('harvest'); 
               setTimeout(() => setBossShake(false), 300);
           }
 
-          // Check for Stage Completion
           if (newProgress >= currentStage.target) {
               playSFX(isBossStage ? 'cheer' : 'success');
+              
+              // Unlock next level if this was the furthest
+              if (currentStage.globalId === maxUnlockedLevel && maxUnlockedLevel < 50) {
+                  setMaxUnlockedLevel(prev => prev + 1);
+              }
+
+              // Check if end of world
               if (currentStageIdx < currentDoor.stages.length - 1) {
+                  // Next stage in same world
                   setTimeout(() => {
                       setCurrentStageIdx(prev => prev + 1);
                       setProgress(0);
                       nextQuestion();
                   }, 500);
               } else {
-                  if (currentDoorIdx < DOORS.length - 1) {
-                      setTimeout(() => {
-                          setCurrentDoorIdx(prev => prev + 1);
-                          setCurrentStageIdx(0);
-                          setGameState('DOOR_TRANSITION');
-                      }, 500);
-                  } else {
-                      setTimeout(() => setGameState('VICTORY'), 500);
-                  }
+                  // World Completed
+                  setTimeout(() => setGameState('VICTORY'), 500);
               }
               return;
           }
-          // Delay next question slightly to show feedback
           setTimeout(nextQuestion, 400); 
       } else {
           playSFX('wrong');
@@ -353,9 +330,8 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
           setTimeout(() => setShake(false), 400);
           setFlash('RED');
           setCombo(0);
-          // Penalty: Reduce time but don't go below 0
           setTimeLeft(prev => Math.max(prev - 2, 0)); 
-          setIsPaused(true); // Freeze timer to show wrong feedback
+          setIsPaused(true); 
           setTimeout(nextQuestion, 800); 
       }
   };
@@ -384,11 +360,20 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
       }
   };
 
+  const handleClaimReward = () => {
+      playSFX('success');
+      setShowReward(true);
+      // Wait for animation before completing
+      setTimeout(() => {
+          onComplete(score);
+      }, 3000);
+  };
+
   // --- RENDER ---
   const renderHeader = () => (
     <div className={`flex items-center justify-between px-4 py-3 backdrop-blur-md z-20 border-b shadow-lg transition-colors duration-300 ${isFever ? 'bg-orange-500/80 border-yellow-300' : 'bg-black/30 border-white/10'}`}>
         <div className="flex items-center gap-3">
-            <button onClick={onExit} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"><Home size={20}/></button>
+            <button onClick={() => setGameState('INTRO')} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"><Home size={20}/></button>
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border-2 transition-colors ${timeLeft < 10 ? 'bg-red-600/80 border-red-400 animate-pulse' : 'bg-black/40 border-white/20'}`}>
                 {isPaused && !isFrozen ? <Clock size={16} className="text-yellow-400"/> : <Clock size={16} className={timeLeft < 10 ? 'animate-spin' : ''}/>}
                 <span className="font-mono font-black text-lg w-8 text-center">{timeLeft}</span>
@@ -409,13 +394,14 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
   const renderQuestionCard = () => {
       if (!currentWord) return null;
       if (questionType === 'TRUE_FALSE') {
+          const displayWord = trueFalseAnswer ? currentWord : (fakeWord || currentWord);
           return (
               <div className="w-full max-w-sm mb-4 bg-white/10 backdrop-blur-xl p-4 rounded-[2rem] border-2 border-white/20 text-center shadow-2xl">
-                  <div className="flex flex-col items-center gap-4">
-                      <div className="w-28 h-28 rounded-2xl overflow-hidden shadow-lg border-4 border-white">
-                          <WordImage word={trueFalseAnswer ? currentWord : (fakeWord || currentWord)} className="w-full h-full" hideLabel={true} />
-                      </div>
-                      <div className="text-3xl font-black text-white drop-shadow-md">{currentWord.english}</div>
+                  <div className="flex flex-col items-center gap-2">
+                      <div className="text-2xl text-white/80 font-bold mb-2 uppercase">Có phải nghĩa là?</div>
+                      <div className="text-4xl font-black text-yellow-300 drop-shadow-md">{displayWord.vietnamese}</div>
+                      <div className="my-2 text-white/50 text-sm">--- so với ---</div>
+                      <div className="text-4xl font-black text-white drop-shadow-md">{currentWord.english}</div>
                   </div>
               </div>
           );
@@ -423,28 +409,20 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
       if (questionType === 'LISTEN') {
           return (
               <div className="w-full max-w-sm mb-4 bg-white/10 backdrop-blur-xl p-6 rounded-[2rem] border-2 border-white/20 text-center shadow-2xl">
-                  <button onClick={() => playAudio(currentWord.english)} className="w-20 h-20 bg-purple-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse border-4 border-purple-300">
-                      <Volume2 size={40} className="text-white"/>
+                  <button onClick={() => playAudio(currentWord.english)} className="w-24 h-24 bg-purple-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse border-4 border-purple-300">
+                      <Volume2 size={48} className="text-white"/>
                   </button>
-                  <p className="mt-4 text-xs font-bold text-white/60">Nghe và chọn đáp án đúng</p>
-              </div>
-          );
-      }
-      if (questionType === 'IMAGE_TO_EN') {
-          return (
-              <div className="w-full max-w-sm mb-6 flex justify-center">
-                  <div className="w-40 h-40 bg-white rounded-3xl shadow-2xl border-8 border-white transform hover:scale-105 transition-transform">
-                      <WordImage word={currentWord} className="w-full h-full rounded-2xl" hideLabel={true} />
-                  </div>
+                  <p className="mt-4 text-sm font-bold text-white/80">Nghe và chọn từ đúng</p>
               </div>
           );
       }
       return (
-          <div className="w-full max-w-sm mb-6 bg-white/10 backdrop-blur-xl p-6 rounded-[2rem] border-2 border-white/20 text-center shadow-2xl">
-              <h2 className={`text-3xl sm:text-4xl font-black drop-shadow-md break-words leading-tight ${questionType === 'VI_TO_EN' ? 'text-yellow-300' : 'text-white'}`}>
+          <div className="w-full max-w-sm mb-6 bg-white/10 backdrop-blur-xl p-8 rounded-[2rem] border-2 border-white/20 text-center shadow-2xl">
+              <h2 className={`text-4xl sm:text-5xl font-black drop-shadow-md break-words leading-tight ${questionType === 'VI_TO_EN' ? 'text-yellow-300' : 'text-white'}`}>
                   {questionType === 'VI_TO_EN' ? currentWord.vietnamese : questionType === 'SPELLING' ? `"${currentWord.vietnamese}"` : currentWord.english}
               </h2>
-              {questionType === 'SPELLING' && <p className="text-xs mt-2 text-white/60">Chọn từ viết đúng</p>}
+              {questionType === 'SPELLING' && <p className="text-sm mt-3 text-white/60 font-bold">Chọn từ viết đúng chính tả</p>}
+              {questionType === 'EN_TO_VI' && <p className="text-sm mt-3 text-white/60 font-bold">Chọn nghĩa tiếng Việt</p>}
           </div>
       );
   };
@@ -453,28 +431,28 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
       if (questionType === 'TRUE_FALSE') {
           return (
               <div className="flex gap-4 w-full max-w-sm">
-                  <button onClick={() => handleAnswer(true)} className="flex-1 py-4 bg-green-500 rounded-3xl shadow-lg border-b-8 border-green-700 active:border-b-0 active:translate-y-2 transition-all flex flex-col items-center justify-center gap-1">
-                      <Check size={32} className="text-white"/>
-                      <span className="text-lg font-black text-white uppercase">Đúng</span>
+                  <button onClick={() => handleAnswer(true)} className="flex-1 py-6 bg-green-500 rounded-3xl shadow-lg border-b-8 border-green-700 active:border-b-0 active:translate-y-2 transition-all flex flex-col items-center justify-center gap-1">
+                      <Check size={40} className="text-white"/>
+                      <span className="text-xl font-black text-white uppercase">Đúng</span>
                   </button>
-                  <button onClick={() => handleAnswer(false)} className="flex-1 py-4 bg-red-500 rounded-3xl shadow-lg border-b-8 border-red-700 active:border-b-0 active:translate-y-2 transition-all flex flex-col items-center justify-center gap-1">
-                      <X size={32} className="text-white"/>
-                      <span className="text-lg font-black text-white uppercase">Sai</span>
+                  <button onClick={() => handleAnswer(false)} className="flex-1 py-6 bg-red-500 rounded-3xl shadow-lg border-b-8 border-red-700 active:border-b-0 active:translate-y-2 transition-all flex flex-col items-center justify-center gap-1">
+                      <X size={40} className="text-white"/>
+                      <span className="text-xl font-black text-white uppercase">Sai</span>
                   </button>
               </div>
           );
       }
       return (
-          <div className="grid grid-cols-2 gap-3 w-full max-w-sm">
-              {options.slice(0, 4).map((opt, idx) => { // Force slice to 4 to prevent UI break
+          <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
+              {options.slice(0, 4).map((opt, idx) => { 
                   const id = opt.id || idx;
                   const isDisabled = disabledOptions.includes(id);
                   const content = questionType === 'SPELLING' ? opt.text :
-                                  ['LISTEN','IMAGE_TO_EN','VI_TO_EN'].includes(questionType) ? opt.english : opt.vietnamese;
+                                  ['LISTEN','VI_TO_EN'].includes(questionType) ? opt.english : opt.vietnamese;
                   return (
-                      <button key={id} disabled={isDisabled} onClick={() => handleAnswer(opt)} className={`relative p-3 rounded-2xl font-bold text-md shadow-lg active:scale-95 transition-all ${isDisabled ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed border-2 border-slate-700' : 'bg-white text-slate-900 hover:bg-blue-50 border-b-[6px] border-slate-300 active:border-b-0 active:translate-y-1.5'}`}>
+                      <button key={id} disabled={isDisabled} onClick={() => handleAnswer(opt)} className={`relative p-4 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-all min-h-[80px] flex items-center justify-center leading-tight ${isDisabled ? 'bg-slate-800/50 text-slate-600 cursor-not-allowed border-2 border-slate-700' : 'bg-white text-slate-900 hover:bg-blue-50 border-b-[6px] border-slate-300 active:border-b-0 active:translate-y-1.5'}`}>
                           {content}
-                          {isDisabled && <Skull className="absolute inset-0 m-auto text-slate-500 opacity-50" size={20}/>}
+                          {isDisabled && <Skull className="absolute inset-0 m-auto text-slate-500 opacity-50" size={24}/>}
                       </button>
                   )
               })}
@@ -498,18 +476,18 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
         </div>
         <div className={`flex-1 flex flex-col items-center justify-center p-4 z-10 ${shake ? 'animate-shake' : ''}`}>
             {isBossStage && (
-                <div className={`mb-4 relative transition-transform duration-100 ${bossShake ? 'scale-90 translate-x-2 brightness-150' : 'animate-bounce-slow'}`}>
-                    <div className="text-8xl filter drop-shadow-[0_0_20px_rgba(239,68,68,0.6)]">{currentDoor.bossEmoji}</div>
-                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full border-2 border-red-400 whitespace-nowrap shadow-lg">HP: {currentStage.target - progress}</div>
+                <div className={`mb-6 relative transition-transform duration-100 ${bossShake ? 'scale-90 translate-x-2 brightness-150' : 'animate-bounce-slow'}`}>
+                    <div className="text-9xl filter drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]">{currentDoor.bossEmoji}</div>
+                    <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-black px-4 py-1.5 rounded-full border-2 border-red-400 whitespace-nowrap shadow-lg">HP: {currentStage.target - progress}</div>
                 </div>
             )}
             {renderQuestionCard()}
             {renderOptions()}
         </div>
         <div className="p-4 bg-black/20 backdrop-blur-sm flex justify-center gap-4 z-20 pb-8 sm:pb-6 border-t border-white/5">
-             <button onClick={useFreeze} disabled={powerUps.freeze <= 0 || isFrozen} className={`flex flex-col items-center gap-1 group ${powerUps.freeze <= 0 ? 'opacity-30 grayscale' : 'active:scale-90 transition-transform hover:-translate-y-1'}`}><div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center border-b-4 border-blue-700 relative shadow-lg"><Snowflake size={24} className="text-white"/><span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-black border-2 border-white shadow-sm">{powerUps.freeze}</span></div></button>
-             <button onClick={useBomb} disabled={powerUps.bomb <= 0 || questionType === 'TRUE_FALSE'} className={`flex flex-col items-center gap-1 group ${powerUps.bomb <= 0 ? 'opacity-30 grayscale' : 'active:scale-90 transition-transform hover:-translate-y-1'}`}><div className="w-12 h-12 bg-slate-700 rounded-2xl flex items-center justify-center border-b-4 border-slate-900 relative shadow-lg"><Bomb size={24} className="text-white"/><span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-black border-2 border-white shadow-sm">{powerUps.bomb}</span></div></button>
-             <button onClick={useHeal} disabled={powerUps.time <= 0} className={`flex flex-col items-center gap-1 group ${powerUps.time <= 0 ? 'opacity-30 grayscale' : 'active:scale-90 transition-transform hover:-translate-y-1'}`}><div className="w-12 h-12 bg-green-500 rounded-2xl flex items-center justify-center border-b-4 border-green-700 relative shadow-lg"><Heart size={24} fill="white" className="text-white"/><span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-black border-2 border-white shadow-sm">{powerUps.time}</span></div></button>
+             <button onClick={useFreeze} disabled={powerUps.freeze <= 0 || isFrozen} className={`flex flex-col items-center gap-1 group ${powerUps.freeze <= 0 ? 'opacity-30 grayscale' : 'active:scale-90 transition-transform hover:-translate-y-1'}`}><div className="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center border-b-4 border-blue-700 relative shadow-lg"><Snowflake size={28} className="text-white"/><span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-xs flex items-center justify-center font-black border-2 border-white shadow-sm">{powerUps.freeze}</span></div></button>
+             <button onClick={useBomb} disabled={powerUps.bomb <= 0 || questionType === 'TRUE_FALSE'} className={`flex flex-col items-center gap-1 group ${powerUps.bomb <= 0 ? 'opacity-30 grayscale' : 'active:scale-90 transition-transform hover:-translate-y-1'}`}><div className="w-14 h-14 bg-slate-700 rounded-2xl flex items-center justify-center border-b-4 border-slate-900 relative shadow-lg"><Bomb size={28} className="text-white"/><span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-xs flex items-center justify-center font-black border-2 border-white shadow-sm">{powerUps.bomb}</span></div></button>
+             <button onClick={useHeal} disabled={powerUps.time <= 0} className={`flex flex-col items-center gap-1 group ${powerUps.time <= 0 ? 'opacity-30 grayscale' : 'active:scale-90 transition-transform hover:-translate-y-1'}`}><div className="w-14 h-14 bg-green-500 rounded-2xl flex items-center justify-center border-b-4 border-green-700 relative shadow-lg"><Heart size={28} fill="white" className="text-white"/><span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full text-xs flex items-center justify-center font-black border-2 border-white shadow-sm">{powerUps.time}</span></div></button>
         </div>
         <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } } .animate-shake { animation: shake 0.4s ease-in-out; } .animate-spin-slow { animation: spin 3s linear infinite; } .animate-bounce-slow { animation: bounce 2s infinite; }`}</style>
     </div>
@@ -517,47 +495,95 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
 
   function renderIntroOrTransition() {
       const isIntro = gameState === 'INTRO';
+      
+      // If we are transitioning, just show the boss and title
+      if (!isIntro) {
+          return (
+            <div className={`flex flex-col items-center justify-center h-full p-6 ${currentDoor.bg} text-white animate-fadeIn text-center overflow-y-auto`}>
+                <div className="z-10 flex flex-col items-center w-full max-w-md my-auto">
+                    <div className="text-8xl mb-6 animate-bounce filter drop-shadow-2xl">{currentDoor.bossEmoji}</div>
+                    <h2 className="text-yellow-400 font-black text-xs uppercase tracking-[0.3em] mb-2">Khu vực {currentDoor.id}</h2>
+                    <h1 className="text-3xl font-black mb-8">{currentDoor.name}</h1>
+                    <div className="bg-white/10 p-4 rounded-xl mb-8 border border-white/20 w-full">
+                        <div className="font-bold text-yellow-300 uppercase text-xs mb-1">Mục tiêu màn {currentStage.id}</div>
+                        <div className="text-xl font-black mb-2">{currentStage.desc}</div>
+                        <div className="text-sm text-white/70">Trả lời đúng {currentStage.target} câu</div>
+                    </div>
+                    <button onClick={startLevel} className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-xl shadow-lg active:scale-95 flex items-center justify-center gap-2">TIẾN LÊN <ArrowRight size={28}/></button>
+                </div>
+            </div>
+          );
+      }
+
+      // FULL LEVEL SELECTOR UI
       return (
-          <div className={`flex flex-col items-center justify-center h-full p-6 ${isIntro ? 'bg-slate-900' : currentDoor.bg} text-white animate-fadeIn text-center overflow-y-auto`}>
-              <div className="z-10 flex flex-col items-center w-full max-w-md my-auto">
-                  {isIntro ? (
-                      <>
-                        <h1 className="text-3xl font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-yellow-300 to-red-500 mb-2 drop-shadow-lg">Hành Trình Tốc Độ</h1>
-                        <p className="text-gray-400 mb-6 text-xs font-bold">Vượt qua {DOORS.length} Cửa ải để trở thành Huyền Thoại!</p>
-                        <div className="w-full space-y-3 mb-6">
-                            {DOORS.map((d, i) => (
-                                <div key={d.id} className={`flex items-center p-3 rounded-2xl border-2 ${i === 0 ? 'bg-white/10 border-yellow-400' : 'bg-black/20 border-slate-700 opacity-60'}`}>
-                                    <div className="w-10 h-10 rounded-full bg-black/40 flex items-center justify-center text-xl mr-3 border border-white/20">{d.bossEmoji}</div>
-                                    <div className="flex-1 text-left"><div className="font-bold text-xs uppercase text-yellow-500">Cửa {d.id}</div><div className="font-black text-sm">{d.name}</div></div>
-                                    {i > 0 && <LockIcon size={16} className="text-slate-500" />}
-                                </div>
-                            ))}
-                        </div>
-                        <button onClick={() => { setGameState('PLAYING'); nextQuestion(); }} className="w-full py-4 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-2xl font-black text-xl shadow-lg border-b-4 border-red-800 active:scale-95"><Sword size={24} className="inline mr-2"/> BẮT ĐẦU</button>
-                      </>
-                  ) : (
-                      <>
-                        <div className="text-7xl mb-4 animate-bounce filter drop-shadow-2xl">{currentDoor.bossEmoji}</div>
-                        <h2 className="text-yellow-400 font-black text-xs uppercase tracking-[0.3em] mb-2">Cửa ải {currentDoor.id}</h2>
-                        <h1 className="text-2xl font-black mb-6">{currentDoor.name}</h1>
-                        <div className="grid grid-cols-2 gap-3 w-full mb-8">
-                            {currentDoor.stages.map((s, i) => {
-                                const Icon = s.icon;
-                                const isPassed = i < currentStageIdx;
-                                const isCurrent = i === currentStageIdx;
-                                return (
-                                    <div key={s.id} className={`p-3 rounded-xl border flex flex-col gap-1 text-left relative overflow-hidden ${isCurrent ? 'bg-white text-slate-900 border-yellow-400 shadow-lg scale-105 z-10' : 'bg-black/20 border-white/10 text-white/60'}`}>
-                                        <div className="flex justify-between items-center"><span className="text-[9px] font-black uppercase tracking-wider">Màn {i+1}</span><Icon size={14} /></div>
-                                        <div className="font-bold text-xs leading-tight">{s.name}</div>
-                                        {isPassed && <div className="absolute inset-0 bg-green-500/80 flex items-center justify-center"><Check size={24} className="text-white"/></div>}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                        <button onClick={startLevel} className="w-full py-4 bg-white text-slate-900 rounded-2xl font-black text-xl shadow-lg active:scale-95 flex items-center justify-center gap-2">TIẾN LÊN <ArrowRight size={24}/></button>
-                      </>
-                  )}
-                  <button onClick={onExit} className="mt-6 text-white/50 text-sm font-bold hover:text-white">Quay lại</button>
+          <div className="flex flex-col h-full bg-slate-900 text-white animate-fadeIn">
+              <div className="p-4 bg-slate-800 shadow-md border-b border-slate-700 flex justify-between items-center z-10">
+                  <button onClick={onExit} className="text-slate-400 hover:text-white flex items-center gap-1 font-bold text-sm"><Home size={18}/> Thoát</button>
+                  <h1 className="font-black text-xl text-yellow-400 uppercase tracking-tighter">Thử Thách Tốc Độ</h1>
+                  <div className="w-16"></div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                  <div className="text-center mb-6">
+                      <div className="text-6xl mb-2">⚔️</div>
+                      <p className="text-slate-400 text-sm">Vượt qua 50 cửa ải để trở thành Huyền thoại!</p>
+                  </div>
+
+                  {DOORS.map((door, idx) => {
+                      const isLocked = door.stages[0].globalId > maxUnlockedLevel;
+                      const isCompleted = door.stages[4].globalId < maxUnlockedLevel;
+                      
+                      return (
+                          <div key={door.id} className={`rounded-3xl border-4 overflow-hidden relative ${isLocked ? 'border-slate-700 bg-slate-800 opacity-60 grayscale' : 'border-slate-600 bg-slate-800'}`}>
+                              {/* World Header */}
+                              <div className={`${door.bg} p-4 flex items-center justify-between`}>
+                                  <div className="flex items-center gap-3">
+                                      <div className="text-4xl filter drop-shadow-md">{door.bossEmoji}</div>
+                                      <div>
+                                          <div className="text-[10px] font-bold text-yellow-300 uppercase tracking-widest">Khu vực {door.id}</div>
+                                          <div className="font-black text-lg">{door.name}</div>
+                                      </div>
+                                  </div>
+                                  {isLocked && <Lock className="text-slate-400" size={24} />}
+                                  {isCompleted && <Trophy className="text-yellow-400" size={24} />}
+                              </div>
+
+                              {/* Stages Grid */}
+                              {!isLocked && (
+                                  <div className="p-4 grid grid-cols-5 gap-2">
+                                      {door.stages.map((stage) => {
+                                          const stageLocked = stage.globalId > maxUnlockedLevel;
+                                          const stageDone = stage.globalId < maxUnlockedLevel;
+                                          
+                                          return (
+                                              <button 
+                                                  key={stage.id}
+                                                  disabled={stageLocked}
+                                                  onClick={() => initLevel(idx, stage.id - 1)}
+                                                  className={`
+                                                      aspect-square rounded-xl flex flex-col items-center justify-center relative border-b-4 transition-all
+                                                      ${stageLocked 
+                                                          ? 'bg-slate-700 border-slate-800 text-slate-500' 
+                                                          : stageDone 
+                                                              ? 'bg-green-600 border-green-800 text-white' 
+                                                              : 'bg-yellow-500 border-yellow-700 text-yellow-900 animate-pulse'
+                                                      }
+                                                  `}
+                                              >
+                                                  {stage.id === 5 ? <Skull size={16}/> : <span className="font-black text-lg">{stage.id}</span>}
+                                                  {stageLocked && <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center"><Lock size={12} className="text-slate-400"/></div>}
+                                                  {stageDone && <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full w-4 h-4 flex items-center justify-center border border-white"><Star size={8} className="text-yellow-800" fill="currentColor"/></div>}
+                                              </button>
+                                          )
+                                      })}
+                                  </div>
+                              )}
+                          </div>
+                      );
+                  })}
+                  
+                  <div className="h-8"></div>
               </div>
           </div>
       )
@@ -565,18 +591,53 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
 
   function renderEndGame() {
       const isWin = gameState === 'VICTORY';
+      const earnedCoins = Math.floor(score / 10);
+
       return (
-          <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-900 text-white animate-fadeIn text-center">
-              <div className="text-8xl mb-6 animate-bounce filter drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">{isWin ? '🏆' : '💪'}</div>
-              <h2 className={`text-4xl font-black uppercase mb-2 tracking-tight ${isWin ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600' : 'text-gray-300'}`}>{isWin ? 'CHIẾN THẮNG!' : 'CỐ LÊN NHÉ!'}</h2>
-              <p className="text-gray-400 mb-6 text-sm">{isWin ? "Bé thật xuất sắc! Huyền thoại tốc độ!" : "Thua keo này ta bày keo khác. Bé làm tốt lắm!"}</p>
+          <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-900 text-white animate-fadeIn text-center relative overflow-hidden">
+              
+              {/* Reward Overlay with Animation */}
+              {showReward && (
+                  <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center animate-fadeIn backdrop-blur-md">
+                      <div className="relative mb-8">
+                          <div className="text-[120px] animate-bounce">🎁</div>
+                          <Sparkles className="absolute -top-10 -left-10 text-yellow-400 animate-spin-slow opacity-80" size={150} />
+                      </div>
+                      <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-orange-500 mb-4 animate-pulse">
+                          NHẬN QUÀ THÀNH CÔNG!
+                      </h2>
+                      <div className="bg-white/10 p-6 rounded-3xl border-2 border-yellow-500/50 flex flex-col items-center animate-bounce-slow">
+                          <Coins size={64} className="text-yellow-400 mb-2" fill="currentColor" />
+                          <span className="text-5xl font-black text-white">+{earnedCoins} XU</span>
+                      </div>
+                  </div>
+              )}
+
+              <div className="text-9xl mb-6 animate-bounce filter drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">{isWin ? '🏆' : '💪'}</div>
+              <h2 className={`text-4xl font-black uppercase mb-2 tracking-tight ${isWin ? 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-yellow-600' : 'text-gray-300'}`}>{isWin ? 'CHIẾN THẮNG!' : 'HẾT GIỜ RỒI!'}</h2>
+              <p className="text-gray-400 mb-8 text-lg font-medium">{isWin ? "Bé thật xuất sắc! Khu vực đã được chinh phục!" : "Cố gắng lên nhé! Bé làm tốt lắm."}</p>
+              
               <div className="bg-white/10 p-6 rounded-3xl w-full max-w-xs mb-8 border border-white/10 backdrop-blur-md">
                   <div className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Tổng điểm</div>
-                  <div className="text-5xl font-black text-white mb-2">{score}</div>
-                  <div className="text-[10px] font-bold text-yellow-400">Đã vượt qua {currentDoorIdx} Cửa ải</div>
+                  <div className="text-6xl font-black text-white mb-2">{score}</div>
+                  <div className="text-sm font-bold text-yellow-400 flex items-center justify-center gap-2">
+                      <Coins size={16} fill="currentColor"/> Nhận được {earnedCoins} Xu
+                  </div>
               </div>
-              <button onClick={() => onComplete(score)} className={`w-full max-w-xs py-4 rounded-2xl font-black text-lg shadow-xl mb-4 active:scale-95 ${isWin ? 'bg-yellow-500 text-yellow-900' : 'bg-blue-600 text-white'}`}>{isWin ? 'NHẬN QUÀ KHỦNG' : 'NHẬN QUÀ KHÍCH LỆ'}</button>
-              {!isWin && <button onClick={() => { setGameState('INTRO'); setCurrentDoorIdx(0); setCurrentStageIdx(0); setScore(0); }} className="text-white/50 font-bold hover:text-white flex items-center gap-2 text-sm"><RefreshCcw size={16}/> Thử lại từ đầu</button>}
+
+              {!showReward && (
+                  <button 
+                    onClick={handleClaimReward} 
+                    className={`w-full max-w-xs py-5 rounded-2xl font-black text-xl shadow-xl mb-4 active:scale-95 transition-all flex items-center justify-center gap-2 ${isWin ? 'bg-yellow-500 text-yellow-900 hover:bg-yellow-400' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  >
+                      {isWin ? <Trophy size={24}/> : <Coins size={24}/>}
+                      {isWin ? 'NHẬN QUÀ KHỦNG' : 'NHẬN QUÀ'}
+                  </button>
+              )}
+
+              {!isWin && !showReward && (
+                  <button onClick={() => { setGameState('INTRO'); }} className="text-white/50 font-bold hover:text-white flex items-center gap-2 text-sm"><RefreshCcw size={16}/> Chọn lại màn</button>
+              )}
           </div>
       )
   }

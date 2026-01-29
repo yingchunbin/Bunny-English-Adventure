@@ -1,4 +1,3 @@
-
 import React, { Suspense, useState, useLayoutEffect, useMemo, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, Stage, Html, useProgress, OrbitControls } from '@react-three/drei';
@@ -110,6 +109,7 @@ const Model = ({ url }: { url: string }) => {
     });
   }, [clonedScene, texture]);
 
+  // @ts-ignore
   return <primitive object={clonedScene} />;
 };
 

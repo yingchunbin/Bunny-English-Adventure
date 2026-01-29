@@ -17,7 +17,8 @@ interface TranslationGameProps {
   onComplete: (coinsEarned: number) => void;
 }
 
-const normalize = (str: string) => str.toLowerCase().replace(/[.,?!]/g, '').trim();
+// Robust normalization: lowercase, remove all punctuation, normalize spaces
+const normalize = (str: string) => str.toLowerCase().replace(/[.,?!]/g, '').replace(/\s+/g, ' ').trim();
 
 export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onComplete }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -82,24 +83,7 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
       setHintsUsed(h => h + 1);
       playSFX('flip');
       
-      if (selectedIndices.length < targetWords.length) {
-          const nextWordText = targetWords[selectedIndices.length]; 
-          const correctIndex = availableWords.findIndex((w, idx) => 
-              !selectedIndices.includes(idx) && normalize(w) === normalize(nextWordText)
-          );
-
-          if (correctIndex !== -1) {
-              handleSelectWord(correctIndex);
-              setAiFeedback({
-                  isCorrect: false,
-                  hint: "Thầy Rùa đã giúp con chọn một từ nhé!",
-                  highlight: [],
-                  encouragement: "Cố lên!"
-              });
-              return;
-          }
-      }
-
+      // Simple hint: if user hasn't selected anything or is stuck
       setAiFeedback({
           isCorrect: false,
           hint: `Câu này có ${targetWords.length} từ. Con thử đọc to lên xem!`,
@@ -114,8 +98,8 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
     setStatus('CHECKING');
     const userSentence = selectedIndices.map(i => availableWords[i]).join(' ');
     const targetSentence = direction === 'EN_TO_VI' ? currentSentence.vi : currentSentence.en;
-    const targetLang = direction === 'EN_TO_VI' ? 'vi' : 'en';
 
+    // Use robust normalization for comparison
     if (normalize(userSentence) === normalize(targetSentence)) {
       playSFX('correct');
       setStatus('CORRECT');
@@ -129,9 +113,6 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
     }
 
     playSFX('wrong');
-    // For kids, if it's not exact, we mostly want to guide them back to the exact words
-    // We can use AI if connected, but fallback to simple matching is often faster and less confusing for early learners.
-    
     setAiFeedback({
         isCorrect: false,
         hint: "Bé hãy xem lại thứ tự các từ nhé!",
@@ -163,8 +144,6 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
 
   const questionText = direction === 'EN_TO_VI' ? currentSentence.en : currentSentence.vi;
   const questionLang = direction === 'EN_TO_VI' ? 'English' : 'Tiếng Việt';
-  
-  // Dynamic Font Size
   const textSizeClass = questionText.length > 30 ? 'text-lg sm:text-xl' : 'text-2xl sm:text-3xl';
 
   return (
@@ -204,28 +183,22 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
         )}
       </div>
 
-      {/* Answer Area */}
-      <div className={`w-full min-h-[100px] bg-white rounded-2xl p-4 mb-4 flex flex-wrap gap-2.5 items-center content-start border-2 transition-colors duration-300 shadow-inner ${
+      {/* Answer Area - Improved CSS for Overflow */}
+      <div className={`w-full min-h-[120px] h-auto bg-white rounded-2xl p-4 mb-4 flex flex-wrap gap-2 items-start content-start border-2 transition-colors duration-300 shadow-inner ${
           status === 'WRONG' ? 'border-red-400 bg-red-50' : 
           status === 'CORRECT' ? 'border-green-400 bg-green-50' : 
           'border-slate-200 focus-within:border-blue-400'
         }`}>
         
-        {selectedIndices.length === 0 && <span className="text-slate-400 italic w-full text-center text-sm font-medium">Bấm vào từ bên dưới để dịch...</span>}
+        {selectedIndices.length === 0 && <span className="text-slate-400 italic w-full text-center text-sm font-medium mt-8">Bấm vào từ bên dưới để dịch...</span>}
         
         {selectedIndices.map((wordIndex, idx) => {
             const word = availableWords[wordIndex];
-            const isHighlighted = status === 'WRONG' && aiFeedback?.highlight?.some(h => normalize(h).includes(normalize(word)));
-            
             return (
                 <button 
                     key={`selected-${wordIndex}-${idx}`}
                     onClick={() => handleRemoveWord(idx)}
-                    className={`px-4 py-3 rounded-2xl shadow-sm border-b-4 font-black text-xl sm:text-2xl active:translate-y-1 active:border-b-0 transition-all animate-fadeIn ${
-                        isHighlighted 
-                            ? 'bg-red-500 text-white border-red-700 animate-pulse ring-2 ring-red-300' 
-                            : 'bg-white text-slate-800 border-slate-200 hover:border-slate-300'
-                    }`}
+                    className="px-3 py-2 sm:px-4 sm:py-3 rounded-xl shadow-sm border-b-4 font-black text-lg sm:text-xl active:translate-y-1 active:border-b-0 transition-all animate-fadeIn bg-white text-slate-800 border-slate-200 hover:border-slate-300"
                 >
                     {word}
                 </button>
@@ -234,7 +207,7 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
       </div>
 
       {/* Word Bank */}
-      <div className="flex flex-wrap gap-3 justify-center mb-6">
+      <div className="flex flex-wrap gap-2 justify-center mb-6 w-full">
         {availableWords.map((word, idx) => {
           const isSelected = selectedIndices.includes(idx);
           return (
@@ -242,7 +215,7 @@ export const TranslationGame: React.FC<TranslationGameProps> = ({ sentences, onC
                 key={`bank-${idx}`}
                 onClick={() => handleSelectWord(idx)}
                 disabled={isSelected}
-                className={`px-4 py-3 sm:px-6 sm:py-4 rounded-2xl border-b-4 font-black text-lg sm:text-xl shadow-sm transition-all duration-200 ${
+                className={`px-3 py-2 sm:px-4 sm:py-3 rounded-xl border-b-4 font-black text-base sm:text-lg shadow-sm transition-all duration-200 ${
                     isSelected 
                     ? 'opacity-0 cursor-default pointer-events-none transform scale-90' 
                     : 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 hover:border-blue-300 active:border-b-0 active:translate-y-1'

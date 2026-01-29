@@ -8,10 +8,9 @@ interface FlashcardGameProps {
   words: Word[];
   onComplete: () => void;
   initialMode?: 'LEARN' | 'QUIZ';
-  backupWords?: Word[]; // Allow providing extra words for distractors
+  backupWords?: Word[]; 
 }
 
-// Updated Question Types based on user request
 type QuestionType = 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN_TO_EN' | 'LISTEN_TO_VI';
 
 export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete, initialMode = 'LEARN', backupWords = [] }) => {
@@ -41,13 +40,19 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
   const currentQuizWord = words[quizIndex];
 
   const playAudio = (text: string, rate: number = 0.8) => {
+    // Cancel any current speech to prevent overlapping
+    window.speechSynthesis.cancel();
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.rate = rate;
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleFlip = () => {
+  const handleFlip = (e: React.MouseEvent) => {
+    // Prevent flip if clicking on buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    
     setIsFlipped(!isFlipped);
     playSFX('flip');
   };
@@ -65,14 +70,11 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
   useEffect(() => {
     if (mode === 'QUIZ' && currentQuizWord) {
-      // Randomize between the 4 text/audio based question types
       const availableTypes: QuestionType[] = ['EN_TO_VI', 'VI_TO_EN', 'LISTEN_TO_EN', 'LISTEN_TO_VI'];
       const nextType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
       setQuestionType(nextType);
 
-      // Create a pool of potential distractors
       const fullPool = [...words, ...backupWords];
-      // Deduplicate by ID
       const uniquePool = Array.from(new Map(fullPool.map(item => [item.id, item])).values());
 
       const distractors = uniquePool
@@ -80,10 +82,10 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
         .sort(() => 0.5 - Math.random())
         .slice(0, 3);
       
-      // Ensure we have at least some options
       while (distractors.length < 3 && uniquePool.length > 1) {
           const random = uniquePool[Math.floor(Math.random() * uniquePool.length)];
-          if (random.id !== currentQuizWord.id) distractors.push(random);
+          if (random.id !== currentQuizWord.id && !distractors.find(d => d.id === random.id)) distractors.push(random);
+          if (distractors.length === uniquePool.length - 1) break; 
       }
 
       const options = [currentQuizWord, ...distractors].sort(() => 0.5 - Math.random());
@@ -92,7 +94,6 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
       setSelectedOption(null);
       setIsCorrect(null);
 
-      // Auto play audio for listening questions
       if (nextType === 'LISTEN_TO_EN' || nextType === 'LISTEN_TO_VI') {
           setTimeout(() => playAudio(currentQuizWord.english), 500);
       }
@@ -123,11 +124,9 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
   };
 
   const renderOptionContent = (opt: Word) => {
-      // For EN_TO_VI or LISTEN_TO_VI, options are Vietnamese
       if (questionType === 'EN_TO_VI' || questionType === 'LISTEN_TO_VI') {
           return <span className="text-xl sm:text-2xl font-bold text-slate-700 text-center leading-tight">{opt.vietnamese}</span>;
       }
-      // For VI_TO_EN or LISTEN_TO_EN, options are English
       return <span className="text-2xl sm:text-3xl font-black text-blue-700 text-center leading-tight">{opt.english}</span>;
   };
 
@@ -184,19 +183,20 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
             </div>
         </div>
         
-        {/* FLASHCARD CONTAINER - Fixed Aspect Ratio & Stable Layout */}
+        {/* FLASHCARD CONTAINER */}
         <div className="relative w-full max-w-sm aspect-[3/4] max-h-[55vh] perspective-1000 group z-10 mb-6 flex-shrink-0">
-          <div className={`relative w-full h-full duration-500 transform-style-3d transition-transform cursor-pointer ${isFlipped ? 'rotate-y-180' : ''}`} onClick={handleFlip}>
+          <div 
+            className={`relative w-full h-full duration-500 transform-style-3d transition-transform cursor-pointer ${isFlipped ? 'rotate-y-180' : ''}`} 
+            onClick={handleFlip}
+          >
             
             {/* FRONT CARD (EN + VI) */}
             <div className="absolute inset-0 w-full h-full backface-hidden bg-white border-4 border-blue-100 rounded-[2rem] shadow-xl flex flex-col items-center justify-center p-6 overflow-hidden">
-                {/* Decoration Circles */}
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-50 rounded-full z-0 opacity-50 pointer-events-none"></div>
                 <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-orange-50 rounded-full z-0 opacity-50 pointer-events-none"></div>
                 
                 <div className="z-10 text-center flex flex-col items-center gap-8 w-full">
                     <div className="w-full">
-                        {/* BIGGER TEXT */}
                         <h3 className="text-5xl sm:text-7xl font-black text-blue-600 tracking-tight mb-4 drop-shadow-sm break-words px-2 leading-none">
                             {currentWord.english}
                         </h3>
@@ -209,8 +209,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
                     <button 
                         onClick={(e) => { 
-                            e.preventDefault();
-                            e.stopPropagation();
+                            e.stopPropagation(); // VERY IMPORTANT: Stops card flip
                             playAudio(currentWord.english); 
                         }} 
                         className="mt-4 w-20 h-20 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg shadow-blue-200 flex items-center justify-center transition-transform active:scale-90"
@@ -226,7 +225,6 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
             {/* BACK CARD (EN + IPA + EXAMPLE) */}
             <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180 bg-white border-4 border-orange-100 rounded-[2rem] shadow-xl flex flex-col overflow-hidden">
-                {/* Header Section (Fixed Height) */}
                 <div className="h-1/4 min-h-[100px] bg-orange-50/50 p-4 flex flex-col items-center justify-center border-b border-orange-100 flex-shrink-0">
                      <h3 className="text-4xl font-black text-slate-800 text-center leading-tight truncate w-full">
                         {currentWord.english}
@@ -234,7 +232,6 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
                      <span className="text-gray-400 font-mono text-2xl italic mt-1 truncate">/{currentWord.pronunciation}/</span>
                 </div>
 
-                {/* Example Section */}
                 <div className="flex-1 p-4 flex flex-col items-center justify-center bg-white overflow-hidden">
                     <div className="w-full h-full bg-blue-50 p-6 rounded-2xl border border-blue-100 relative text-center flex flex-col items-center">
                         <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-100 text-blue-600 text-xs px-4 py-1 rounded-full font-black uppercase tracking-wider shadow-sm border border-blue-200">
@@ -252,8 +249,8 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
 
                         <button 
                             onClick={(e) => {
-                                e.stopPropagation();
-                                playAudio(currentWord.exampleEn, 0.85); 
+                                e.stopPropagation(); // VERY IMPORTANT: Stops card flip
+                                playAudio(currentWord.exampleEn, 0.85); // Play SENTENCE not word
                             }}
                             className="flex-shrink-0 inline-flex items-center gap-2 bg-white px-5 py-3 rounded-xl shadow-sm border border-gray-200 text-blue-500 font-bold text-sm hover:bg-blue-50 active:scale-95 transition-all mt-4"
                         >
@@ -275,6 +272,7 @@ export const FlashcardGame: React.FC<FlashcardGameProps> = ({ words, onComplete,
     );
   }
 
+  // ... Quiz Render Logic (Unchanged) ...
   if (!currentQuizWord) return <div className="flex justify-center items-center h-48"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div></div>;
 
   return (
