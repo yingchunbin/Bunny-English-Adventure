@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Word } from '../types';
 import { Clock, Zap, Home, Skull, Sword, Snowflake, Bomb, Heart, Volume2, Check, X, Type, Star, Shield, Lock, ArrowRight, RefreshCcw, Play, Trophy, Sparkles, Coins } from 'lucide-react';
 import { playSFX } from '../utils/sound';
+import { resolveImage } from '../utils/imageUtils';
 
 interface TimeAttackGameProps {
   words: Word[];
@@ -28,6 +29,7 @@ interface DoorConfig {
     name: string;
     bg: string;
     bossEmoji: string;
+    bossImage?: string; // New field for Boss Image ID
     stages: StageConfig[];
 }
 
@@ -53,16 +55,16 @@ const generateMisspelling = (word: string): string => {
 // Algorithmic Level Generation for 50 Levels (10 Worlds x 5 Stages)
 const generateLevelData = (): DoorConfig[] => {
     const worlds = [
-        { name: "Khu Rừng Nhỏ", bg: "bg-emerald-900", boss: "🌲" },
-        { name: "Hang Động Đá", bg: "bg-stone-800", boss: "🦇" },
-        { name: "Sa Mạc Nóng", bg: "bg-amber-900", boss: "🦂" },
-        { name: "Biển Sâu", bg: "bg-blue-950", boss: "🐙" },
-        { name: "Vùng Băng Giá", bg: "bg-cyan-900", boss: "🥶" },
-        { name: "Núi Lửa", bg: "bg-red-950", boss: "🐉" },
-        { name: "Lâu Đài Ma", bg: "bg-purple-950", boss: "👻" },
-        { name: "Thế Giới Kẹo", bg: "bg-pink-900", boss: "🍭" },
-        { name: "Thành Phố Máy", bg: "bg-slate-900", boss: "🤖" },
-        { name: "Vũ Trụ", bg: "bg-indigo-950", boss: "👽" },
+        { name: "Khu Rừng Nhỏ", bg: "bg-emerald-900", boss: "🦅", bossImg: "1SHyHvU0iL6S5Frkgq0mM-KQOyUwUyp1N" }, // Harpy
+        { name: "Hang Động Đá", bg: "bg-stone-800", boss: "🐍", bossImg: "1SW-rHJQWaPEGiSQcAP-CjmRuYaObI4sF" }, // Gorgon
+        { name: "Sa Mạc Nóng", bg: "bg-amber-900", boss: "🧟", bossImg: "10hs1RSpGCIjqBOZkOkxIjs6l28Cfrhgc" }, // Mummy
+        { name: "Biển Sâu", bg: "bg-blue-950", boss: "🐟", bossImg: "1rj90094F-dJGASfb21GuU4BPGf06t_Rr" }, // Anglerfish
+        { name: "Vùng Băng Giá", bg: "bg-cyan-900", boss: "🐯", bossImg: "1LveDXwjxmWf6X5as9hc-6jZQR2OzLCzI" }, // Tiger (Snow)
+        { name: "Núi Lửa", bg: "bg-red-950", boss: "🦎", bossImg: "1N1kz76R9lR0U9ckZ-QIuslacQqh5931R" }, // Salamander
+        { name: "Lâu Đài Ma", bg: "bg-purple-950", boss: "📦", bossImg: "1tkTzHXgI8IT0bWPgVki_VaylKEresOOr" }, // Mimic
+        { name: "Thế Giới Kẹo", bg: "bg-pink-900", boss: "🧚", bossImg: "1v2tMcq1AOI80i5SvDT5oHNfgZ-dnAyQl" }, // Fairy
+        { name: "Thành Phố Máy", bg: "bg-slate-900", boss: "⚡", bossImg: "1cVnvDjVA6xb69n00hO-RML8ghORjMPzd" }, // Thunder Slime
+        { name: "Vũ Trụ", bg: "bg-indigo-950", boss: "🧞", bossImg: "1jsJUmOmSvKPOf16m2u60MLjhZRWVG-SR" }, // Djinn
     ];
 
     let globalCounter = 1;
@@ -102,6 +104,7 @@ const generateLevelData = (): DoorConfig[] => {
             name: world.name,
             bg: world.bg,
             bossEmoji: world.boss,
+            bossImage: world.bossImg,
             stages
         };
     });
@@ -465,6 +468,7 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
 
   const bossHpPercent = isBossStage ? ((currentStage.target - progress) / currentStage.target) * 100 : 0;
   const stageProgressPercent = !isBossStage ? (progress / currentStage.target) * 100 : 0;
+  const bossImgUrl = resolveImage(currentDoor.bossImage);
 
   return (
     <div className={`flex flex-col h-full ${currentDoor.bg} text-white relative overflow-hidden transition-colors duration-1000`}>
@@ -477,7 +481,13 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
         <div className={`flex-1 flex flex-col items-center justify-center p-4 z-10 ${shake ? 'animate-shake' : ''}`}>
             {isBossStage && (
                 <div className={`mb-6 relative transition-transform duration-100 ${bossShake ? 'scale-90 translate-x-2 brightness-150' : 'animate-bounce-slow'}`}>
-                    <div className="text-9xl filter drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]">{currentDoor.bossEmoji}</div>
+                    {bossImgUrl ? (
+                        <div className="w-40 h-40 drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]">
+                            <img src={bossImgUrl} alt={currentDoor.name} className="w-full h-full object-contain" />
+                        </div>
+                    ) : (
+                        <div className="text-9xl filter drop-shadow-[0_0_30px_rgba(239,68,68,0.6)]">{currentDoor.bossEmoji}</div>
+                    )}
                     <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-red-600 text-white text-xs font-black px-4 py-1.5 rounded-full border-2 border-red-400 whitespace-nowrap shadow-lg">HP: {currentStage.target - progress}</div>
                 </div>
             )}
@@ -495,13 +505,20 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
 
   function renderIntroOrTransition() {
       const isIntro = gameState === 'INTRO';
+      const bossImgUrl = resolveImage(currentDoor.bossImage);
       
       // If we are transitioning, just show the boss and title
       if (!isIntro) {
           return (
             <div className={`flex flex-col items-center justify-center h-full p-6 ${currentDoor.bg} text-white animate-fadeIn text-center overflow-y-auto`}>
                 <div className="z-10 flex flex-col items-center w-full max-w-md my-auto">
-                    <div className="text-8xl mb-6 animate-bounce filter drop-shadow-2xl">{currentDoor.bossEmoji}</div>
+                    {bossImgUrl ? (
+                        <div className="w-48 h-48 mb-6 animate-bounce filter drop-shadow-2xl">
+                            <img src={bossImgUrl} alt={currentDoor.name} className="w-full h-full object-contain" />
+                        </div>
+                    ) : (
+                        <div className="text-8xl mb-6 animate-bounce filter drop-shadow-2xl">{currentDoor.bossEmoji}</div>
+                    )}
                     <h2 className="text-yellow-400 font-black text-xs uppercase tracking-[0.3em] mb-2">Khu vực {currentDoor.id}</h2>
                     <h1 className="text-3xl font-black mb-8">{currentDoor.name}</h1>
                     <div className="bg-white/10 p-4 rounded-xl mb-8 border border-white/20 w-full">
@@ -533,13 +550,16 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
                   {DOORS.map((door, idx) => {
                       const isLocked = door.stages[0].globalId > maxUnlockedLevel;
                       const isCompleted = door.stages[4].globalId < maxUnlockedLevel;
+                      const bossImg = resolveImage(door.bossImage);
                       
                       return (
                           <div key={door.id} className={`rounded-3xl border-4 overflow-hidden relative ${isLocked ? 'border-slate-700 bg-slate-800 opacity-60 grayscale' : 'border-slate-600 bg-slate-800'}`}>
                               {/* World Header */}
                               <div className={`${door.bg} p-4 flex items-center justify-between`}>
                                   <div className="flex items-center gap-3">
-                                      <div className="text-4xl filter drop-shadow-md">{door.bossEmoji}</div>
+                                      <div className="w-12 h-12 flex items-center justify-center filter drop-shadow-md">
+                                          {bossImg ? <img src={bossImg} alt="boss" className="w-full h-full object-contain"/> : <span className="text-4xl">{door.bossEmoji}</span>}
+                                      </div>
                                       <div>
                                           <div className="text-[10px] font-bold text-yellow-300 uppercase tracking-widest">Khu vực {door.id}</div>
                                           <div className="font-black text-lg">{door.name}</div>
