@@ -19,10 +19,11 @@ import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepa
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
 // TARGET KEY FOR THE APP
-const CURRENT_VERSION_KEY = 'turtle_english_state_v10';
+const CURRENT_VERSION_KEY = 'turtle_english_state_v11';
 
 // ALL POSSIBLE KEYS TO SCAN (Current + Legacy)
 const ALL_STORAGE_KEYS = [
+    'turtle_english_state_v11',
     'turtle_english_state_v10',
     'turtle_english_state_v9',
     'turtle_english_state_v8',
@@ -102,7 +103,14 @@ const migrateState = (oldState: any): UserState => {
       newState.decorSlots = defaultSlots;
   }
 
-  // 3. Ensure critical arrays exist
+  // 3. Ensure critical arrays exist and preserve machine data
+  // Critical fix: Ensure machineSlots from oldState are respected if they exist, to prevent loss on reload
+  if (oldState.machineSlots && Array.isArray(oldState.machineSlots) && oldState.machineSlots.length > 0) {
+      newState.machineSlots = oldState.machineSlots;
+  } else {
+      newState.machineSlots = DEFAULT_USER_STATE.machineSlots;
+  }
+
   if (!newState.decorSlots) newState.decorSlots = DEFAULT_USER_STATE.decorSlots;
   if (!newState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels || DEFAULT_USER_STATE.unlockedLevels;
   if (!newState.completedLevels) newState.completedLevels = oldState.completedLevels || DEFAULT_USER_STATE.completedLevels;
@@ -161,11 +169,6 @@ export default function App() {
         if (candidates.length > 0) {
             const best = candidates[0];
             console.log(`🏆 Restoring best save from: ${best.key} (Score: ${best.score})`);
-            
-            // If the best save has score > 200 (approx base score of default state), use it.
-            // Default state has ~200 score (coins). A user with 1 completed level has > 10200.
-            // A user with empty state but selected book might have ~200.
-            // If the user has old data with levels, it will massively outscore the empty state.
             return migrateState(best.data);
         }
         
@@ -187,7 +190,7 @@ export default function App() {
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
   useEffect(() => {
-      // Save to the CURRENT v10 key, ensuring future reloads pick this up (if it remains the highest score)
+      // Save to the CURRENT v11 key, ensuring future reloads pick this up
       localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userState));
   }, [userState]);
 

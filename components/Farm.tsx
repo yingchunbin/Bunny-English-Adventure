@@ -132,13 +132,26 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const handleExpand = (type: 'PLOT' | 'PEN' | 'MACHINE' | 'DECOR') => {
       const baseCost = 500;
       let currentCount = 0;
-      if (type === 'PLOT') currentCount = userState.farmPlots.length; 
-      if (type === 'PEN') currentCount = userState.livestockSlots?.length || 0;
-      if (type === 'MACHINE') currentCount = userState.machineSlots?.length || 0;
-      if (type === 'DECOR') currentCount = userState.decorSlots?.length || 0;
+      let defaultSlots = 0;
 
-      const threshold = type === 'PLOT' ? 6 : type === 'DECOR' ? 3 : 2;
-      const cost = baseCost * Math.pow(1.5, Math.max(0, currentCount - threshold)); 
+      if (type === 'PLOT') {
+          currentCount = userState.farmPlots.length;
+          defaultSlots = 4;
+      } else if (type === 'PEN') {
+          currentCount = userState.livestockSlots?.length || 0;
+          defaultSlots = 2;
+      } else if (type === 'MACHINE') {
+          currentCount = userState.machineSlots?.length || 0;
+          defaultSlots = 2;
+      } else if (type === 'DECOR') {
+          currentCount = userState.decorSlots?.length || 0;
+          defaultSlots = 3;
+      }
+
+      // Calculate cost: 500 for first expansion, then increases.
+      // Formula: 500 * 1.5 ^ (count - default)
+      const extraSlots = Math.max(0, currentCount - defaultSlots);
+      const cost = Math.floor(baseCost * Math.pow(1.5, extraSlots));
       const finalCost = Math.floor(cost / 100) * 100; 
 
       setConfirmConfig({

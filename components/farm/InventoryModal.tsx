@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
-import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2 } from 'lucide-react';
+import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { resolveImage } from '../../utils/imageUtils';
 
@@ -111,13 +111,17 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
           extraInfo = buffText ? <div className="text-[9px] font-bold text-purple-500 bg-white/80 px-2 py-1 rounded border border-purple-100 mt-1">{buffText}</div> : null;
           
+          // Check if placed
+          const isPlaced = activeDecorIds.includes(item.id);
+
           if (mode === 'SELECT_DECOR') {
               decorStatus = (
                   <button 
-                      onClick={() => onToggleDecor && onToggleDecor(item.id)}
-                      className="bg-purple-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                      onClick={() => !isPlaced && onToggleDecor && onToggleDecor(item.id)}
+                      disabled={isPlaced}
+                      className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md transition-all ${isPlaced ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300' : 'bg-purple-500 text-white active:scale-95'}`}
                   >
-                      Đặt vào ô
+                      {isPlaced ? <><Ban size={12} className="inline mr-1"/> Đang dùng</> : "Đặt vào ô"}
                   </button>
               );
           } else {

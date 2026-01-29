@@ -215,7 +215,6 @@ export const PRODUCTS: Product[] = [
     { id: 'tea', name: 'Trà', emoji: '🍵', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 150 },
     { id: 'green_smoothie', name: 'Sinh tố xanh', emoji: '🥬', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 200 },
     { id: 'strawberry_milk', name: 'Sữa dâu', emoji: '🧋', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 240 },
-    // Newly Added
     { id: 'sushi', name: 'Sushi', emoji: '🍣', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 250 },
     { id: 'bouquet', name: 'Bó Hoa', emoji: '💐', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 180 },
     { id: 'sunflower_bouquet', name: 'Bó Hướng Dương', emoji: '🌻', type: 'PROCESSED', currency: 'COIN', cost: 0, sellPrice: 200 },
@@ -227,7 +226,7 @@ export const DECORATIONS: Decor[] = [
     {
         id: 'wheelbarrow', name: 'Xe Rùa', emoji: '🛒', type: 'DECOR', currency: 'STAR', cost: 12,
         imageUrl: 'https://drive.google.com/thumbnail?id=184jjzLYfgqiX_a3sNMQp7Rglafpuk1M0&sz=w500',
-        buff: { type: 'TIME', value: 5, desc: 'Giảm 5% thời gian chờ' }
+        buff: { type: 'TIME', value: 12, desc: 'Giảm 12% thời gian chờ' } // Buffed from 5% to 12%
     },
     {
         id: 'straw_hat', name: 'Mũ Rơm', emoji: '👒', type: 'DECOR', currency: 'STAR', cost: 3,
@@ -242,12 +241,12 @@ export const DECORATIONS: Decor[] = [
     {
         id: 'fence', name: 'Hàng Rào', emoji: '🪜', type: 'DECOR', currency: 'STAR', cost: 2,
         imageUrl: 'https://drive.google.com/thumbnail?id=1cSNDep2PY9I1D-TcxcTtVDWP2RQIbxtC&sz=w500',
-        buff: { type: 'PEST', value: 15, desc: 'Giảm 15% sâu bệnh' }
+        buff: { type: 'PEST', value: 5, desc: 'Giảm 5% sâu bệnh' } // Nerfed from 15% to 5% (Logic: Low cost)
     },
     {
         id: 'boots', name: 'Ủng Cao Su', emoji: '👢', type: 'DECOR', currency: 'STAR', cost: 4,
         imageUrl: 'https://drive.google.com/thumbnail?id=1Eg1N55-osusJbTdrKeIVruRxL51VSKRq&sz=w500',
-        buff: { type: 'EXP', value: 2, desc: '+2% Kinh nghiệm' }
+        buff: { type: 'EXP', value: 4, desc: '+4% Kinh nghiệm' } // Buffed from 2% to 4%
     },
     {
         id: 'basket', name: 'Giỏ Đựng', emoji: '🧺', type: 'DECOR', currency: 'STAR', cost: 10,
@@ -292,12 +291,12 @@ export const DECORATIONS: Decor[] = [
     {
         id: 'axe', name: 'Rìu', emoji: '🪓', type: 'DECOR', currency: 'STAR', cost: 10,
         imageUrl: 'https://drive.google.com/thumbnail?id=1LmqqQLmn55ofA5ZbqjmYDakxwf464VyB&sz=w500',
-        buff: { type: 'EXP', value: 10, desc: '+10% Kinh nghiệm' }
+        buff: { type: 'EXP', value: 15, desc: '+15% Kinh nghiệm' } // Buffed from 10% to 15%
     },
     {
         id: 'saw', name: 'Cưa Gỗ', emoji: '🪚', type: 'DECOR', currency: 'STAR', cost: 11,
         imageUrl: 'https://drive.google.com/thumbnail?id=1J8pK8ScZficISIGm7BV0eXNl7OXoRQIW&sz=w500',
-        buff: { type: 'EXP', value: 12, desc: '+12% Kinh nghiệm' }
+        buff: { type: 'EXP', value: 16, desc: '+16% Kinh nghiệm' } // Buffed from 12% to 16%
     },
     {
         id: 'scythe', name: 'Lưỡi Hái', emoji: '🌾', type: 'DECOR', currency: 'STAR', cost: 9,
@@ -307,12 +306,12 @@ export const DECORATIONS: Decor[] = [
     {
         id: 'pitchfork', name: 'Cây Chỉa', emoji: '🔱', type: 'DECOR', currency: 'STAR', cost: 6,
         imageUrl: 'https://drive.google.com/thumbnail?id=1tLqTclwFt8PyB4IsQQzqQwX_TosNyMnW&sz=w500',
-        buff: { type: 'TIME', value: 5, desc: 'Giảm 5% thời gian chờ' }
+        buff: { type: 'TIME', value: 9, desc: 'Giảm 9% thời gian chờ' } // Buffed from 5% to 9%
     },
     {
         id: 'pickaxe', name: 'Cuốc Chim', emoji: '⛏️', type: 'DECOR', currency: 'STAR', cost: 15,
         imageUrl: 'https://drive.google.com/thumbnail?id=1ZFLFyFxIgdP1eocJ2GqkUnjp6bI39URr&sz=w500',
-        buff: { type: 'EXP', value: 15, desc: '+15% Kinh nghiệm' }
+        buff: { type: 'EXP', value: 20, desc: '+20% Kinh nghiệm' } // Buffed from 15% to 20%
     },
     {
         id: 'hoe', name: 'Cái Cuốc', emoji: '⛏️', type: 'DECOR', currency: 'STAR', cost: 4,
@@ -347,17 +346,17 @@ export const DECORATIONS: Decor[] = [
     {
         id: 'mouse', name: 'Chuột Đồng', emoji: '🐁', type: 'DECOR', currency: 'STAR', cost: 6,
         imageUrl: 'https://drive.google.com/thumbnail?id=1Q38-oxgTTEcbADPF3zdalMLaFisvak9P&sz=w500',
-        buff: { type: 'EXP', value: 5, desc: '+5% Kinh nghiệm' }
+        buff: { type: 'EXP', value: 8, desc: '+8% Kinh nghiệm' } // Buffed from 5% to 8%
     },
     {
         id: 'moth', name: 'Bướm Đêm', emoji: '🦋', type: 'DECOR', currency: 'STAR', cost: 3,
         imageUrl: 'https://drive.google.com/thumbnail?id=1Ch3rv0oYZAjCyerOVJzade_zG-0NJTqb&sz=w500',
-        buff: { type: 'COIN', value: 5, desc: '+5% Giá bán nông sản' }
+        buff: { type: 'COIN', value: 3, desc: '+3% Giá bán nông sản' } // Adjusted down slightly to match cost 3
     },
     {
         id: 'worm', name: 'Giun Đất', emoji: '🪱', type: 'DECOR', currency: 'STAR', cost: 1,
         imageUrl: 'https://drive.google.com/thumbnail?id=1wfo2MjPdShrLdZl-ERt76noMJu4otOGE&sz=w500',
-        buff: { type: 'TIME', value: 5, desc: 'Giảm 5% thời gian chờ' }
+        buff: { type: 'TIME', value: 1, desc: 'Giảm 1% thời gian chờ' } // Adjusted down to match cost 1
     },
     {
         id: 'slug', name: 'Ốc Sên Trần', emoji: '🐌', type: 'DECOR', currency: 'STAR', cost: 2,
@@ -367,20 +366,21 @@ export const DECORATIONS: Decor[] = [
     {
         id: 'caterpillar', name: 'Sâu Bướm', emoji: '🐛', type: 'DECOR', currency: 'STAR', cost: 4,
         imageUrl: 'https://drive.google.com/thumbnail?id=1vsu6vhRsedfisGpXR79KJ3wUCwvNr8Y1&sz=w500',
-        buff: { type: 'COIN', value: 8, desc: '+8% Giá bán nông sản' }
+        buff: { type: 'COIN', value: 5, desc: '+5% Giá bán nông sản' } // Adjusted down to 5% to match Hand Scythe (Cost 4)
     },
     {
         id: 'seeds_blue', name: 'Túi Hạt Xanh', emoji: '🔵', type: 'DECOR', currency: 'STAR', cost: 5,
         imageUrl: 'https://drive.google.com/thumbnail?id=1xLi6PQJPYWtP6MM32KewhT-jgr5lnkzb&sz=w500',
-        buff: { type: 'EXP', value: 10, desc: '+10% Kinh nghiệm' }
+        buff: { type: 'EXP', value: 6, desc: '+6% Kinh nghiệm' } // Nerfed from 10% to 6% (Cost 5 is mid-low)
     },
     {
         id: 'seeds_green', name: 'Túi Hạt Lục', emoji: '🟢', type: 'DECOR', currency: 'STAR', cost: 5,
         imageUrl: 'https://drive.google.com/thumbnail?id=1j1WXaTz2xUzN17NUm8KDmbMfkXLTXknu&sz=w500',
-        buff: { type: 'COIN', value: 10, desc: '+10% Giá bán nông sản' }
+        buff: { type: 'COIN', value: 6, desc: '+6% Giá bán nông sản' } // Nerfed from 10% to 6%
     }
 ];
 
+// ... existing code for FARM_ACHIEVEMENTS_DATA and DAILY_MISSION_POOL ...
 export const FARM_ACHIEVEMENTS_DATA: Mission[] = [
     { id: 'hv_10', desc: 'Thu hoạch 10 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 10, current: 0, reward: { type: 'COIN', amount: 100 }, completed: false, claimed: false },
     { id: 'hv_50', desc: 'Thu hoạch 50 nông sản', type: 'HARVEST', category: 'ACHIEVEMENT', target: 50, current: 0, reward: { type: 'STAR', amount: 5 }, completed: false, claimed: false },
