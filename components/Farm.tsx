@@ -82,8 +82,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
 
-  // ... (Keep existing helpers) ...
-  
   const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
       playSFX('wrong');
       setAlertConfig({ isOpen: true, message: msg, type });
@@ -398,8 +396,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const elapsed = crop && plot.plantedAt ? (now - plot.plantedAt) / 1000 : 0;
                   const progress = crop ? Math.min(100, (elapsed / crop.growthTime) * 100) : 0;
                   const isReady = progress >= 100;
-                  const timeLeft = crop ? Math.max(0, Math.ceil(crop.growthTime - elapsed)) : 0;
-
+                  
                   return (
                       <button 
                         key={plot.id}
@@ -463,6 +460,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {slots.map(slot => {
                   const animal = slot.animalId ? ANIMALS.find(a => a.id === slot.animalId) : null;
                   const product = animal ? PRODUCTS.find(p => p.id === animal.produceId) : null;
+                  const feedItem = animal ? [...CROPS, ...PRODUCTS].find(c => c.id === animal.feedCropId) : null;
+                  const userHasFeed = animal ? (userState.harvestedCrops?.[animal.feedCropId] || 0) : 0;
+                  const canFeed = animal && userHasFeed >= animal.feedAmount;
+
                   const imgUrl = resolveImage(animal?.imageUrl);
                   
                   const isProducing = slot.fedAt !== null;
@@ -474,13 +475,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   }
 
                   const hasProduct = (slot.storage?.length || 0) > 0;
+                  // Critical: Animal is hungry if NOT currently producing AND NOT holding product
                   const isHungry = !isProducing && !hasProduct && animal;
 
                   return (
                       <button 
                         key={slot.id}
                         onClick={(e) => {
-                            if (!slot.isUnlocked) return; // Expand handled by empty slot usually, but here lock is visual
+                            if (!slot.isUnlocked) return;
                             if (!animal) {
                                 setSelectedId(slot.id);
                                 setInventoryMode('PLACE_ANIMAL');
@@ -520,10 +522,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                       {imgUrl ? <img src={imgUrl} alt={animal.name} className="w-full h-full object-contain" /> : animal.emoji}
                                   </div>
                                   
-                                  {/* Status Indicators */}
+                                  {/* Hungry Indicator with Feed */}
                                   {isHungry && (
-                                      <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-[9px] font-black animate-pulse shadow-sm">
-                                          ĐÓI
+                                      <div className={`absolute bottom-3 bg-white/90 px-2 py-1 rounded-full text-[9px] font-black shadow-sm border border-orange-200 flex items-center gap-1 z-20 ${!canFeed ? 'opacity-70 grayscale' : 'animate-pulse'}`}>
+                                          <span className="text-xs">{feedItem?.emoji}</span>
+                                          <span className={canFeed ? 'text-green-600' : 'text-red-500'}>{animal.feedAmount}</span>
                                       </div>
                                   )}
 
@@ -547,7 +550,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                       </div>
                                   )}
 
-                                  {/* Speed Up */}
+                                  {/* Speed Up - CRITICAL: Ensure this renders */}
                                   {isProducing && !hasProduct && (
                                       renderSpeedUpButton('ANIMAL', slot.id)
                                   )}

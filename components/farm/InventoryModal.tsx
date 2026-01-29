@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
 import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban } from 'lucide-react';
@@ -102,7 +103,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       if (activeTab === 'DECOR') {
           const decor = decorations.find(d => d.id === item.id);
-          const buffText = decor?.buffs?.[0]?.desc || "";
+          const buffText = decor?.buffs?.[0]?.desc || ""; // Correctly access first buff description
           
           // Apply Rarity Glow Logic
           const rarity = getRarityStyle(decor?.cost || 0);

@@ -18,11 +18,11 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// TARGET KEY FOR THE APP - BUMPED TO V12 TO FORCE CLEAN MIGRATION
-const CURRENT_VERSION_KEY = 'turtle_english_state_v12';
+// BUMP VERSION TO V13 TO FORCE FIX
+const CURRENT_VERSION_KEY = 'turtle_english_state_v13';
 
-// ALL POSSIBLE KEYS TO SCAN (Current + Legacy)
 const ALL_STORAGE_KEYS = [
+    'turtle_english_state_v13',
     'turtle_english_state_v12',
     'turtle_english_state_v11',
     'turtle_english_state_v10',
@@ -52,8 +52,8 @@ const DEFAULT_USER_STATE: UserState = {
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
   ],
   livestockSlots: [
-      { id: 1, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
-      { id: 2, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
+      { id: 1, isUnlocked: true, animalId: null, fedAt: null, storage: [], queue: 0 },
+      { id: 2, isUnlocked: true, animalId: null, fedAt: null, storage: [], queue: 0 },
   ],
   machineSlots: [
       { id: 1, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, storage: [], queue: [] },
@@ -81,81 +81,88 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
-// Helper function to migrate and sanitize data
+// --- CRITICAL: DEEP MERGE MIGRATION ---
+// This function prioritizes EXISTING user data over default data to prevent progress loss.
 const migrateState = (oldState: any): UserState => {
-  // 1. Merge with default to ensure all new fields exist
-  let newState = { ...DEFAULT_USER_STATE, ...oldState };
+  // Start with default structure
+  let newState = { ...DEFAULT_USER_STATE };
 
-  // 2. Decor Slots Migration (Strict merge)
-  // Ensure we keep old slots if they exist and are populated
-  if (oldState.decorSlots && Array.isArray(oldState.decorSlots)) {
-      // If the old state has slots, we use them, but we might want to ensure they conform to new structure if needed
-      // For now, trust the old array if it has content
-      const hasContent = oldState.decorSlots.some((s: any) => s.decorId !== null);
-      if (hasContent) {
-          newState.decorSlots = oldState.decorSlots;
-      } else {
-          // If old state had empty slots, check if we should keep them (e.g. unlocked status)
-          // Merge logic: Keep unlocked status from old, keep decorId if present
-          newState.decorSlots = DEFAULT_USER_STATE.decorSlots.map((defSlot, idx) => {
-              const oldSlot = oldState.decorSlots[idx];
-              if (oldSlot) {
-                  return {
-                      ...defSlot,
-                      isUnlocked: oldSlot.isUnlocked || defSlot.isUnlocked,
-                      decorId: oldSlot.decorId || defSlot.decorId
-                  };
-              }
-              return defSlot;
-          });
-      }
-  }
-
-  // 3. Machine Slots Migration (Strict merge)
-  if (oldState.machineSlots && Array.isArray(oldState.machineSlots)) {
-      const hasContent = oldState.machineSlots.some((s: any) => s.machineId !== null);
-      if (hasContent) {
-          newState.machineSlots = oldState.machineSlots;
-      } else {
-           newState.machineSlots = DEFAULT_USER_STATE.machineSlots.map((defSlot, idx) => {
-              const oldSlot = oldState.machineSlots[idx];
-              if (oldSlot) {
-                  return {
-                      ...defSlot,
-                      isUnlocked: oldSlot.isUnlocked || defSlot.isUnlocked,
-                      machineId: oldSlot.machineId || defSlot.machineId,
-                      // Preserve other fields if machine exists
-                      activeRecipeId: oldSlot.machineId ? oldSlot.activeRecipeId : null,
-                      startedAt: oldSlot.machineId ? oldSlot.startedAt : null,
-                      storage: oldSlot.machineId ? (oldSlot.storage || []) : [],
-                      queue: oldSlot.machineId ? (oldSlot.queue || []) : []
-                  };
-              }
-              return defSlot;
-          });
-      }
-  }
-
-  // 4. Ensure other arrays exist
-  if (!newState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels || DEFAULT_USER_STATE.unlockedLevels;
-  if (!newState.completedLevels) newState.completedLevels = oldState.completedLevels || DEFAULT_USER_STATE.completedLevels;
+  // 1. Basic Stats (Copy if exist)
+  if (oldState.grade) newState.grade = oldState.grade;
+  if (oldState.textbook) newState.textbook = oldState.textbook;
+  if (typeof oldState.coins === 'number') newState.coins = oldState.coins;
+  if (typeof oldState.stars === 'number') newState.stars = oldState.stars;
+  if (oldState.currentAvatarId) newState.currentAvatarId = oldState.currentAvatarId;
+  if (oldState.completedLevels) newState.completedLevels = oldState.completedLevels;
+  if (oldState.levelStars) newState.levelStars = oldState.levelStars;
+  if (oldState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels;
+  if (oldState.streak) newState.streak = oldState.streak;
+  if (oldState.inventory) newState.inventory = oldState.inventory;
+  if (oldState.harvestedCrops) newState.harvestedCrops = oldState.harvestedCrops;
+  if (oldState.farmLevel) newState.farmLevel = oldState.farmLevel;
+  if (oldState.farmExp) newState.farmExp = oldState.farmExp;
+  if (oldState.waterDrops) newState.waterDrops = oldState.waterDrops;
+  if (oldState.fertilizers) newState.fertilizers = oldState.fertilizers;
+  if (oldState.decorations) newState.decorations = oldState.decorations;
   
-  // 5. Farm Plots Migration (Keep unlocked status and crops)
-  if (oldState.farmPlots && Array.isArray(oldState.farmPlots)) {
-      newState.farmPlots = oldState.farmPlots.map((p: any, idx: number) => {
-          // Ensure structure matches modern expectation
-          return {
-              id: p.id || (idx + 1),
-              isUnlocked: p.isUnlocked ?? false,
-              cropId: p.cropId || null,
-              plantedAt: p.plantedAt || null,
-              isWatered: p.isWatered || false,
-              hasBug: p.hasBug || false,
-              hasWeed: p.hasWeed || false,
-              hasMysteryBox: p.hasMysteryBox || false
-          };
-      });
+  // 2. Farm Plots (Preserve planting times)
+  if (Array.isArray(oldState.farmPlots) && oldState.farmPlots.length > 0) {
+      // Map old plots to new structure, keeping old data if valid
+      const mergedPlots = oldState.farmPlots.map((p: any) => ({
+          id: p.id,
+          isUnlocked: p.isUnlocked ?? false,
+          cropId: p.cropId || null,
+          plantedAt: p.plantedAt || null, // CRITICAL: Keep timestamp
+          isWatered: p.isWatered || false,
+          hasBug: p.hasBug || false,
+          hasWeed: p.hasWeed || false,
+          hasMysteryBox: p.hasMysteryBox || false
+      }));
+      
+      // If user bought extra slots in previous versions, keep them.
+      // If default has more slots than user (unlikely but possible), append defaults? 
+      // Better: Just take the user's plots if they have valid data.
+      newState.farmPlots = mergedPlots;
   }
+
+  // 3. Livestock Slots (Preserve animals and feeding times)
+  if (Array.isArray(oldState.livestockSlots) && oldState.livestockSlots.length > 0) {
+      newState.livestockSlots = oldState.livestockSlots.map((s: any) => ({
+          id: s.id,
+          isUnlocked: s.isUnlocked ?? false,
+          animalId: s.animalId || null,
+          fedAt: s.fedAt || null, // CRITICAL: Keep timestamp
+          storage: Array.isArray(s.storage) ? s.storage : [],
+          queue: typeof s.queue === 'number' ? s.queue : 0
+      }));
+  }
+
+  // 4. Machine Slots (Preserve machines and processing times)
+  if (Array.isArray(oldState.machineSlots) && oldState.machineSlots.length > 0) {
+      newState.machineSlots = oldState.machineSlots.map((s: any) => ({
+          id: s.id,
+          isUnlocked: s.isUnlocked ?? false,
+          machineId: s.machineId || null,
+          activeRecipeId: s.activeRecipeId || null,
+          startedAt: s.startedAt || null, // CRITICAL: Keep timestamp
+          storage: Array.isArray(s.storage) ? s.storage : [],
+          queue: Array.isArray(s.queue) ? s.queue : []
+      }));
+  }
+
+  // 5. Decor Slots (Preserve placements)
+  if (Array.isArray(oldState.decorSlots) && oldState.decorSlots.length > 0) {
+      newState.decorSlots = oldState.decorSlots.map((s: any) => ({
+          id: s.id,
+          isUnlocked: s.isUnlocked ?? false,
+          decorId: s.decorId || null
+      }));
+  }
+
+  // 6. Missions & Orders
+  if (oldState.missions) newState.missions = oldState.missions;
+  if (oldState.activeOrders) newState.activeOrders = oldState.activeOrders;
+  if (oldState.lastMissionUpdate) newState.lastMissionUpdate = oldState.lastMissionUpdate;
 
   return newState;
 };
@@ -164,29 +171,18 @@ const migrateState = (oldState: any): UserState => {
 const calculateProgressScore = (state: any) => {
     if (!state) return -1;
     let score = 0;
-    
-    // Most important: How much did they learn?
-    if (Array.isArray(state.completedLevels)) {
-        score += state.completedLevels.length * 10000;
-    }
-
-    // Secondary: Farm progress
-    if (state.farmLevel) {
-        score += state.farmLevel * 1000;
-    }
-
-    // Tertiary: Wealth
-    if (state.coins) {
-        score += state.coins;
-    }
-
+    if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 10000;
+    if (state.farmLevel) score += state.farmLevel * 1000;
+    if (state.coins) score += state.coins;
+    // Boost score if slots are populated (means valid gameplay data)
+    if (state.livestockSlots?.some((s:any) => s.animalId)) score += 500;
+    if (state.machineSlots?.some((s:any) => s.machineId)) score += 500;
     return score;
 };
 
 export default function App() {
   const [userState, setUserState] = useState<UserState>(() => {
       try {
-        // 1. Gather all candidates from all known keys
         const candidates: { key: string, data: any, score: number }[] = [];
 
         ALL_STORAGE_KEYS.forEach(key => {
@@ -204,7 +200,7 @@ export default function App() {
             }
         });
 
-        // 2. Sort by Score Descending (Highest progress first)
+        // Sort by Score Descending
         candidates.sort((a, b) => b.score - a.score);
 
         if (candidates.length > 0) {
@@ -212,8 +208,6 @@ export default function App() {
             console.log(`🏆 Restoring best save from: ${best.key} (Score: ${best.score})`);
             return migrateState(best.data);
         }
-        
-        // 3. New user (No valid data found anywhere)
         return DEFAULT_USER_STATE;
       } catch (e) {
         console.error("Critical State Error:", e);
@@ -231,7 +225,6 @@ export default function App() {
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
   useEffect(() => {
-      // Save to the CURRENT v12 key, ensuring future reloads pick this up
       localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userState));
   }, [userState]);
 
