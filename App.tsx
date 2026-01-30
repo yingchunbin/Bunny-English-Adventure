@@ -18,11 +18,11 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react'; // Changed MessageCircle to Book
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// ... (Keep existing VERSION KEY and DEFAULT_USER_STATE) ...
 // VERSION KEY
 const CURRENT_VERSION_KEY = 'turtle_english_state_v15';
 const BACKUP_KEY = 'turtle_english_state_backup';
 
+// UPDATED: Expanded list to include ALL possible previous versions to recover lost data
 const ALL_STORAGE_KEYS = [
     'turtle_english_state_v15',
     'turtle_english_state_v14',
@@ -31,6 +31,14 @@ const ALL_STORAGE_KEYS = [
     'turtle_english_state_v11',
     'turtle_english_state_v10',
     'turtle_english_state_v9',
+    'turtle_english_state_v8',
+    'turtle_english_state_v7',
+    'turtle_english_state_v6',
+    'turtle_english_state_v5',
+    'turtle_english_state_v4',
+    'turtle_english_state_v3',
+    'turtle_english_state_v2',
+    'turtle_english_state_v1',
     'turtle_english_state'
 ];
 
@@ -84,7 +92,6 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
-// ... (Keep smartMergeArray, migrateState, calculateProgressScore helpers) ...
 const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any, keyCheck: string): T[] => {
     if (!Array.isArray(oldArr) || oldArr.length === 0) return defaultArr;
     const oldMap = new Map(oldArr.map((item: any) => [item.id, item]));
@@ -138,7 +145,6 @@ const calculateProgressScore = (state: any) => {
     return score;
 };
 
-// ... (Rest of App component logic up to render) ...
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false); 
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
