@@ -49,17 +49,17 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
   // Duplicate helper from ShopModal for consistency
   const getRarityStyle = (cost: number) => {
-      if(cost >= 20) return { 
+      if(cost >= 50) return { 
           border: 'border-yellow-400', 
           shadow: 'shadow-[0_0_15px_rgba(250,204,21,0.4)]', 
           bg: 'bg-yellow-50'
       }; 
-      if(cost >= 10) return { 
+      if(cost >= 20) return { 
           border: 'border-purple-400', 
           shadow: 'shadow-[0_0_10px_rgba(192,132,252,0.3)]',
           bg: 'bg-purple-50'
       }; 
-      if(cost >= 5) return { 
+      if(cost >= 8) return { 
           border: 'border-blue-300', 
           shadow: 'shadow-[0_0_8px_rgba(96,165,250,0.2)]',
           bg: 'bg-blue-50'

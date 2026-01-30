@@ -74,21 +74,21 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
   // Helper to determine rarity glow based on cost (Stars)
   const getRarityStyle = (cost: number) => {
-      if(cost >= 20) return { 
+      if(cost >= 50) return { 
           bg: 'bg-yellow-50', 
           border: 'border-yellow-400', 
           shadow: 'shadow-[0_0_15px_rgba(250,204,21,0.5)]', 
           text: 'text-yellow-600',
           badge: 'bg-yellow-100 text-yellow-700'
       }; // Legendary
-      if(cost >= 10) return { 
+      if(cost >= 20) return { 
           bg: 'bg-purple-50', 
           border: 'border-purple-400', 
           shadow: 'shadow-[0_0_10px_rgba(192,132,252,0.4)]', 
           text: 'text-purple-600',
           badge: 'bg-purple-100 text-purple-700'
       }; // Epic
-      if(cost >= 5) return { 
+      if(cost >= 8) return { 
           bg: 'bg-blue-50', 
           border: 'border-blue-300', 
           shadow: 'shadow-[0_0_8px_rgba(96,165,250,0.3)]', 
