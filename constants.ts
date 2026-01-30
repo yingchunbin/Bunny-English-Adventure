@@ -260,9 +260,10 @@ const CURRICULUM_MAP: Record<number, Record<string, GradeCurriculum>> = {
   5: { 'global_success': G5_GLOBAL_SUCCESS, 'family_friends': G5_FAMILY_FRIENDS, 'smart_start': G5_SMART_START, 'macmillan': G5_MACMILLAN },
 };
 
-const createLevel = (id: number, grade: number, unitNum: number, data: any, type: LessonType = 'LESSON'): LessonLevel => {
+// Updated createLevel to include textbookId
+const createLevel = (id: number, grade: number, textbookId: string, unitNum: number, data: any, type: LessonType = 'LESSON'): LessonLevel => {
   return {
-    id, grade, type, title: data.title, topic: data.title.split(':')[0], isLocked: unitNum > 1, stars: 0,
+    id, grade, textbookId, type, title: data.title, topic: data.title.split(':')[0], isLocked: unitNum > 1, stars: 0,
     words: data.words.map((w: any) => {
       const meta = getWordMetadata(w.en);
       return {
@@ -296,7 +297,8 @@ const generateLevels = (): LessonLevel[] => {
                 let type: LessonType = 'LESSON';
                 if (unitNum % 3 === 0) type = 'EXAM';
                 if (unitNum % 5 === 0) type = 'GAME';
-                allLevels.push(createLevel(levelId, grade, unitNum, gradeData[unitNum], type));
+                // Pass bookId here as textbookId
+                allLevels.push(createLevel(levelId, grade, bookId, unitNum, gradeData[unitNum], type));
             });
         }
     });

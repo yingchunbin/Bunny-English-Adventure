@@ -4,7 +4,7 @@ export enum Screen {
   HOME = 'HOME',
   MAP = 'MAP',
   GAME = 'GAME',
-  CHAT = 'CHAT',
+  CHAT = 'CHAT', // We will reuse this enum but render the Story component
   FARM = 'FARM',
   SETTINGS = 'SETTINGS', 
   TIME_ATTACK = 'TIME_ATTACK',
@@ -211,6 +211,7 @@ export interface UserState {
   lastWeatherUpdate?: number; 
   decorations?: string[]; // Owned decoration IDs
   decorSlots?: DecorSlot[]; // Placed decorations logic
+  completedStories?: string[]; // NEW: Track IDs of completed stories
   
   farmLevel?: number;
   farmExp?: number;

@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
 import { Farm } from './components/Farm';
 import { Settings } from './components/Settings';
-import { AIChat } from './components/AIChat';
+import { StoryAdventure } from './components/StoryAdventure'; // Updated import
 import { TimeAttackGame } from './components/TimeAttackGame';
 import { GeneralAchievements } from './components/GeneralAchievements';
 import { LessonGuide } from './components/LessonGuide';
@@ -14,9 +15,10 @@ import { SpeakingGame } from './components/SpeakingGame';
 import { ConfirmModal } from './components/ui/ConfirmModal'; 
 import { getLevels, LEVELS, TEXTBOOKS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
-import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
+import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react'; // Changed MessageCircle to Book
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
+// ... (Keep existing VERSION KEY and DEFAULT_USER_STATE) ...
 // VERSION KEY
 const CURRENT_VERSION_KEY = 'turtle_english_state_v15';
 const BACKUP_KEY = 'turtle_english_state_backup';
@@ -64,6 +66,7 @@ const DEFAULT_USER_STATE: UserState = {
       { id: 2, isUnlocked: true, decorId: null },
       { id: 3, isUnlocked: false, decorId: null },
   ],
+  completedStories: [], // Initialize new field
   inventory: { 'carrot': 2, 'wheat': 2 }, 
   harvestedCrops: {},
   fertilizers: 3,
@@ -81,7 +84,7 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
-// --- SMART MERGE HELPER ---
+// ... (Keep smartMergeArray, migrateState, calculateProgressScore helpers) ...
 const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any, keyCheck: string): T[] => {
     if (!Array.isArray(oldArr) || oldArr.length === 0) return defaultArr;
     const oldMap = new Map(oldArr.map((item: any) => [item.id, item]));
@@ -112,7 +115,7 @@ const migrateState = (oldState: any): UserState => {
   });
 
   // Copy Arrays
-  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders'];
+  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders', 'completedStories'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
@@ -135,6 +138,7 @@ const calculateProgressScore = (state: any) => {
     return score;
 };
 
+// ... (Rest of App component logic up to render) ...
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false); 
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
@@ -225,28 +229,16 @@ export default function App() {
   }, []);
 
   // --- INSTANT SAVE WRAPPER (SYNCHRONOUS) ---
-  // Fix: Calculates state based on Ref (source of truth) and saves immediately.
-  // This bypasses React's async state queue for the storage write.
   const handleUpdateState = useCallback((update: UserState | ((prev: UserState) => UserState)) => {
       if (!isLoaded) return;
-
-      // 1. Get latest state synchronously from Ref
       const currentState = userStateRef.current;
-
-      // 2. Calculate new state immediately
       const newState = typeof update === 'function' ? (update as any)(currentState) : update;
-
-      // 3. Update Ref immediately
       userStateRef.current = newState;
-
-      // 4. Persist to LocalStorage IMMEDIATELY (Synchronous)
       try {
           localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
       } catch (e) {
           console.error("Instant Save Failed:", e);
       }
-
-      // 5. Update React State (Async, for UI)
       setUserState(newState);
   }, [isLoaded]);
 
@@ -429,7 +421,7 @@ export default function App() {
                       <NavButton icon={<MapIcon />} label="Bản đồ" active onClick={() => {}} />
                       <NavButton icon={<Sprout />} label="Nông trại" onClick={() => setScreen(Screen.FARM)} />
                       <NavButton icon={<Gamepad2 />} label="Trò chơi" onClick={() => setScreen(Screen.TIME_ATTACK)} />
-                      <NavButton icon={<MessageCircle />} label="Hỏi Thầy" onClick={() => setScreen(Screen.CHAT)} />
+                      <NavButton icon={<Book />} label="Truyện" onClick={() => setScreen(Screen.CHAT)} />
                       <NavButton icon={<Trophy />} label="Thành tích" onClick={() => setShowAchievements(true)} />
                   </div>
               </div>
@@ -446,15 +438,20 @@ export default function App() {
           )}
 
           {screen === Screen.CHAT && (
-              <div className="h-full flex flex-col bg-white">
-                  <div className="p-4 bg-white shadow-sm flex items-center gap-2 border-b border-slate-100">
-                      <button onClick={() => setScreen(Screen.HOME)} className="text-slate-500 font-bold hover:bg-slate-100 px-3 py-1 rounded-lg">Quay lại</button>
-                      <h2 className="font-bold text-lg">Hỏi đáp cùng Thầy Rùa</h2>
-                  </div>
-                  <div className="flex-1 overflow-hidden">
-                      <AIChat grade={userState.grade || 1} />
-                  </div>
-              </div>
+              <StoryAdventure 
+                  userState={userState} // Passed full userState
+                  onCompleteStory={(storyId, reward) => {
+                      handleUpdateState(prev => {
+                          const isNew = !(prev.completedStories || []).includes(storyId);
+                          return {
+                              ...prev,
+                              coins: prev.coins + (isNew ? reward : Math.floor(reward / 2)),
+                              completedStories: isNew ? [...(prev.completedStories || []), storyId] : prev.completedStories
+                          };
+                      });
+                  }}
+                  onExit={() => setScreen(Screen.HOME)}
+              />
           )}
 
           {screen === Screen.TIME_ATTACK && (

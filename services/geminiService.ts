@@ -34,6 +34,27 @@ export interface FeedbackResponse {
   encouragement: string;
 }
 
+export interface StoryFeedback {
+    score: number; // 1-10
+    isCorrect: boolean; // Threshold >= 7
+    corrected: string; // The correct/better version
+    explanation: string; // Why?
+    suggestion: string; // Tips for next time
+    alternatives: string[]; // NEW: List of natural ways to say it
+}
+
+export interface VocabHint {
+    en: string;
+    vi: string;
+}
+
+export interface GeneratedStorySegment {
+    vi: string;
+    en: string; 
+    vocabList: VocabHint[]; // Changed to structured list
+    grammarTip: string;
+}
+
 export const getTranslationFeedback = async (
   targetSentence: string,
   userSentence: string,
@@ -160,3 +181,157 @@ export const getChatResponse = async (history: ChatMessage[], userMessage: strin
     return "Thầy Rùa đang bị cảm... 🐢";
   }
 }
+
+// UPDATED: No longer takes 'context', strictly sentence-to-sentence
+export const evaluateStoryTranslation = async (
+    vietnameseSentence: string,
+    userEnglish: string
+): Promise<StoryFeedback> => {
+    if (!process.env.API_KEY) {
+        return {
+            score: 10,
+            isCorrect: true,
+            corrected: "Good job (Offline mode)",
+            explanation: "Thầy Rùa đang mất mạng nên cho con 10 điểm luôn!",
+            suggestion: "Lần sau kiểm tra lại mạng nhé!",
+            alternatives: ["Way to go!", "Nice work!"]
+        };
+    }
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        
+        // Strict Prompt: NO CONTEXT provided to the model
+        const prompt = `
+        TARGET SENTENCE (Vietnamese): "${vietnameseSentence}"
+        STUDENT ANSWER (English): "${userEnglish}"
+
+        INSTRUCTIONS FOR THẦY RÙA:
+        1. Ignore any previous story context. Grade ONLY based on the exact meaning of the "TARGET SENTENCE" provided above.
+        2. Strict Grammar Check:
+           - Check spelling, plurals ('s'), articles ('a/an/the'), and verb tenses carefully.
+           - If the target sentence is "Môn học", do NOT require "Our favorite subjects" (that's hallucination). Accept "Subject" or "Subjects".
+           - Only require possessives (my/our) if the Vietnamese explicitly says "của tôi/của chúng mình".
+        3. Output JSON:
+           - score (1-10)
+           - isCorrect (boolean): False if there is ANY grammatical error or wrong meaning.
+           - explanation (Vietnamese): Explain the error clearly. Point out exactly which word is wrong/missing based strictly on the target sentence.
+           - corrected: The best literal translation.
+           - alternatives: Other valid translations.
+        `;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+            config: {
+                systemInstruction: `You are Thầy Rùa, a strict but fair English teacher. 
+                You grade translations literally based ONLY on the provided Vietnamese sentence. 
+                You do not invent details from a background story.`,
+                responseMimeType: "application/json",
+                safetySettings: SAFETY_SETTINGS,
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        score: { type: Type.NUMBER },
+                        isCorrect: { type: Type.BOOLEAN },
+                        corrected: { type: Type.STRING },
+                        explanation: { type: Type.STRING },
+                        suggestion: { type: Type.STRING },
+                        alternatives: { type: Type.ARRAY, items: { type: Type.STRING } }
+                    },
+                    required: ["score", "isCorrect", "corrected", "explanation", "suggestion", "alternatives"]
+                }
+            }
+        });
+
+        const text = response.text || '{}';
+        return cleanAndParseJSON(text) || { 
+            score: 0, 
+            isCorrect: false, 
+            corrected: "", 
+            explanation: "Lỗi phân tích", 
+            suggestion: "Thử lại nhé",
+            alternatives: []
+        };
+
+    } catch (error) {
+        console.error("Gemini Story Error:", error);
+        return {
+            score: 0,
+            isCorrect: false,
+            corrected: "",
+            explanation: "Thầy Rùa đang bận chút, con thử lại sau nhé.",
+            suggestion: "",
+            alternatives: []
+        };
+    }
+};
+
+export const generateCohesiveStory = async (
+    topic: string,
+    words: string[],
+    grade: number
+): Promise<{ segments: GeneratedStorySegment[] }> => {
+    if (!process.env.API_KEY) {
+        return { segments: [] }; 
+    }
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `Write a very short, simple, cohesive story (5 sentences max) for a Grade ${grade} Vietnamese student learning English.
+        Topic: ${topic}.
+        Mandatory Vocabulary to use: ${words.join(', ')}.
+        
+        Requirements:
+        1. The story must make sense and have a flow.
+        2. Return JSON with 'vi' (Vietnamese), 'en' (English).
+        3. 'vocabList': Provide a list of key vocabulary words used in this specific sentence.
+        4. 'grammarTip' MUST BE IN VIETNAMESE.
+        5. IMPORTANT: The Vietnamese translation ('vi') must be accurate to the English ('en') so the student knows exactly what to translate. Do not omit details in the Vietnamese version that appear in English.
+        `;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-3-flash-preview',
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                safetySettings: SAFETY_SETTINGS,
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        segments: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    vi: { type: Type.STRING },
+                                    en: { type: Type.STRING },
+                                    vocabList: { 
+                                        type: Type.ARRAY,
+                                        items: {
+                                            type: Type.OBJECT,
+                                            properties: {
+                                                en: { type: Type.STRING },
+                                                vi: { type: Type.STRING }
+                                            }
+                                        }
+                                    },
+                                    grammarTip: { type: Type.STRING, description: "Must be in Vietnamese" }
+                                },
+                                required: ["vi", "en", "vocabList", "grammarTip"]
+                            }
+                        }
+                    },
+                    required: ["segments"]
+                }
+            }
+        });
+
+        const text = response.text || '{}';
+        return cleanAndParseJSON(text) || { segments: [] };
+
+    } catch (error) {
+        console.error("Gemini Story Generation Error:", error);
+        return { segments: [] };
+    }
+};
