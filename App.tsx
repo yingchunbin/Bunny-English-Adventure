@@ -18,12 +18,11 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react'; // Changed MessageCircle to Book
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// VERSION KEY - BUMPED TO V16 TO FORCE DATA RECOVERY
+// VERSION KEY - Keep v16 to maintain the "fresh start" migration we established
 const CURRENT_VERSION_KEY = 'turtle_english_state_v16';
 const BACKUP_KEY = 'turtle_english_state_backup';
 
-// UPDATED: Expanded list to include ALL possible previous versions to recover lost data
-// v15 is now treated as a "candidate" instead of the source of truth
+// LIST OF LEGACY KEYS FOR MIGRATION ONLY
 const ALL_STORAGE_KEYS = [
     'turtle_english_state_v15',
     'turtle_english_state_v14',
@@ -140,16 +139,10 @@ const migrateState = (oldState: any): UserState => {
 const calculateProgressScore = (state: any) => {
     if (!state) return -1;
     let score = 0;
-    // Prioritize levels heavily
     if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 50000;
-    // Then farm level
     if (state.farmLevel) score += state.farmLevel * 5000;
-    // Then coins
     if (state.coins) score += state.coins;
-    
-    // Add small bonus for inventory size to break ties
     if (state.inventory) score += Object.keys(state.inventory).length * 10;
-    
     return score;
 };
 
@@ -157,65 +150,60 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false); 
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   
-  // Use a Ref to hold state for immediate access in event listeners
+  // Use a Ref to hold state for emergency saves
   const userStateRef = useRef(userState);
 
-  // Keep Ref updated (Legacy support for components reading ref directly if any)
-  useEffect(() => {
-      userStateRef.current = userState;
-  }, [userState]);
-  
   // --- INITIAL LOAD ---
   useEffect(() => {
       try {
         let loadedState: any = null;
         let sourceKey = '';
 
-        // STRATEGY: ALWAYS Search backups first to find the BEST data, 
-        // even if CURRENT_VERSION_KEY exists (in case user started fresh accidentally).
-        
-        const candidates: { key: string, data: any, score: number }[] = [];
-        
-        // 1. Check Current Key (v16)
+        // 1. PRIORITY: Check Current Key (v16) first
+        // If v16 exists, WE USE IT. We do NOT compare scores. 
+        // This prevents data loss if user spends coins (lowering score) and then reloads.
         const currentRaw = localStorage.getItem(CURRENT_VERSION_KEY);
         if (currentRaw) {
              try {
                 const parsed = JSON.parse(currentRaw);
-                const score = calculateProgressScore(parsed);
-                candidates.push({ key: CURRENT_VERSION_KEY, data: parsed, score });
-             } catch(e) {}
+                if (parsed && typeof parsed === 'object') {
+                    console.log(`✅ Loaded directly from ${CURRENT_VERSION_KEY}`);
+                    loadedState = parsed;
+                    sourceKey = CURRENT_VERSION_KEY;
+                }
+             } catch(e) {
+                 console.error("Current version corrupt, checking backups...");
+             }
         }
 
-        // 2. Check All Old Keys
-        [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (parsed && typeof parsed === 'object') {
-                        const score = calculateProgressScore(parsed);
-                        candidates.push({ key, data: parsed, score });
+        // 2. MIGRATION: Only if v16 is missing or corrupt, scan all old keys for the best one
+        if (!loadedState) {
+            console.log("⚠️ Current version missing. Scanning for best backup...");
+            const candidates: { key: string, data: any, score: number }[] = [];
+            
+            [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        if (parsed && typeof parsed === 'object') {
+                            const score = calculateProgressScore(parsed);
+                            candidates.push({ key, data: parsed, score });
+                        }
+                    } catch (e) {
+                        console.warn(`Corrupt data in ${key}`);
                     }
-                } catch (e) {
-                    console.warn(`Corrupt data in ${key}`);
                 }
-            }
-        });
+            });
 
-        // 3. Pick the Winner
-        candidates.sort((a, b) => b.score - a.score);
+            candidates.sort((a, b) => b.score - a.score);
 
-        if (candidates.length > 0) {
-            const best = candidates[0];
-            console.log(`🏆 WINNER: ${best.key} (Score: ${best.score})`);
-            
-            // If the winner isn't the current key, we are restoring/migrating!
-            if (best.key !== CURRENT_VERSION_KEY) {
-                console.log("♻️ Restoring data from older/better version...");
+            if (candidates.length > 0) {
+                const best = candidates[0];
+                console.log(`🏆 Restored from ${best.key} (Score: ${best.score})`);
+                loadedState = best.data;
+                sourceKey = best.key;
             }
-            
-            loadedState = best.data;
-            sourceKey = best.key;
         }
 
         // APPLY STATE
@@ -224,10 +212,11 @@ export default function App() {
             setUserState(migrated);
             userStateRef.current = migrated;
             
-            // Immediately save to current key to lock it in
-            localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
+            // If we recovered from an old backup, save to v16 immediately to lock it in
+            if (sourceKey !== CURRENT_VERSION_KEY) {
+                localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
+            }
         } else {
-            // New user
             console.log("🆕 New User Started");
             setUserState(DEFAULT_USER_STATE);
             userStateRef.current = DEFAULT_USER_STATE;
@@ -240,32 +229,42 @@ export default function App() {
       }
   }, []);
 
-  // --- INSTANT SAVE WRAPPER (SYNCHRONOUS) ---
+  // --- SAFER STATE UPDATE (ATOMIC) ---
   const handleUpdateState = useCallback((update: UserState | ((prev: UserState) => UserState)) => {
       if (!isLoaded) return;
-      const currentState = userStateRef.current;
-      const newState = typeof update === 'function' ? (update as any)(currentState) : update;
-      userStateRef.current = newState;
-      try {
-          localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
-      } catch (e) {
-          console.error("Instant Save Failed:", e);
-      }
-      setUserState(newState);
+      
+      setUserState(prev => {
+          const newState = typeof update === 'function' ? (update as any)(prev) : update;
+          
+          // Side Effect: Save to LocalStorage immediately
+          try {
+              localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
+              userStateRef.current = newState; // Keep ref synced
+          } catch (e) {
+              console.error("Save Failed:", e);
+          }
+          
+          return newState;
+      });
   }, [isLoaded]);
 
-  // Emergency Backup on Visibility Change (Mobile backgrounding)
+  // Emergency Backup on Visibility Change
   useEffect(() => {
       const handleVisibilityChange = () => {
-          if (document.visibilityState === 'hidden' && isLoaded) {
+          if (document.visibilityState === 'hidden' && isLoaded && userStateRef.current) {
               try {
                   localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userStateRef.current));
-                  console.log("⏸️ Background Save Executed");
               } catch (e) { console.error(e); }
           }
       };
       document.addEventListener('visibilitychange', handleVisibilityChange);
-      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Also save on beforeunload for desktop refresh
+      window.addEventListener('beforeunload', handleVisibilityChange);
+      
+      return () => {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+          window.removeEventListener('beforeunload', handleVisibilityChange);
+      };
   }, [isLoaded]);
 
   const [screen, setScreen] = useState<Screen>(Screen.ONBOARDING);
@@ -299,7 +298,6 @@ export default function App() {
     const levels = getLevels(grade, textbookId);
     const startId = levels[0]?.id; 
     
-    // Use the instant saver
     handleUpdateState(prev => {
         const currentUnlocked = prev.unlockedLevels || [];
         const newUnlockedLevels = startId && !currentUnlocked.includes(startId) 
@@ -373,7 +371,7 @@ export default function App() {
   const handleImportData = (data: any) => {
       if (data && typeof data === 'object') {
           const migrated = migrateState(data);
-          handleUpdateState(migrated); // Use instant save
+          handleUpdateState(migrated);
           localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
           alert("Khôi phục dữ liệu thành công! Ứng dụng sẽ tải lại.");
           window.location.reload();
@@ -544,7 +542,7 @@ export default function App() {
                   onUpdateSettings={(newSettings) => handleUpdateState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
                       // Only clear keys if user explicitly resets
-                      [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(k => localStorage.removeItem(k));
+                      [...ALL_STORAGE_KEYS, BACKUP_KEY, CURRENT_VERSION_KEY].forEach(k => localStorage.removeItem(k));
                       window.location.reload();
                   }}
                   onImportData={handleImportData}
