@@ -3,8 +3,13 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Bunny English - Tiếng Anh Tiểu Học</title>
+    <link rel="manifest" href="/manifest.json" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -16,6 +21,22 @@
         user-select: none; /* Prevent text selection */
         -webkit-tap-highlight-color: transparent;
         touch-action: pan-x pan-y; /* Disable double-tap zoom */
+        
+        /* Use dynamic viewport height to handle mobile browser bars correctly */
+        height: 100dvh; 
+        width: 100vw;
+        
+        /* Handle Safe Area (Notch/Home bar) */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        background-color: #f8fafc; /* Match bg-slate-50 */
+      }
+      #root {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
       }
       /* Custom utility for 3D flip card */
       .perspective-1000 {
