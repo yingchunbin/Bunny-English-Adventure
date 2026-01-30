@@ -18,11 +18,12 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react'; // Changed MessageCircle to Book
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// VERSION KEY
-const CURRENT_VERSION_KEY = 'turtle_english_state_v15';
+// VERSION KEY - BUMPED TO V16 TO FORCE DATA RECOVERY
+const CURRENT_VERSION_KEY = 'turtle_english_state_v16';
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 // UPDATED: Expanded list to include ALL possible previous versions to recover lost data
+// v15 is now treated as a "candidate" instead of the source of truth
 const ALL_STORAGE_KEYS = [
     'turtle_english_state_v15',
     'turtle_english_state_v14',
@@ -139,9 +140,16 @@ const migrateState = (oldState: any): UserState => {
 const calculateProgressScore = (state: any) => {
     if (!state) return -1;
     let score = 0;
-    if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 10000;
-    if (state.farmLevel) score += state.farmLevel * 1000;
+    // Prioritize levels heavily
+    if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 50000;
+    // Then farm level
+    if (state.farmLevel) score += state.farmLevel * 5000;
+    // Then coins
     if (state.coins) score += state.coins;
+    
+    // Add small bonus for inventory size to break ties
+    if (state.inventory) score += Object.keys(state.inventory).length * 10;
+    
     return score;
 };
 
@@ -163,51 +171,51 @@ export default function App() {
         let loadedState: any = null;
         let sourceKey = '';
 
-        // STRATEGY 1: Try exact current version match first
+        // STRATEGY: ALWAYS Search backups first to find the BEST data, 
+        // even if CURRENT_VERSION_KEY exists (in case user started fresh accidentally).
+        
+        const candidates: { key: string, data: any, score: number }[] = [];
+        
+        // 1. Check Current Key (v16)
         const currentRaw = localStorage.getItem(CURRENT_VERSION_KEY);
         if (currentRaw) {
-            try {
+             try {
                 const parsed = JSON.parse(currentRaw);
-                if (parsed && typeof parsed === 'object') {
-                    console.log(`✅ Loaded directly from current version: ${CURRENT_VERSION_KEY}`);
-                    loadedState = parsed;
-                    sourceKey = CURRENT_VERSION_KEY;
-                }
-            } catch (e) {
-                console.warn(`${CURRENT_VERSION_KEY} is corrupted.`);
-            }
+                const score = calculateProgressScore(parsed);
+                candidates.push({ key: CURRENT_VERSION_KEY, data: parsed, score });
+             } catch(e) {}
         }
 
-        // STRATEGY 2: If current version missing/corrupt, fallback to best backup (Migration)
-        if (!loadedState) {
-            console.log("⚠️ Current version not found, searching backups...");
-            const candidates: { key: string, data: any, score: number }[] = [];
-            [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
-                // Skip the current key we already checked
-                if (key === CURRENT_VERSION_KEY) return; 
-                
-                const raw = localStorage.getItem(key);
-                if (raw) {
-                    try {
-                        const parsed = JSON.parse(raw);
-                        if (parsed && typeof parsed === 'object') {
-                            const score = calculateProgressScore(parsed);
-                            candidates.push({ key, data: parsed, score });
-                        }
-                    } catch (e) {
-                        console.warn(`Corrupt data in ${key}`);
+        // 2. Check All Old Keys
+        [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        const score = calculateProgressScore(parsed);
+                        candidates.push({ key, data: parsed, score });
                     }
+                } catch (e) {
+                    console.warn(`Corrupt data in ${key}`);
                 }
-            });
-
-            candidates.sort((a, b) => b.score - a.score);
-
-            if (candidates.length > 0) {
-                const best = candidates[0];
-                console.log(`🏆 Restoring from backup: ${best.key} (Score: ${best.score})`);
-                loadedState = best.data;
-                sourceKey = best.key;
             }
+        });
+
+        // 3. Pick the Winner
+        candidates.sort((a, b) => b.score - a.score);
+
+        if (candidates.length > 0) {
+            const best = candidates[0];
+            console.log(`🏆 WINNER: ${best.key} (Score: ${best.score})`);
+            
+            // If the winner isn't the current key, we are restoring/migrating!
+            if (best.key !== CURRENT_VERSION_KEY) {
+                console.log("♻️ Restoring data from older/better version...");
+            }
+            
+            loadedState = best.data;
+            sourceKey = best.key;
         }
 
         // APPLY STATE
@@ -216,10 +224,8 @@ export default function App() {
             setUserState(migrated);
             userStateRef.current = migrated;
             
-            // If we loaded from a backup, immediately save to current key
-            if (sourceKey !== CURRENT_VERSION_KEY) {
-                localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
-            }
+            // Immediately save to current key to lock it in
+            localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
         } else {
             // New user
             console.log("🆕 New User Started");
