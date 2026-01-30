@@ -1,24 +1,52 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { UserState } from '../types';
-import { Volume2, VolumeX, Battery, BatteryCharging, Trash2, X, User, Music } from 'lucide-react';
+import { Volume2, VolumeX, Battery, BatteryCharging, Trash2, X, User, Music, Download, Upload } from 'lucide-react';
 import { ConfirmModal } from './ui/ConfirmModal';
 
 interface SettingsProps {
   userState: UserState;
   onUpdateSettings: (settings: any) => void;
   onResetData: () => void;
+  onImportData?: (data: any) => void;
   onClose: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onClose }) => {
+export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onImportData, onClose }) => {
   const { settings } = userState;
   const [showConfirmReset, setShowConfirmReset] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleVolumeChange = (type: 'sfx' | 'bgm', val: string) => {
     const value = parseFloat(val);
     if (type === 'sfx') onUpdateSettings({ ...settings, sfxVolume: value });
     else onUpdateSettings({ ...settings, bgmVolume: value });
+  };
+
+  const handleExport = () => {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(userState));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `turtle_english_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+          try {
+              const json = JSON.parse(event.target?.result as string);
+              if (onImportData) onImportData(json);
+          } catch (err) {
+              alert("File lỗi! Không thể đọc dữ liệu.");
+          }
+      };
+      reader.readAsText(file);
   };
 
   return (
@@ -32,7 +60,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={24} className="text-slate-500"/></button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
           
           {/* Profile Section */}
           <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
@@ -76,6 +104,36 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
                 className="flex-1 accent-green-500 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer"
               />
             </div>
+          </div>
+
+          {/* Backup & Restore (New Feature) */}
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">Dữ Liệu & Sao Lưu</h3>
+              <div className="grid grid-cols-2 gap-3">
+                  <button 
+                      onClick={handleExport}
+                      className="flex flex-col items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 p-3 rounded-2xl transition-all active:scale-95 text-emerald-700 font-bold text-xs"
+                  >
+                      <Download size={20} /> Tải dữ liệu về
+                  </button>
+                  
+                  <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex flex-col items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 p-3 rounded-2xl transition-all active:scale-95 text-amber-700 font-bold text-xs"
+                  >
+                      <Upload size={20} /> Nạp dữ liệu cũ
+                  </button>
+                  <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept=".json" 
+                      onChange={handleFileChange}
+                  />
+              </div>
+              <p className="text-[10px] text-slate-400 italic text-center">
+                  *Hãy tải dữ liệu về thường xuyên để không bị mất khi đổi máy nhé!
+              </p>
           </div>
 
           {/* Performance */}

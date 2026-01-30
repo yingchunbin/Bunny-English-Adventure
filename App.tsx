@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
@@ -18,19 +17,18 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// BUMP VERSION TO V14 TO FORCE MIGRATION & FIX
-const CURRENT_VERSION_KEY = 'turtle_english_state_v14';
+// UPDATE VERSION KEY TO FORCE A CLEAN LOAD ATTEMPT
+const CURRENT_VERSION_KEY = 'turtle_english_state_v15';
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const ALL_STORAGE_KEYS = [
+    'turtle_english_state_v15',
     'turtle_english_state_v14',
     'turtle_english_state_v13',
     'turtle_english_state_v12',
     'turtle_english_state_v11',
     'turtle_english_state_v10',
     'turtle_english_state_v9',
-    'turtle_english_state_v8',
-    'turtle_english_state_v7',
     'turtle_english_state'
 ];
 
@@ -84,66 +82,48 @@ const DEFAULT_USER_STATE: UserState = {
 };
 
 // --- SMART MERGE HELPER ---
-// Ensures we don't lose slots that have data just because the array length differs
-const smartMergeArray = (defaultArr: any[], oldArr: any[], keyCheck: string) => {
+const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any[], keyCheck: string): T[] => {
     if (!Array.isArray(oldArr) || oldArr.length === 0) return defaultArr;
-    
-    // Create a map of existing items by ID to preserve them
-    const oldMap = new Map(oldArr.map(item => [item.id, item]));
-    
-    // Start with default structure to ensure we have all required slots
-    // But if oldArr has MORE slots (purchased expansions), we want those too.
-    
-    // 1. Recover standard slots
+    const oldMap = new Map(oldArr.map((item: any) => [item.id, item]));
     const merged = defaultArr.map(defItem => {
         const oldItem = oldMap.get(defItem.id);
-        if (oldItem) {
-            // Check if old item has "content" (crop, animal, machine)
-            // If yes, prioritize old data. If no, still prioritize old data (e.g. unlocked status)
-            return { ...defItem, ...oldItem };
-        }
+        if (oldItem) return { ...defItem, ...oldItem };
         return defItem;
     });
-
-    // 2. Append extra slots user might have bought (IDs that are not in default)
-    oldArr.forEach(item => {
-        if (!merged.find(m => m.id === item.id)) {
-            merged.push(item);
-        }
+    oldArr.forEach((item: any) => {
+        if (!merged.find(m => m.id === item.id)) merged.push(item);
     });
-
     return merged;
 };
 
 const migrateState = (oldState: any): UserState => {
   let newState: UserState = { ...DEFAULT_USER_STATE };
 
-  // Primitive fields: Copy if exist
+  // Copy primitives
   const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
   primitives.forEach(key => {
       if (oldState[key] !== undefined) newState[key as keyof UserState] = oldState[key];
   });
 
-  // Objects/Maps: Copy if exist
+  // Copy Objects
   const objects = ['levelStars', 'lessonGuides', 'inventory', 'harvestedCrops', 'settings'];
   objects.forEach(key => {
       if (oldState[key]) newState[key as keyof UserState] = oldState[key];
   });
 
-  // Arrays: Copy if exist
+  // Copy Arrays
   const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) newState[key as keyof UserState] = oldState[key];
   });
 
-  // Complex Arrays (The Danger Zone): Use Smart Merge
+  // Smart Merge Complex Arrays
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
-  newState.livestockSlots = smartMergeArray(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId') as LivestockSlot[];
-  newState.machineSlots = smartMergeArray(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId') as MachineSlot[];
-  newState.decorSlots = smartMergeArray(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId') as DecorSlot[];
+  newState.livestockSlots = smartMergeArray<LivestockSlot>(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId');
+  newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
+  newState.decorSlots = smartMergeArray<DecorSlot>(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId');
 
-  // Fix specific migration edge case for decorations
-  // If user has 'activeDecorIds' (old format) but no 'decorSlots', migrate them
+  // Retroactive fix for old decoration format
   if ((!oldState.decorSlots || oldState.decorSlots.length === 0) && Array.isArray(oldState.activeDecorIds)) {
       const newSlots = [...newState.decorSlots || []];
       oldState.activeDecorIds.forEach((dId: string, idx: number) => {
@@ -157,30 +137,34 @@ const migrateState = (oldState: any): UserState => {
   return newState;
 };
 
-// Calculate a "Progress Score" to decide which save file is best
+// Score to determine best save file
 const calculateProgressScore = (state: any) => {
     if (!state) return -1;
     let score = 0;
     if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 10000;
     if (state.farmLevel) score += state.farmLevel * 1000;
     if (state.coins) score += state.coins;
-    // Boost score if farm has active items
-    if (state.livestockSlots?.some((s:any) => s.animalId)) score += 5000;
-    if (state.machineSlots?.some((s:any) => s.machineId)) score += 5000;
     return score;
 };
 
 export default function App() {
-  const [isLoaded, setIsLoaded] = useState(false); // CRITICAL FLAG: Don't save until true
-  
+  const [isLoaded, setIsLoaded] = useState(false); // SAFETY FLAG
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   
-  // --- INITIAL LOAD EFFECT ---
+  // Use a Ref to hold state for event listeners (closure issue fix)
+  const userStateRef = useRef(userState);
+
+  // Keep Ref updated
+  useEffect(() => {
+      userStateRef.current = userState;
+  }, [userState]);
+  
+  // --- INITIAL LOAD ---
   useEffect(() => {
       try {
         const candidates: { key: string, data: any, score: number }[] = [];
 
-        // 1. Check all versions including Backup
+        // Scan all possible keys including backups
         [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
             const raw = localStorage.getItem(key);
             if (raw) {
@@ -196,7 +180,7 @@ export default function App() {
             }
         });
 
-        // 2. Sort by Score Descending
+        // Pick the one with highest progress
         candidates.sort((a, b) => b.score - a.score);
 
         if (candidates.length > 0) {
@@ -205,7 +189,7 @@ export default function App() {
             const migrated = migrateState(best.data);
             setUserState(migrated);
             
-            // Create a backup immediately if we loaded a good save
+            // Immediately backup if it's a good save
             if (best.score > 500) {
                 localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
             }
@@ -217,33 +201,54 @@ export default function App() {
         console.error("Critical Load Error:", e);
         setUserState(DEFAULT_USER_STATE);
       } finally {
-          setIsLoaded(true); // Enable saving
+          // Only allow saving AFTER we have attempted to load
+          setIsLoaded(true); 
       }
   }, []);
 
-  // --- SAVE EFFECT (Only runs if isLoaded is true) ---
+  // --- REGULAR SAFE SAVE (Debounced) ---
   useEffect(() => {
-      if (!isLoaded) return; // BLOCKS OVERWRITING ON STARTUP
+      if (!isLoaded) return; // PREVENT OVERWRITE IF NOT LOADED
 
       const save = () => {
           try {
               const json = JSON.stringify(userState);
               localStorage.setItem(CURRENT_VERSION_KEY, json);
-              
-              // Updating backup occasionally (e.g. if significant progress)
-              // For simplicity, we assume if state is valid and loaded, we keep saving to main key.
-              // Backup is mostly for recovery on boot.
           } catch (e) {
               console.error("Save failed:", e);
           }
       };
 
-      // Debounce save slightly to avoid thrashing
-      const timeout = setTimeout(save, 500);
+      const timeout = setTimeout(save, 500); // 500ms debounce
       return () => clearTimeout(timeout);
   }, [userState, isLoaded]);
 
-  const [screen, setScreen] = useState<Screen>(Screen.ONBOARDING); // Default to onboarding, effect below will fix
+  // --- EMERGENCY SAVE (Instant on reload/close) ---
+  useEffect(() => {
+      const handleEmergencySave = () => {
+          if (isLoaded && userStateRef.current) {
+              try {
+                  const json = JSON.stringify(userStateRef.current);
+                  localStorage.setItem(CURRENT_VERSION_KEY, json);
+                  console.log("🚑 Emergency Save Executed!");
+              } catch (e) {
+                  console.error("Emergency Save Failed:", e);
+              }
+          }
+      };
+
+      // 'beforeunload' covers refresh/close on desktop
+      window.addEventListener('beforeunload', handleEmergencySave);
+      // 'pagehide' covers mobile browser backgrounding/switching tabs
+      window.addEventListener('pagehide', handleEmergencySave);
+
+      return () => {
+          window.removeEventListener('beforeunload', handleEmergencySave);
+          window.removeEventListener('pagehide', handleEmergencySave);
+      };
+  }, [isLoaded]);
+
+  const [screen, setScreen] = useState<Screen>(Screen.ONBOARDING);
   
   // Update screen based on loaded state
   useEffect(() => {
@@ -342,6 +347,20 @@ export default function App() {
       setScreen(Screen.HOME);
       setActiveLevel(null);
       playSFX('success');
+  };
+
+  const handleImportData = (data: any) => {
+      if (data && typeof data === 'object') {
+          const migrated = migrateState(data);
+          setUserState(migrated);
+          // Force save
+          localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
+          localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
+          alert("Khôi phục dữ liệu thành công! Ứng dụng sẽ tải lại.");
+          window.location.reload();
+      } else {
+          alert("File dữ liệu không hợp lệ.");
+      }
   };
 
   const currentBookName = TEXTBOOKS.find(b => b.id === userState.textbook)?.name || "Chưa chọn sách";
@@ -492,6 +511,7 @@ export default function App() {
                       [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(k => localStorage.removeItem(k));
                       window.location.reload();
                   }}
+                  onImportData={handleImportData}
                   onClose={() => setShowSettings(false)} 
               />
           )}

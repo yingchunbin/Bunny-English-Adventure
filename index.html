@@ -10,9 +10,12 @@
     <style>
       body {
         font-family: 'Nunito', sans-serif;
-        overscroll-behavior: none; /* Prevent pull-to-refresh on mobile */
+        /* CRITICAL FIX: Disable Pull-to-Refresh on Mobile */
+        overscroll-behavior: none; 
+        overflow: hidden; /* Prevent body scroll, handle scroll in containers */
         user-select: none; /* Prevent text selection */
         -webkit-tap-highlight-color: transparent;
+        touch-action: pan-x pan-y; /* Disable double-tap zoom */
       }
       /* Custom utility for 3D flip card */
       .perspective-1000 {
