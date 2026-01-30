@@ -47,36 +47,19 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       return inventory[id] || 0;
   };
 
-  // Helper to determine rarity glow based on cost (Stars) - MATCHING SHOP MODAL
-  const getRarityStyle = (cost: number) => {
-      if(cost >= 50) return { 
-          bg: 'bg-gradient-to-br from-yellow-50 to-amber-100', 
-          border: 'border-yellow-400', 
-          shadow: 'shadow-[0_0_20px_rgba(250,204,21,0.6)]', 
-          text: 'text-yellow-700',
-          badge: 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      }; 
-      if(cost >= 20) return { 
-          bg: 'bg-gradient-to-br from-purple-50 to-fuchsia-100', 
-          border: 'border-purple-400', 
-          shadow: 'shadow-[0_0_15px_rgba(192,132,252,0.5)]', 
-          text: 'text-purple-700',
-          badge: 'bg-purple-100 text-purple-800 border-purple-200'
-      }; 
-      if(cost >= 8) return { 
-          bg: 'bg-gradient-to-br from-blue-50 to-sky-100', 
-          border: 'border-blue-400', 
-          shadow: 'shadow-[0_0_10px_rgba(96,165,250,0.4)]', 
-          text: 'text-blue-700',
-          badge: 'bg-blue-100 text-blue-800 border-blue-200'
-      }; 
-      return { 
-          bg: 'bg-white', 
-          border: 'border-slate-200', 
-          shadow: 'shadow-sm', 
-          text: 'text-slate-700',
-          badge: 'bg-slate-100 text-slate-500 border-slate-200'
-      }; 
+  // Helper to determine rarity glow based on cost (Stars) - APPLIED ONLY TO IMAGE
+  const getRarityImageStyle = (cost: number) => {
+      if(cost >= 50) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; 
+      if(cost >= 20) return 'drop-shadow-[0_0_10px_rgba(192,132,252,0.6)]'; 
+      if(cost >= 8) return 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]'; 
+      return 'drop-shadow-sm'; 
+  };
+
+  const getRarityBadgeStyle = (cost: number) => {
+      if(cost >= 50) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      if(cost >= 20) return 'bg-purple-100 text-purple-800 border-purple-200';
+      if(cost >= 8) return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-slate-100 text-slate-500 border-slate-200';
   };
 
   const renderItemRow = (item: FarmItem, count: number) => {
@@ -87,7 +70,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       let decorStatus = null;
       const imgUrl = resolveImage(item.imageUrl);
       
-      let containerStyle = "bg-white border-slate-200 shadow-sm"; // Default for non-decor
+      let imageStyle = "";
 
       if (activeTab === 'ANIMALS') {
           const animal = animals.find(a => a.id === item.id);
@@ -113,12 +96,11 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
           const decor = decorations.find(d => d.id === item.id);
           const buffText = decor?.buff?.desc || "";
           
-          // Apply Rarity Glow Logic
-          const rarity = getRarityStyle(decor?.cost || 0);
-          containerStyle = `${rarity.bg} ${rarity.border} ${rarity.shadow}`;
+          imageStyle = getRarityImageStyle(decor?.cost || 0);
+          const badgeStyle = getRarityBadgeStyle(decor?.cost || 0);
 
           extraInfo = buffText ? (
-            <div className={`text-[9px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1 mt-1 ${rarity.badge}`}>
+            <div className={`text-[9px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1 mt-1 ${badgeStyle}`}>
                 <Plus size={8}/> {buffText}
             </div>
           ) : null;
@@ -142,18 +124,13 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       }
 
       return (
-          <div key={item.id} className={`border-4 rounded-3xl p-3 flex items-center justify-between animate-fadeIn relative overflow-hidden ${containerStyle}`}>
-              {/* Optional glow background for decor */}
-              {activeTab === 'DECOR' && (
-                  <div className="absolute -left-6 -top-6 w-24 h-24 bg-white/40 rounded-full blur-xl pointer-events-none"></div>
-              )}
-
+          <div key={item.id} className="bg-white border-slate-200 shadow-sm border-4 rounded-3xl p-3 flex items-center justify-between animate-fadeIn relative overflow-hidden">
               <div className="flex items-center gap-3 z-10">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative overflow-hidden ${activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : activeTab === 'MACHINES' ? 'bg-blue-50 border-blue-100' : 'bg-transparent border-transparent'}`}>
-                      {imgUrl ? <img src={imgUrl} alt={item.name} className="w-full h-full object-contain" /> : item.emoji}
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative overflow-hidden ${activeTab === 'DECOR' ? `bg-white ${imageStyle}` : activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
+                      {imgUrl ? <img src={imgUrl} alt={item.name} className={`w-full h-full object-contain ${imageStyle}`} /> : <div className={imageStyle}>{item.emoji}</div>}
                   </div>
                   <div>
-                      <div className={`font-black text-sm uppercase ${activeTab === 'DECOR' ? (getRarityStyle((item as Decor).cost).text) : 'text-slate-700'}`}>{item.name}</div>
+                      <div className="font-black text-sm uppercase text-slate-700">{item.name}</div>
                       {activeTab !== 'DECOR' && <div className="text-xs font-bold text-slate-400 mb-1">Số lượng: <span className="text-blue-600">{count}</span></div>}
                       {extraInfo}
                   </div>

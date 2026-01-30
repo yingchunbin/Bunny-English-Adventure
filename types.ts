@@ -165,6 +165,7 @@ export interface FarmOrder {
   rewardCoins: number;
   rewardExp: number;
   rewardStars?: number; // Added stars reward
+  rewardFertilizer?: number; // Added fertilizer reward
   expiresAt: number; 
 }
 

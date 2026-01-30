@@ -72,46 +72,25 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       return 'hover:scale-110';
   };
 
-  // Helper to determine rarity glow based on cost (Stars) - ENHANCED VISUALS
-  const getRarityStyle = (cost: number) => {
-      if(cost >= 50) return { 
-          bg: 'bg-gradient-to-br from-yellow-50 to-amber-100', 
-          border: 'border-yellow-400', 
-          shadow: 'shadow-[0_0_20px_rgba(250,204,21,0.6)]', 
-          text: 'text-yellow-700',
-          badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-          animation: 'animate-pulse' // Special pulse for legendary
-      }; // Legendary
-      if(cost >= 20) return { 
-          bg: 'bg-gradient-to-br from-purple-50 to-fuchsia-100', 
-          border: 'border-purple-400', 
-          shadow: 'shadow-[0_0_15px_rgba(192,132,252,0.5)]', 
-          text: 'text-purple-700',
-          badge: 'bg-purple-100 text-purple-800 border-purple-200',
-          animation: ''
-      }; // Epic
-      if(cost >= 8) return { 
-          bg: 'bg-gradient-to-br from-blue-50 to-sky-100', 
-          border: 'border-blue-400', 
-          shadow: 'shadow-[0_0_10px_rgba(96,165,250,0.4)]', 
-          text: 'text-blue-700',
-          badge: 'bg-blue-100 text-blue-800 border-blue-200',
-          animation: ''
-      }; // Rare
-      return { 
-          bg: 'bg-white', 
-          border: 'border-slate-200', 
-          shadow: 'shadow-sm', 
-          text: 'text-slate-700',
-          badge: 'bg-slate-100 text-slate-500 border-slate-200',
-          animation: ''
-      }; // Common
+  // Helper to determine rarity glow based on cost (Stars) - APPLIED ONLY TO IMAGE
+  const getRarityImageStyle = (cost: number) => {
+      if(cost >= 50) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; // Legendary
+      if(cost >= 20) return 'drop-shadow-[0_0_10px_rgba(192,132,252,0.6)]'; // Epic
+      if(cost >= 8) return 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]'; // Rare
+      return 'drop-shadow-sm'; // Common
   };
 
-  const sortedCrops = sortItems(crops.filter(c => !c.isMagic));
-  const sortedAnimals = sortItems(animals);
-  const sortedMachines = sortItems(machines);
-  const sortedDecor = sortItems(decorations);
+  const getRarityBadgeStyle = (cost: number) => {
+      if(cost >= 50) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      if(cost >= 20) return 'bg-purple-100 text-purple-800 border-purple-200';
+      if(cost >= 8) return 'bg-blue-100 text-blue-800 border-blue-200';
+      return 'bg-slate-100 text-slate-500 border-slate-200';
+  };
+
+  const sortedCrops = sortItems(crops.filter(c => !c.isMagic)) as Crop[];
+  const sortedAnimals = sortItems(animals) as AnimalItem[];
+  const sortedMachines = sortItems(machines) as MachineItem[];
+  const sortedDecor = sortItems(decorations) as Decor[];
 
   const allItems = [...crops, ...products];
 
@@ -288,7 +267,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
-                {/* DECOR - GLOW EFFECTS ENHANCED */}
+                {/* DECOR - FIXED GLOW */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedDecor.map(decor => {
@@ -297,26 +276,22 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             const anim = getDecorAnimation(decor.id);
                             const imgUrl = resolveImage(decor.imageUrl);
                             
-                            // Determine rarity style
-                            const style = getRarityStyle(decor.cost);
+                            const imageGlow = getRarityImageStyle(decor.cost);
+                            const badgeStyle = getRarityBadgeStyle(decor.cost);
 
-                            // Keep style even if owned, just overlay "owned" status
                             return (
                                 <div 
                                     key={decor.id} 
-                                    className={`p-4 rounded-3xl border-4 flex items-center gap-4 transition-all relative overflow-hidden group ${style.border} ${style.bg} ${style.shadow}`}
+                                    className="p-4 rounded-3xl border-4 bg-white border-slate-100 shadow-sm flex items-center gap-4 transition-all relative overflow-hidden group"
                                 >
-                                    {/* Glowing Background Effect - Stronger for higher rarity */}
-                                    <div className="absolute -left-10 -top-10 w-40 h-40 bg-white/40 rounded-full blur-2xl opacity-50 pointer-events-none"></div>
-
-                                    <div className={`w-16 h-16 flex items-center justify-center z-10 transition-all drop-shadow-md ${anim} ${style.animation}`}>
+                                    <div className={`w-16 h-16 flex items-center justify-center z-10 transition-all ${anim} ${imageGlow}`}>
                                         {imgUrl ? <img src={imgUrl} alt={decor.name} className="w-full h-full object-contain" /> : <div className="text-6xl">{decor.emoji}</div>}
                                     </div>
                                     
                                     <div className="flex-1 z-10">
-                                        <div className={`font-black text-sm uppercase tracking-tight ${style.text}`}>{decor.name}</div>
+                                        <div className="font-black text-sm text-slate-700 uppercase tracking-tight">{decor.name}</div>
                                         {decor.buff && (
-                                            <div className={`text-[10px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm backdrop-blur-sm ${style.badge}`}>
+                                            <div className={`text-[10px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm ${badgeStyle}`}>
                                                 <Plus size={8}/> {decor.buff.desc}
                                             </div>
                                         )}

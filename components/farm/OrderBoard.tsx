@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FarmOrder, FarmItem } from '../../types';
-import { Truck, X, RefreshCw, Coins, Zap, Clock, Info, Star, CheckCircle } from 'lucide-react';
+import { Truck, X, RefreshCw, Coins, Zap, Clock, Info, Star, CheckCircle, Crown, Gift } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { Avatar } from '../Avatar';
 import { CROPS, ANIMALS, RECIPES, MACHINES, PRODUCTS } from '../../data/farmData';
@@ -46,7 +46,7 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
       setTimeout(() => {
           onDeliver(order);
           setDeliveringId(null);
-      }, 1500);
+      }, 2500); // Increased delay to show off rewards
   };
 
   const handleItemClick = (item: FarmItem) => {
@@ -110,21 +110,32 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                         // RENDER SUCCESS STATE
                         if (isDelivering) {
                             return (
-                                <div key={order.id} className="bg-green-50 border-4 border-green-400 rounded-[2rem] p-6 shadow-lg flex flex-col items-center justify-center animate-bounce min-h-[160px]">
-                                    <div className="text-green-600 mb-2 animate-ping"><CheckCircle size={48} /></div>
-                                    <h4 className="text-xl font-black text-green-700 uppercase tracking-tight mb-4">Giao Hàng Thành Công!</h4>
-                                    <div className="flex gap-4 items-center bg-white px-4 py-2 rounded-2xl shadow-sm border-2 border-green-200">
-                                        <div className="flex items-center gap-1 font-black text-amber-500 text-lg">
-                                            +{order.rewardCoins} <Coins size={20} fill="currentColor"/>
+                                <div key={order.id} className="bg-green-50 border-4 border-green-400 rounded-[2rem] p-6 shadow-lg flex flex-col items-center justify-center animate-bounce min-h-[200px] relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-green-100/50 animate-pulse"></div>
+                                    <div className="text-green-600 mb-2 animate-ping relative z-10"><CheckCircle size={56} /></div>
+                                    <h4 className="text-2xl font-black text-green-700 uppercase tracking-tight mb-4 relative z-10">Thành Công!</h4>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 w-full relative z-10">
+                                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-amber-200">
+                                            <Coins size={24} className="text-amber-500 fill-amber-500"/>
+                                            <span className="font-black text-slate-700 text-lg">+{order.rewardCoins}</span>
                                         </div>
-                                        {order.rewardStars && order.rewardStars > 0 && (
-                                            <div className="flex items-center gap-1 font-black text-purple-500 text-lg">
-                                                +{order.rewardStars} <Star size={20} fill="currentColor"/>
+                                        <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-blue-200">
+                                            <Crown size={24} className="text-blue-500 fill-blue-500"/>
+                                            <span className="font-black text-slate-700 text-lg">+{order.rewardExp} XP</span>
+                                        </div>
+                                        {(order.rewardStars || 0) > 0 && (
+                                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-purple-200">
+                                                <Star size={24} className="text-purple-500 fill-purple-500"/>
+                                                <span className="font-black text-slate-700 text-lg">+{order.rewardStars}</span>
                                             </div>
                                         )}
-                                        <div className="flex items-center gap-1 font-black text-blue-500 text-lg">
-                                            +{order.rewardExp} <Zap size={20} fill="currentColor"/>
-                                        </div>
+                                        {(order.rewardFertilizer || 0) > 0 && (
+                                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-sm border border-indigo-200">
+                                                <Zap size={24} className="text-indigo-500 fill-indigo-500"/>
+                                                <span className="font-black text-slate-700 text-lg">+{order.rewardFertilizer}</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -143,12 +154,15 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <div className="flex items-center gap-1 text-[10px] font-black text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200"><Coins size={12} fill="currentColor"/> {order.rewardCoins}</div>
+                                    <div className="flex gap-1.5 flex-wrap justify-end max-w-[60%]">
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100"><Coins size={10} fill="currentColor"/> {order.rewardCoins}</div>
+                                        <div className="flex items-center gap-1 text-[10px] font-black text-blue-700 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100" title="Kinh nghiệm"><Crown size={10} fill="currentColor"/> {order.rewardExp}</div>
                                         {(order.rewardStars || 0) > 0 && (
-                                            <div className="flex items-center gap-1 text-[10px] font-black text-purple-700 bg-purple-100 px-3 py-1.5 rounded-full border border-purple-200"><Star size={12} fill="currentColor"/> {order.rewardStars}</div>
+                                            <div className="flex items-center gap-1 text-[10px] font-black text-purple-700 bg-purple-50 px-2 py-1 rounded-lg border border-purple-100"><Star size={10} fill="currentColor"/> {order.rewardStars}</div>
                                         )}
-                                        <div className="flex items-center gap-1 text-[10px] font-black text-blue-700 bg-blue-100 px-3 py-1.5 rounded-full border border-blue-200"><Zap size={12} fill="currentColor"/> {order.rewardExp}</div>
+                                        {(order.rewardFertilizer || 0) > 0 && (
+                                            <div className="flex items-center gap-1 text-[10px] font-black text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100" title="Phân bón"><Zap size={10} fill="currentColor"/> {order.rewardFertilizer}</div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -164,16 +178,16 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                                 <div 
                                                     key={req.cropId} 
                                                     onClick={() => handleItemClick(item)}
-                                                    className="flex flex-col items-center bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[70px] cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-colors group relative"
+                                                    className="flex flex-col items-center bg-slate-50 p-2 rounded-xl border border-slate-100 min-w-[60px] cursor-pointer hover:bg-blue-50 hover:border-blue-200 transition-colors group relative"
                                                 >
                                                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"><Info size={10} className="text-blue-400"/></div>
                                                     <div className="relative">
-                                                        <span className="text-3xl filter drop-shadow-sm select-none">{item.emoji}</span>
-                                                        <div className={`absolute -bottom-1 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-md border ${isEnough ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-700 border-red-300'}`}>
+                                                        <span className="text-2xl filter drop-shadow-sm select-none">{item.emoji}</span>
+                                                        <div className={`absolute -bottom-1 -right-2 text-[9px] font-black px-1.5 py-0.5 rounded-md border shadow-sm ${isEnough ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-700 border-red-300'}`}>
                                                             {has}/{req.amount}
                                                         </div>
                                                     </div>
-                                                    <span className="text-[9px] font-bold text-slate-600 mt-1 max-w-[60px] truncate">{item.name}</span>
+                                                    <span className="text-[8px] font-bold text-slate-500 mt-1 max-w-[50px] truncate">{item.name}</span>
                                                 </div>
                                             )
                                         })}
@@ -189,9 +203,9 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                             }
                                         }}
                                         disabled={isExpired || deliveringId !== null}
-                                        className={`ml-2 h-12 px-5 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center ${canDeliver && !isExpired ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}
+                                        className={`ml-2 h-12 px-4 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center gap-1 ${canDeliver && !isExpired ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}
                                     >
-                                        {isExpired ? 'Hết hạn' : 'Giao Hàng'}
+                                        {isExpired ? 'Hết hạn' : <><Gift size={16}/> Giao</>}
                                     </button>
                                 </div>
                             </div>

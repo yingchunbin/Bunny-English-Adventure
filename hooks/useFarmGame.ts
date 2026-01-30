@@ -51,6 +51,33 @@ export const useFarmGame = (
       return 5; // Default fallback
   };
 
+  // Helper: Recursive Base Cost Calculation
+  const getBaseCost = (itemId: string): number => {
+      const crop = CROPS.find(c => c.id === itemId);
+      if (crop) {
+          // If bought with Stars, value it highly (e.g., 500 coins per star)
+          if (crop.currency === 'STAR') return crop.cost * 500; 
+          return crop.cost;
+      }
+
+      const product = PRODUCTS.find(p => p.id === itemId);
+      if (product) {
+          if (product.type === 'PRODUCT') {
+              const animal = ANIMALS.find(a => a.produceId === itemId);
+              if (animal) {
+                  // Cost = Feed Cost * Amount
+                  return getBaseCost(animal.feedCropId) * animal.feedAmount;
+              }
+          } else if (product.type === 'PROCESSED') {
+              const recipe = RECIPES.find(r => r.outputId === itemId);
+              if (recipe) {
+                  return recipe.input.reduce((sum, ing) => sum + (getBaseCost(ing.id) * ing.amount), 0);
+              }
+          }
+      }
+      return 10; // Fallback
+  };
+
   // Helper: Create a single order with calculated time
   const createSingleOrder = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
       const npcs = ["Bác Gấu", "Cô Mèo", "Bạn Thỏ", "Chú Hổ", "Bà Cáo", "Thầy Rùa", "Chị Ong Vàng", "Anh Kiến", "Cụ Voi"];
@@ -86,31 +113,42 @@ export const useFarmGame = (
       }
 
       const requirements = [];
-      let totalValue = 0;
+      let totalCost = 0;
       let totalExp = 0;
       let maxProductionTime = 0;
 
       for (const [itemId, amount] of Object.entries(tempReqs)) {
           requirements.push({ cropId: itemId, amount });
           
-          // Value & Exp Calc
+          // Cost Calc using recursive function
+          const baseCost = getBaseCost(itemId);
+          totalCost += baseCost * amount;
+
+          // Exp Calc
           const itemData = [...CROPS, ...PRODUCTS].find(x => x.id === itemId);
           if (itemData) {
-              totalValue += itemData.sellPrice * amount;
               const expBase = itemData.type === 'CROP' ? (itemData as Crop).exp : 20;
               totalExp += expBase * amount * 3.0;
           }
 
-          // Time Calc: Estimate time to produce this batch
+          // Time Calc
           const unitTime = getItemProductionTime(itemId);
-          const batchTime = unitTime * Math.ceil(amount / 2); // Assume 2 slots avg
+          const batchTime = unitTime * Math.ceil(amount / 2); 
           if (batchTime > maxProductionTime) maxProductionTime = batchTime;
       }
 
       const durationMinutes = Math.max(15, maxProductionTime * 3);
 
-      const finalCoins = Math.ceil((totalValue * 2.5) / 10) * 10;
+      // Reward Calculation: 2.0x to 3.0x of the TRUE COST
+      const multiplier = 2.5 + Math.random() * 1.5; // Random between 2.5 and 4.0
+      // Ensure a minimum base reward of 100 to prevent tiny orders feeling worthless
+      const baseReward = Math.ceil(totalCost * multiplier);
+      const finalCoins = Math.max(100, Math.ceil(baseReward / 10) * 10);
+
       const rewardStars = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0;
+      
+      // STRICT fertilizer control: 0, 1, 2, or 3.
+      const rewardFertilizer = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0; 
 
       return {
           id: Math.random().toString(36).substr(2, 9),
@@ -119,6 +157,7 @@ export const useFarmGame = (
           rewardCoins: finalCoins,
           rewardExp: Math.ceil(totalExp / 5) * 5,
           rewardStars: rewardStars,
+          rewardFertilizer: rewardFertilizer,
           expiresAt: Date.now() + (durationMinutes * 60 * 1000)
       };
   };
@@ -129,7 +168,7 @@ export const useFarmGame = (
       return ownedMachineIds.includes(recipe.machineId);
   };
 
-  // --- INIT LOGIC (Effect) ---
+  // ... (No changes to INIT LOGIC) ...
   useEffect(() => {
       const todayStr = new Date().toDateString();
       onUpdateState(prev => {
@@ -182,7 +221,7 @@ export const useFarmGame = (
       });
   }, []); 
 
-  // --- MAIN GAME LOOP ---
+  // ... (No changes to MAIN GAME LOOP) ...
   useEffect(() => {
     const interval = setInterval(() => {
         const currentTime = Date.now();
@@ -333,6 +372,7 @@ export const useFarmGame = (
     return () => clearInterval(interval);
   }, []);
 
+  // ... (Existing helpers) ...
   const updateMissionProgress = useCallback((type: Mission['type'], amount: number) => {
       onUpdateState(prev => {
           if (!prev.missions) return prev;
@@ -788,6 +828,7 @@ export const useFarmGame = (
       if (!hasEnough) return { success: false, msg: "Bé chưa đủ hàng trong Kho nông sản để giao!" };
 
       playSFX('success');
+      playSFX('coins'); // Extra feedback
       onUpdateState(prev => {
           const newHarvested = { ...(prev.harvestedCrops || {}) };
           order.requirements.forEach(req => { newHarvested[req.cropId] -= req.amount; });
@@ -801,6 +842,7 @@ export const useFarmGame = (
               ...prev,
               coins: prev.coins + order.rewardCoins,
               stars: prev.stars + (order.rewardStars || 0), // Award stars
+              fertilizers: (prev.fertilizers || 0) + (order.rewardFertilizer || 0), // Award fertilizer
               harvestedCrops: newHarvested,
               farmLevel: newLevel,
               farmExp: newExp,

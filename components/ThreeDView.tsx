@@ -16,19 +16,6 @@ THREE.DefaultLoadingManager.onError = (url) => {
   console.error(`There was an error loading ${url}`);
 };
 
-// Add IntrinsicElements support for TypeScript
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      group: any;
-      primitive: any;
-      ambientLight: any;
-      directionalLight: any;
-      pointLight: any;
-    }
-  }
-}
-
 function Loader() {
   const { progress } = useProgress();
   return <Html center><span className="text-xs font-bold text-slate-400">{progress.toFixed(0)}%</span></Html>;
@@ -132,7 +119,7 @@ export const ThreeDView: React.FC<ThreeDViewProps> = ({
   modelUrl, 
   fallbackEmoji, 
   className = "w-full h-full", 
-  autoRotate = true,
+  autoRotate = true, 
   interactive = false
 }) => {
   const [error, setError] = useState(false);
@@ -180,9 +167,11 @@ class ErrorBoundary extends React.Component<{ setHasError: (v: boolean) => void,
     return { hasError: true };
   }
   componentDidCatch(error: any) {
-    this.props.setHasError(true);
+    // Explicitly cast 'this' to any to access props if TS complains about missing 'props' property
+    (this as any).props.setHasError(true);
   }
   render() {
-    return this.props.children;
+    // Explicitly cast 'this' to any to access props if TS complains about missing 'props' property
+    return (this as any).props.children;
   }
 }
