@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
@@ -17,7 +17,7 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// UPDATE VERSION KEY TO FORCE A CLEAN LOAD ATTEMPT
+// VERSION KEY
 const CURRENT_VERSION_KEY = 'turtle_english_state_v15';
 const BACKUP_KEY = 'turtle_english_state_backup';
 
@@ -82,16 +82,16 @@ const DEFAULT_USER_STATE: UserState = {
 };
 
 // --- SMART MERGE HELPER ---
-const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any[], keyCheck: string): T[] => {
+const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any, keyCheck: string): T[] => {
     if (!Array.isArray(oldArr) || oldArr.length === 0) return defaultArr;
     const oldMap = new Map(oldArr.map((item: any) => [item.id, item]));
-    const merged = defaultArr.map(defItem => {
+    const merged: T[] = defaultArr.map(defItem => {
         const oldItem = oldMap.get(defItem.id);
-        if (oldItem) return { ...defItem, ...oldItem };
+        if (oldItem) return { ...defItem, ...oldItem } as T;
         return defItem;
     });
     oldArr.forEach((item: any) => {
-        if (!merged.find(m => m.id === item.id)) merged.push(item);
+        if (!merged.find(m => m.id === item.id)) merged.push(item as T);
     });
     return merged;
 };
@@ -123,21 +123,9 @@ const migrateState = (oldState: any): UserState => {
   newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
   newState.decorSlots = smartMergeArray<DecorSlot>(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId');
 
-  // Retroactive fix for old decoration format
-  if ((!oldState.decorSlots || oldState.decorSlots.length === 0) && Array.isArray(oldState.activeDecorIds)) {
-      const newSlots = [...newState.decorSlots || []];
-      oldState.activeDecorIds.forEach((dId: string, idx: number) => {
-          if (idx < newSlots.length) {
-              newSlots[idx] = { ...newSlots[idx], isUnlocked: true, decorId: dId };
-          }
-      });
-      newState.decorSlots = newSlots;
-  }
-
   return newState;
 };
 
-// Score to determine best save file
 const calculateProgressScore = (state: any) => {
     if (!state) return -1;
     let score = 0;
@@ -148,13 +136,13 @@ const calculateProgressScore = (state: any) => {
 };
 
 export default function App() {
-  const [isLoaded, setIsLoaded] = useState(false); // SAFETY FLAG
+  const [isLoaded, setIsLoaded] = useState(false); 
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   
-  // Use a Ref to hold state for event listeners (closure issue fix)
+  // Use a Ref to hold state for immediate access in event listeners
   const userStateRef = useRef(userState);
 
-  // Keep Ref updated
+  // Keep Ref updated (Legacy support for components reading ref directly if any)
   useEffect(() => {
       userStateRef.current = userState;
   }, [userState]);
@@ -163,8 +151,6 @@ export default function App() {
   useEffect(() => {
       try {
         const candidates: { key: string, data: any, score: number }[] = [];
-
-        // Scan all possible keys including backups
         [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
             const raw = localStorage.getItem(key);
             if (raw) {
@@ -180,72 +166,70 @@ export default function App() {
             }
         });
 
-        // Pick the one with highest progress
         candidates.sort((a, b) => b.score - a.score);
 
         if (candidates.length > 0) {
             const best = candidates[0];
             console.log(`🏆 Restoring best save from: ${best.key} (Score: ${best.score})`);
             const migrated = migrateState(best.data);
-            setUserState(migrated);
             
-            // Immediately backup if it's a good save
+            // Set initial state
+            setUserState(migrated);
+            userStateRef.current = migrated; // Sync ref immediately
+            
             if (best.score > 500) {
                 localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
             }
         } else {
-            console.log("🆕 New user or no valid save found. Starting fresh.");
             setUserState(DEFAULT_USER_STATE);
+            userStateRef.current = DEFAULT_USER_STATE;
         }
       } catch (e) {
         console.error("Critical Load Error:", e);
         setUserState(DEFAULT_USER_STATE);
       } finally {
-          // Only allow saving AFTER we have attempted to load
           setIsLoaded(true); 
       }
   }, []);
 
-  // --- REGULAR SAFE SAVE (Debounced) ---
-  useEffect(() => {
-      if (!isLoaded) return; // PREVENT OVERWRITE IF NOT LOADED
+  // --- INSTANT SAVE WRAPPER ---
+  // This is the core fix. Instead of useEffect based saving (which is async and debounced),
+  // we use a wrapper that saves synchronously to LocalStorage BEFORE setting React state.
+  const handleUpdateState = useCallback((update: UserState | ((prev: UserState) => UserState)) => {
+      if (!isLoaded) return;
 
-      const save = () => {
+      setUserState(prev => {
+          // 1. Calculate new state
+          const newState = typeof update === 'function' ? update(prev) : update;
+          
+          // 2. Sync Ref immediately (Source of truth for rapid events)
+          userStateRef.current = newState;
+
+          // 3. Persist to LocalStorage IMMEDIATELY (Synchronous)
+          // This blocks the thread for a few ms, but guarantees data safety on crash/reload
           try {
-              const json = JSON.stringify(userState);
-              localStorage.setItem(CURRENT_VERSION_KEY, json);
+              localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
           } catch (e) {
-              console.error("Save failed:", e);
+              console.error("Instant Save Failed:", e);
           }
-      };
 
-      const timeout = setTimeout(save, 500); // 500ms debounce
-      return () => clearTimeout(timeout);
-  }, [userState, isLoaded]);
+          // 4. Return for React render
+          return newState;
+      });
+  }, [isLoaded]);
 
-  // --- EMERGENCY SAVE (Instant on reload/close) ---
+  // Emergency Backup on Visibility Change (Mobile backgrounding)
   useEffect(() => {
-      const handleEmergencySave = () => {
-          if (isLoaded && userStateRef.current) {
+      const handleVisibilityChange = () => {
+          if (document.visibilityState === 'hidden' && isLoaded) {
               try {
-                  const json = JSON.stringify(userStateRef.current);
-                  localStorage.setItem(CURRENT_VERSION_KEY, json);
-                  console.log("🚑 Emergency Save Executed!");
-              } catch (e) {
-                  console.error("Emergency Save Failed:", e);
-              }
+                  localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userStateRef.current));
+                  console.log("⏸️ Background Save Executed");
+              } catch (e) { console.error(e); }
           }
       };
-
-      // 'beforeunload' covers refresh/close on desktop
-      window.addEventListener('beforeunload', handleEmergencySave);
-      // 'pagehide' covers mobile browser backgrounding/switching tabs
-      window.addEventListener('pagehide', handleEmergencySave);
-
-      return () => {
-          window.removeEventListener('beforeunload', handleEmergencySave);
-          window.removeEventListener('pagehide', handleEmergencySave);
-      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [isLoaded]);
 
   const [screen, setScreen] = useState<Screen>(Screen.ONBOARDING);
@@ -279,7 +263,8 @@ export default function App() {
     const levels = getLevels(grade, textbookId);
     const startId = levels[0]?.id; 
     
-    setUserState(prev => {
+    // Use the instant saver
+    handleUpdateState(prev => {
         const currentUnlocked = prev.unlockedLevels || [];
         const newUnlockedLevels = startId && !currentUnlocked.includes(startId) 
             ? [...currentUnlocked, startId] 
@@ -323,7 +308,7 @@ export default function App() {
       if (!activeLevel) return;
       const stars = 3; 
       
-      setUserState(prev => {
+      handleUpdateState(prev => {
           const newCompleted = prev.completedLevels.includes(activeLevel.id) ? prev.completedLevels : [...prev.completedLevels, activeLevel.id];
           const newStars = Math.max(prev.levelStars[activeLevel.id] || 0, stars);
           
@@ -352,9 +337,7 @@ export default function App() {
   const handleImportData = (data: any) => {
       if (data && typeof data === 'object') {
           const migrated = migrateState(data);
-          setUserState(migrated);
-          // Force save
-          localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
+          handleUpdateState(migrated); // Use instant save
           localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
           alert("Khôi phục dữ liệu thành công! Ứng dụng sẽ tải lại.");
           window.location.reload();
@@ -423,7 +406,7 @@ export default function App() {
           {screen === Screen.FARM && (
               <Farm 
                   userState={userState} 
-                  onUpdateState={setUserState} 
+                  onUpdateState={handleUpdateState} 
                   onExit={() => setScreen(Screen.HOME)} 
                   allWords={LEVELS.flatMap(l => l.words)}
                   levels={getLevels(userState.grade, userState.textbook)}
@@ -447,7 +430,7 @@ export default function App() {
                   words={LEVELS.flatMap(l => l.words)}
                   onComplete={(score) => {
                       const earnedCoins = Math.floor(score / 10);
-                      setUserState(prev => ({ ...prev, coins: prev.coins + earnedCoins }));
+                      handleUpdateState(prev => ({ ...prev, coins: prev.coins + earnedCoins }));
                       setScreen(Screen.HOME);
                   }}
                   onExit={() => setScreen(Screen.HOME)}
@@ -485,7 +468,7 @@ export default function App() {
                           <SpeakingGame 
                               words={activeLevel.words} 
                               onComplete={(coins) => {
-                                  setUserState(prev => ({ ...prev, coins: prev.coins + coins }));
+                                  handleUpdateState(prev => ({ ...prev, coins: prev.coins + coins }));
                                   setGameStep('GUIDE');
                               }}
                           />
@@ -494,7 +477,7 @@ export default function App() {
                           <LessonGuide 
                               level={activeLevel} 
                               userState={userState}
-                              onUpdateState={setUserState}
+                              onUpdateState={handleUpdateState}
                               onComplete={() => handleLevelComplete(0)}
                           />
                       )}
@@ -505,7 +488,7 @@ export default function App() {
           {showSettings && (
               <Settings 
                   userState={userState} 
-                  onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
+                  onUpdateSettings={(newSettings) => handleUpdateState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
                       // Only clear keys if user explicitly resets
                       [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(k => localStorage.removeItem(k));
