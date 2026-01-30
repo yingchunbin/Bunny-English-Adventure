@@ -102,19 +102,19 @@ const migrateState = (oldState: any): UserState => {
   // Copy primitives
   const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
   primitives.forEach(key => {
-      if (oldState[key] !== undefined) newState[key as keyof UserState] = oldState[key];
+      if (oldState[key] !== undefined) (newState as any)[key] = oldState[key];
   });
 
   // Copy Objects
   const objects = ['levelStars', 'lessonGuides', 'inventory', 'harvestedCrops', 'settings'];
   objects.forEach(key => {
-      if (oldState[key]) newState[key as keyof UserState] = oldState[key];
+      if (oldState[key]) (newState as any)[key] = oldState[key];
   });
 
   // Copy Arrays
   const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders'];
   simpleArrays.forEach(key => {
-      if (Array.isArray(oldState[key])) newState[key as keyof UserState] = oldState[key];
+      if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
 
   // Smart Merge Complex Arrays
@@ -192,30 +192,32 @@ export default function App() {
       }
   }, []);
 
-  // --- INSTANT SAVE WRAPPER ---
-  // This is the core fix. Instead of useEffect based saving (which is async and debounced),
-  // we use a wrapper that saves synchronously to LocalStorage BEFORE setting React state.
+  // --- INSTANT SAVE WRAPPER (SYNCHRONOUS) ---
+  // Fix: Calculates state based on Ref (source of truth) and saves immediately.
+  // This bypasses React's async state queue for the storage write.
   const handleUpdateState = useCallback((update: UserState | ((prev: UserState) => UserState)) => {
       if (!isLoaded) return;
 
-      setUserState(prev => {
-          // 1. Calculate new state
-          const newState = typeof update === 'function' ? update(prev) : update;
-          
-          // 2. Sync Ref immediately (Source of truth for rapid events)
-          userStateRef.current = newState;
+      // 1. Get latest state synchronously from Ref
+      // This prevents using stale state if React hasn't re-rendered yet
+      const currentState = userStateRef.current;
 
-          // 3. Persist to LocalStorage IMMEDIATELY (Synchronous)
-          // This blocks the thread for a few ms, but guarantees data safety on crash/reload
-          try {
-              localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
-          } catch (e) {
-              console.error("Instant Save Failed:", e);
-          }
+      // 2. Calculate new state immediately
+      const newState = typeof update === 'function' ? (update as any)(currentState) : update;
 
-          // 4. Return for React render
-          return newState;
-      });
+      // 3. Update Ref immediately
+      userStateRef.current = newState;
+
+      // 4. Persist to LocalStorage IMMEDIATELY (Synchronous)
+      // This blocks the thread for a few ms, but guarantees data safety on crash/reload
+      try {
+          localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
+      } catch (e) {
+          console.error("Instant Save Failed:", e);
+      }
+
+      // 5. Update React State (Async, for UI)
+      setUserState(newState);
   }, [isLoaded]);
 
   // Emergency Backup on Visibility Change (Mobile backgrounding)
