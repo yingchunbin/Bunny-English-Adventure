@@ -150,37 +150,69 @@ export default function App() {
   // --- INITIAL LOAD ---
   useEffect(() => {
       try {
-        const candidates: { key: string, data: any, score: number }[] = [];
-        [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    if (parsed && typeof parsed === 'object') {
-                        const score = calculateProgressScore(parsed);
-                        candidates.push({ key, data: parsed, score });
-                    }
-                } catch (e) {
-                    console.warn(`Corrupt data in ${key}`);
+        let loadedState: any = null;
+        let sourceKey = '';
+
+        // STRATEGY 1: Try exact current version match first
+        const currentRaw = localStorage.getItem(CURRENT_VERSION_KEY);
+        if (currentRaw) {
+            try {
+                const parsed = JSON.parse(currentRaw);
+                if (parsed && typeof parsed === 'object') {
+                    console.log(`✅ Loaded directly from current version: ${CURRENT_VERSION_KEY}`);
+                    loadedState = parsed;
+                    sourceKey = CURRENT_VERSION_KEY;
                 }
+            } catch (e) {
+                console.warn(`${CURRENT_VERSION_KEY} is corrupted.`);
             }
-        });
+        }
 
-        candidates.sort((a, b) => b.score - a.score);
+        // STRATEGY 2: If current version missing/corrupt, fallback to best backup (Migration)
+        if (!loadedState) {
+            console.log("⚠️ Current version not found, searching backups...");
+            const candidates: { key: string, data: any, score: number }[] = [];
+            [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
+                // Skip the current key we already checked
+                if (key === CURRENT_VERSION_KEY) return; 
+                
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    try {
+                        const parsed = JSON.parse(raw);
+                        if (parsed && typeof parsed === 'object') {
+                            const score = calculateProgressScore(parsed);
+                            candidates.push({ key, data: parsed, score });
+                        }
+                    } catch (e) {
+                        console.warn(`Corrupt data in ${key}`);
+                    }
+                }
+            });
 
-        if (candidates.length > 0) {
-            const best = candidates[0];
-            console.log(`🏆 Restoring best save from: ${best.key} (Score: ${best.score})`);
-            const migrated = migrateState(best.data);
-            
-            // Set initial state
+            candidates.sort((a, b) => b.score - a.score);
+
+            if (candidates.length > 0) {
+                const best = candidates[0];
+                console.log(`🏆 Restoring from backup: ${best.key} (Score: ${best.score})`);
+                loadedState = best.data;
+                sourceKey = best.key;
+            }
+        }
+
+        // APPLY STATE
+        if (loadedState) {
+            const migrated = migrateState(loadedState);
             setUserState(migrated);
-            userStateRef.current = migrated; // Sync ref immediately
+            userStateRef.current = migrated;
             
-            if (best.score > 500) {
-                localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
+            // If we loaded from a backup, immediately save to current key
+            if (sourceKey !== CURRENT_VERSION_KEY) {
+                localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
             }
         } else {
+            // New user
+            console.log("🆕 New User Started");
             setUserState(DEFAULT_USER_STATE);
             userStateRef.current = DEFAULT_USER_STATE;
         }
@@ -199,7 +231,6 @@ export default function App() {
       if (!isLoaded) return;
 
       // 1. Get latest state synchronously from Ref
-      // This prevents using stale state if React hasn't re-rendered yet
       const currentState = userStateRef.current;
 
       // 2. Calculate new state immediately
@@ -209,7 +240,6 @@ export default function App() {
       userStateRef.current = newState;
 
       // 4. Persist to LocalStorage IMMEDIATELY (Synchronous)
-      // This blocks the thread for a few ms, but guarantees data safety on crash/reload
       try {
           localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
       } catch (e) {
