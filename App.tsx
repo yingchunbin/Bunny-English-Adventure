@@ -440,12 +440,24 @@ export default function App() {
           {screen === Screen.CHAT && (
               <StoryAdventure 
                   userState={userState} // Passed full userState
-                  onCompleteStory={(storyId, reward) => {
+                  onCompleteStory={(storyId, rewards) => {
                       handleUpdateState(prev => {
                           const isNew = !(prev.completedStories || []).includes(storyId);
+                          
+                          // If already completed, give reduced rewards (half)
+                          const finalRewards = {
+                              coins: isNew ? rewards.coins : Math.floor(rewards.coins / 2),
+                              stars: isNew ? rewards.stars : 0, // No extra stars for replay
+                              water: isNew ? rewards.water : Math.floor(rewards.water / 2),
+                              fertilizer: isNew ? rewards.fertilizer : 0
+                          };
+
                           return {
                               ...prev,
-                              coins: prev.coins + (isNew ? reward : Math.floor(reward / 2)),
+                              coins: prev.coins + finalRewards.coins,
+                              stars: (prev.stars || 0) + finalRewards.stars,
+                              waterDrops: (prev.waterDrops || 0) + finalRewards.water,
+                              fertilizers: (prev.fertilizers || 0) + finalRewards.fertilizer,
                               completedStories: isNew ? [...(prev.completedStories || []), storyId] : prev.completedStories
                           };
                       });

@@ -1,15 +1,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Book, Check, ChevronRight, Home, RefreshCw, Star, ArrowLeft, Lightbulb, MessageCircle, Sparkles, GraduationCap, Volume2, Trophy, Award, Filter, Wand2 } from 'lucide-react';
+import { Book, Check, ChevronRight, Home, RefreshCw, Star, ArrowLeft, MessageCircle, Sparkles, GraduationCap, Volume2, Trophy, Award, Wand2, Droplets, Zap, Coins } from 'lucide-react';
 import { STORIES, Story, StorySegment } from '../data/stories';
 import { evaluateStoryTranslation, StoryFeedback, generateCohesiveStory } from '../services/geminiService';
 import { playSFX } from '../utils/sound';
 import { Avatar } from './Avatar';
 import { UserState } from '../types';
 
+interface StoryRewards {
+    coins: number;
+    stars: number;
+    water: number;
+    fertilizer: number;
+}
+
 interface StoryAdventureProps {
     userState: UserState; // Pass full state to access grade and textbook
-    onCompleteStory: (storyId: string, reward: number) => void;
+    onCompleteStory: (storyId: string, rewards: StoryRewards) => void;
     onExit: () => void;
 }
 
@@ -28,8 +35,52 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
     const [showAchievements, setShowAchievements] = useState(false);
     const [isClaiming, setIsClaiming] = useState(false);
     const [fullEnglishStory, setFullEnglishStory] = useState<string[]>([]);
+    const [calculatedRewards, setCalculatedRewards] = useState<StoryRewards | null>(null);
 
     const contentAreaRef = useRef<HTMLDivElement>(null);
+
+    // Helper to consistent reward calculation
+    const calculateRewards = (story: Story): StoryRewards => {
+        const grade = story.grade || 1;
+        
+        // Extract Unit Number for progression (e.g. Unit 1 -> 1, Unit 12 -> 12)
+        // Fallback to 1 if not found (e.g. Starter)
+        const unitMatch = story.title.match(/Unit (\d+)/);
+        const unitNum = unitMatch ? parseInt(unitMatch[1]) : 1;
+        const isReview = story.title.toLowerCase().includes('review');
+
+        // VOCAB & LENGTH FACTORS
+        const vocabCount = story.vocabulary?.length || 6;
+
+        // 1. COINS CALCULATION (Boosted to Thousands)
+        // Base: 1000
+        // Grade Scale: +100 per grade (Grade 5 gets +500)
+        // Unit Progression: +50 per unit (Unit 10 gets +500)
+        // Content Bonus: +50 per vocab word
+        let coins = 1000 + (grade * 100) + (unitNum * 50) + (vocabCount * 50);
+        
+        // 2. WATER CALCULATION
+        // Base: 3
+        // Grade Scale: +1 per grade
+        // Unit Bonus: +1 for every 3 units
+        let water = 3 + grade + Math.floor(unitNum / 3);
+
+        // 3. FERTILIZER CALCULATION (Increased)
+        // Base: 2
+        // Grade Bonus: +1 for every 2 grades
+        // Unit Bonus: +1 for every 5 units
+        let fertilizer = 2 + Math.floor(grade / 2) + Math.floor(unitNum / 5);
+
+        // 4. STAR CALCULATION (Tripled)
+        // Base: 3
+        // Bonus: Review chapters or Every 5th Unit gets +2
+        let stars = 3;
+        if (isReview || (unitNum > 0 && unitNum % 5 === 0)) {
+            stars += 2;
+        }
+
+        return { coins, stars, water, fertilizer };
+    };
 
     // Auto-scroll to top of content area when segment changes (optional, but sticky handles visibility)
     useEffect(() => {
@@ -46,6 +97,7 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
         setCurrentSegmentIdx(0);
         setUserInput('');
         setFeedback(null);
+        setCalculatedRewards(null);
 
         // CHECK CACHE FIRST
         const cacheKey = `story_content_${story.id}`;
@@ -124,25 +176,29 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
             setFeedback(null);
             playSFX('flip');
         } else {
+            // Calculate Rewards based on specific Story data
+            const rewards = calculateRewards(selectedStory);
+            setCalculatedRewards(rewards);
             setShowSummary(true);
             playSFX('success');
         }
     };
 
     const handleFinishReward = () => {
-        if (!selectedStory || isClaiming) return;
+        if (!selectedStory || isClaiming || !calculatedRewards) return;
         setIsClaiming(true);
         playSFX('coins');
         
-        // Save progress
-        onCompleteStory(selectedStory.id, selectedStory.reward);
+        // Save progress with calculated combo rewards
+        onCompleteStory(selectedStory.id, calculatedRewards);
 
         // Delay to show effect/sound before going back to list
         setTimeout(() => {
             setSelectedStory(null);
             setShowSummary(false);
             setIsClaiming(false);
-        }, 1200);
+            setCalculatedRewards(null);
+        }, 1500);
     };
 
     const playFullStory = () => {
@@ -182,7 +238,7 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
                             <button onClick={onExit} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"><Home size={24}/></button>
                             <div>
                                 <h2 className="font-black text-slate-800 text-lg uppercase tracking-tight">Thư Viện Lớp {userState.grade}</h2>
-                                <p className="text-xs text-slate-400 font-bold">Truyện theo sách giáo khoa</p>
+                                <p className="text-xs text-slate-400 font-bold">Đọc truyện - Nhận quà Nông Trại</p>
                             </div>
                         </div>
                         <button 
@@ -239,6 +295,9 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
                     ) : (
                         visibleStories.map((story) => {
                             const isDone = completedStoriesList.includes(story.id);
+                            // Pass the whole story object to calculate progressive rewards
+                            const rewards = calculateRewards(story);
+                            
                             return (
                                 <button 
                                     key={story.id}
@@ -253,12 +312,21 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
                                             <h3 className="text-base font-black text-slate-800 leading-tight line-clamp-2">{story.title}</h3>
                                             {isDone && <div className="bg-green-500 text-white p-1 rounded-full"><Check size={12}/></div>}
                                         </div>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded text-white uppercase tracking-wider ${story.difficulty === 'EASY' ? 'bg-green-400' : story.difficulty === 'MEDIUM' ? 'bg-yellow-400' : 'bg-red-400'}`}>
-                                                {story.difficulty === 'EASY' ? 'Dễ' : story.difficulty === 'MEDIUM' ? 'Vừa' : 'Khó'}
+                                        {/* Reward Badges */}
+                                        <div className="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar">
+                                            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-lg border border-amber-100">
+                                                <Coins size={12} className="fill-amber-500 text-amber-500"/> {rewards.coins}
                                             </span>
-                                            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200">
-                                                5 đoạn
+                                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                                                <Droplets size={12} className="fill-blue-500 text-blue-500"/> {rewards.water}
+                                            </span>
+                                            {rewards.fertilizer > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-100">
+                                                    <Zap size={12} className="fill-green-500 text-green-500"/> {rewards.fertilizer}
+                                                </span>
+                                            )}
+                                            <span className="flex items-center gap-1 text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded-lg border border-purple-100">
+                                                <Star size={12} className="fill-purple-500 text-purple-500"/> {rewards.stars}
                                             </span>
                                         </div>
                                     </div>
@@ -288,7 +356,7 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
     }
 
     // --- SUMMARY VIEW (BEFORE REWARD) ---
-    if (showSummary) {
+    if (showSummary && calculatedRewards) {
         return (
             <div className="flex flex-col h-full bg-indigo-50 animate-fadeIn relative overflow-hidden">
                 {/* Confetti Effect Simulation */}
@@ -330,6 +398,29 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
                         >
                             <Volume2 size={16} /> Nghe cả truyện
                         </button>
+                    </div>
+
+                    {/* REWARD COMBO BOX */}
+                    <div className="w-full max-w-sm bg-yellow-50 rounded-3xl border-4 border-yellow-200 p-4 mb-4">
+                        <div className="text-center font-black text-yellow-700 uppercase mb-3 text-sm tracking-widest">Phần thưởng Nông Trại</div>
+                        <div className="grid grid-cols-4 gap-2">
+                            <div className="flex flex-col items-center bg-white p-2 rounded-2xl border border-yellow-100 shadow-sm">
+                                <Coins className="text-amber-500 mb-1" size={24} fill="currentColor"/>
+                                <span className="font-black text-slate-700 text-xs">+{calculatedRewards.coins}</span>
+                            </div>
+                            <div className="flex flex-col items-center bg-white p-2 rounded-2xl border border-yellow-100 shadow-sm">
+                                <Star className="text-purple-500 mb-1" size={24} fill="currentColor"/>
+                                <span className="font-black text-slate-700 text-xs">+{calculatedRewards.stars}</span>
+                            </div>
+                            <div className="flex flex-col items-center bg-white p-2 rounded-2xl border border-yellow-100 shadow-sm">
+                                <Droplets className="text-blue-500 mb-1" size={24} fill="currentColor"/>
+                                <span className="font-black text-slate-700 text-xs">+{calculatedRewards.water}</span>
+                            </div>
+                            <div className="flex flex-col items-center bg-white p-2 rounded-2xl border border-yellow-100 shadow-sm">
+                                <Zap className="text-green-500 mb-1" size={24} fill="currentColor"/>
+                                <span className="font-black text-slate-700 text-xs">+{calculatedRewards.fertilizer}</span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Vocabulary List */}
@@ -377,8 +468,7 @@ export const StoryAdventure: React.FC<StoryAdventureProps> = ({ userState, onCom
                         className={`w-full py-4 rounded-2xl font-black text-lg shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 ${isClaiming ? 'bg-green-500 text-white scale-105' : 'bg-gradient-to-r from-yellow-400 to-orange-500 text-white shadow-orange-200'}`}
                     >
                         {isClaiming ? <Check /> : <Sparkles size={20} />} 
-                        {isClaiming ? 'Đã nhận!' : `Nhận ${selectedStory?.reward} Sao`} 
-                        {!isClaiming && <Star fill="currentColor" size={20}/>}
+                        {isClaiming ? 'Đã nhận!' : `Nhận Quà Nông Trại`} 
                     </button>
                 </div>
             </div>
