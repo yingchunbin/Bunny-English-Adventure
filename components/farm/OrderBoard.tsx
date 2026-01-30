@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FarmOrder, FarmItem } from '../../types';
-import { Truck, X, RefreshCw, Coins, Zap, Clock, Info, Star } from 'lucide-react';
+import { Truck, X, RefreshCw, Coins, Zap, Clock, Info, Star, CheckCircle } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { Avatar } from '../Avatar';
 import { CROPS, ANIMALS, RECIPES, MACHINES, PRODUCTS } from '../../data/farmData';
@@ -19,6 +19,7 @@ interface OrderBoardProps {
 export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory, onDeliver, onRefresh, onClose, onShowAlert }) => {
   // Local state to force re-render every minute for countdowns
   const [now, setNow] = useState(Date.now());
+  const [deliveringId, setDeliveringId] = useState<string | null>(null);
 
   useEffect(() => {
       const interval = setInterval(() => setNow(Date.now()), 60000);
@@ -33,6 +34,19 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
       
       if (hours > 0) return `${hours}h ${minutes}p`;
       return `${minutes} phút`;
+  };
+
+  const handleDeliverClick = (order: FarmOrder) => {
+      if (deliveringId) return; // Prevent double clicks
+
+      playSFX('coins'); // Success sound
+      setDeliveringId(order.id);
+
+      // Wait for animation to finish before actually removing the order
+      setTimeout(() => {
+          onDeliver(order);
+          setDeliveringId(null);
+      }, 1500);
   };
 
   const handleItemClick = (item: FarmItem) => {
@@ -91,7 +105,32 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                         const canDeliver = order.requirements.every(req => (inventory[req.cropId] || 0) >= req.amount);
                         const isExpired = order.expiresAt <= now;
                         const timeString = getRemainingTime(order.expiresAt);
+                        const isDelivering = deliveringId === order.id;
 
+                        // RENDER SUCCESS STATE
+                        if (isDelivering) {
+                            return (
+                                <div key={order.id} className="bg-green-50 border-4 border-green-400 rounded-[2rem] p-6 shadow-lg flex flex-col items-center justify-center animate-bounce min-h-[160px]">
+                                    <div className="text-green-600 mb-2 animate-ping"><CheckCircle size={48} /></div>
+                                    <h4 className="text-xl font-black text-green-700 uppercase tracking-tight mb-4">Giao Hàng Thành Công!</h4>
+                                    <div className="flex gap-4 items-center bg-white px-4 py-2 rounded-2xl shadow-sm border-2 border-green-200">
+                                        <div className="flex items-center gap-1 font-black text-amber-500 text-lg">
+                                            +{order.rewardCoins} <Coins size={20} fill="currentColor"/>
+                                        </div>
+                                        {order.rewardStars && order.rewardStars > 0 && (
+                                            <div className="flex items-center gap-1 font-black text-purple-500 text-lg">
+                                                +{order.rewardStars} <Star size={20} fill="currentColor"/>
+                                            </div>
+                                        )}
+                                        <div className="flex items-center gap-1 font-black text-blue-500 text-lg">
+                                            +{order.rewardExp} <Zap size={20} fill="currentColor"/>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+
+                        // RENDER NORMAL CARD
                         return (
                             <div key={order.id} className={`bg-white border-4 border-white rounded-[2rem] p-4 shadow-sm transition-colors ${isExpired ? 'opacity-50 grayscale' : 'hover:border-orange-200'}`}>
                                 <div className="flex justify-between items-center mb-4 border-b border-orange-50 pb-2">
@@ -143,13 +182,13 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                         onClick={() => {
                                             if (isExpired) return;
                                             if (canDeliver) {
-                                                onDeliver(order);
+                                                handleDeliverClick(order);
                                             } else {
                                                 playSFX('wrong');
                                                 onShowAlert("Bé chưa đủ hàng trong Kho nông sản để giao nhé!", "DANGER");
                                             }
                                         }}
-                                        disabled={isExpired}
+                                        disabled={isExpired || deliveringId !== null}
                                         className={`ml-2 h-12 px-5 rounded-2xl font-black text-[10px] uppercase shadow-md transition-all active:scale-90 flex items-center justify-center ${canDeliver && !isExpired ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-slate-100 text-slate-400 border-2 border-slate-200 shadow-none grayscale cursor-not-allowed'}`}
                                     >
                                         {isExpired ? 'Hết hạn' : 'Giao Hàng'}
@@ -164,7 +203,8 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
             <div className="p-4 bg-white border-t border-slate-100">
                 <button 
                     onClick={onRefresh}
-                    className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-95 text-xs uppercase tracking-widest"
+                    disabled={deliveringId !== null}
+                    className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-black shadow-lg shadow-blue-200 flex items-center justify-center gap-3 transition-all active:scale-95 text-xs uppercase tracking-widest disabled:opacity-70 disabled:grayscale"
                 >
                     <RefreshCw size={18} /> THÊM ĐƠN (LÀM BÀI TẬP)
                 </button>

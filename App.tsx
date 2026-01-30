@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Screen, UserState, Mission, LessonLevel } from './types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
 import { Farm } from './components/Farm';
@@ -18,11 +18,14 @@ import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } fr
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, MessageCircle, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react';
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 
-// TARGET KEY FOR THE APP
-const CURRENT_VERSION_KEY = 'turtle_english_state_v11';
+// BUMP VERSION TO V14 TO FORCE MIGRATION & FIX
+const CURRENT_VERSION_KEY = 'turtle_english_state_v14';
+const BACKUP_KEY = 'turtle_english_state_backup';
 
-// ALL POSSIBLE KEYS TO SCAN (Current + Legacy)
 const ALL_STORAGE_KEYS = [
+    'turtle_english_state_v14',
+    'turtle_english_state_v13',
+    'turtle_english_state_v12',
     'turtle_english_state_v11',
     'turtle_english_state_v10',
     'turtle_english_state_v9',
@@ -51,8 +54,8 @@ const DEFAULT_USER_STATE: UserState = {
       { id: 4, isUnlocked: false, cropId: null, plantedAt: null },
   ],
   livestockSlots: [
-      { id: 1, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
-      { id: 2, isUnlocked: true, animalId: null, fedAt: null, storage: [] },
+      { id: 1, isUnlocked: true, animalId: null, fedAt: null, storage: [], queue: 0 },
+      { id: 2, isUnlocked: true, animalId: null, fedAt: null, storage: [], queue: 0 },
   ],
   machineSlots: [
       { id: 1, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, storage: [], queue: [] },
@@ -80,42 +83,77 @@ const DEFAULT_USER_STATE: UserState = {
   }
 };
 
-// Helper function to migrate and sanitize data
+// --- SMART MERGE HELPER ---
+// Ensures we don't lose slots that have data just because the array length differs
+const smartMergeArray = (defaultArr: any[], oldArr: any[], keyCheck: string) => {
+    if (!Array.isArray(oldArr) || oldArr.length === 0) return defaultArr;
+    
+    // Create a map of existing items by ID to preserve them
+    const oldMap = new Map(oldArr.map(item => [item.id, item]));
+    
+    // Start with default structure to ensure we have all required slots
+    // But if oldArr has MORE slots (purchased expansions), we want those too.
+    
+    // 1. Recover standard slots
+    const merged = defaultArr.map(defItem => {
+        const oldItem = oldMap.get(defItem.id);
+        if (oldItem) {
+            // Check if old item has "content" (crop, animal, machine)
+            // If yes, prioritize old data. If no, still prioritize old data (e.g. unlocked status)
+            return { ...defItem, ...oldItem };
+        }
+        return defItem;
+    });
+
+    // 2. Append extra slots user might have bought (IDs that are not in default)
+    oldArr.forEach(item => {
+        if (!merged.find(m => m.id === item.id)) {
+            merged.push(item);
+        }
+    });
+
+    return merged;
+};
+
 const migrateState = (oldState: any): UserState => {
-  // 1. Merge with default to ensure all new fields exist
-  let newState = { ...DEFAULT_USER_STATE, ...oldState };
+  let newState: UserState = { ...DEFAULT_USER_STATE };
 
-  // 2. Decor Slots Migration (v8 -> v9/v10)
-  if ((!newState.decorSlots || newState.decorSlots.length === 0) && oldState.activeDecorIds) {
-      const defaultSlots = [
-          { id: 1, isUnlocked: true, decorId: null },
-          { id: 2, isUnlocked: true, decorId: null },
-          { id: 3, isUnlocked: false, decorId: null },
-      ];
-      
-      if (Array.isArray(oldState.activeDecorIds)) {
-          oldState.activeDecorIds.forEach((dId: string, idx: number) => {
-              if (idx < defaultSlots.length) {
-                  defaultSlots[idx] = { ...defaultSlots[idx], isUnlocked: true, decorId: dId };
-              }
-          });
-      }
-      newState.decorSlots = defaultSlots;
+  // Primitive fields: Copy if exist
+  const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
+  primitives.forEach(key => {
+      if (oldState[key] !== undefined) newState[key as keyof UserState] = oldState[key];
+  });
+
+  // Objects/Maps: Copy if exist
+  const objects = ['levelStars', 'lessonGuides', 'inventory', 'harvestedCrops', 'settings'];
+  objects.forEach(key => {
+      if (oldState[key]) newState[key as keyof UserState] = oldState[key];
+  });
+
+  // Arrays: Copy if exist
+  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders'];
+  simpleArrays.forEach(key => {
+      if (Array.isArray(oldState[key])) newState[key as keyof UserState] = oldState[key];
+  });
+
+  // Complex Arrays (The Danger Zone): Use Smart Merge
+  newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
+  newState.livestockSlots = smartMergeArray(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId') as LivestockSlot[];
+  newState.machineSlots = smartMergeArray(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId') as MachineSlot[];
+  newState.decorSlots = smartMergeArray(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId') as DecorSlot[];
+
+  // Fix specific migration edge case for decorations
+  // If user has 'activeDecorIds' (old format) but no 'decorSlots', migrate them
+  if ((!oldState.decorSlots || oldState.decorSlots.length === 0) && Array.isArray(oldState.activeDecorIds)) {
+      const newSlots = [...newState.decorSlots || []];
+      oldState.activeDecorIds.forEach((dId: string, idx: number) => {
+          if (idx < newSlots.length) {
+              newSlots[idx] = { ...newSlots[idx], isUnlocked: true, decorId: dId };
+          }
+      });
+      newState.decorSlots = newSlots;
   }
 
-  // 3. Ensure critical arrays exist and preserve machine data
-  // Critical fix: Ensure machineSlots from oldState are respected if they exist, to prevent loss on reload
-  if (oldState.machineSlots && Array.isArray(oldState.machineSlots) && oldState.machineSlots.length > 0) {
-      newState.machineSlots = oldState.machineSlots;
-  } else {
-      newState.machineSlots = DEFAULT_USER_STATE.machineSlots;
-  }
-
-  if (!newState.decorSlots) newState.decorSlots = DEFAULT_USER_STATE.decorSlots;
-  if (!newState.unlockedLevels) newState.unlockedLevels = oldState.unlockedLevels || DEFAULT_USER_STATE.unlockedLevels;
-  if (!newState.completedLevels) newState.completedLevels = oldState.completedLevels || DEFAULT_USER_STATE.completedLevels;
-  if (!newState.farmPlots) newState.farmPlots = oldState.farmPlots || DEFAULT_USER_STATE.farmPlots;
-  
   return newState;
 };
 
@@ -123,32 +161,27 @@ const migrateState = (oldState: any): UserState => {
 const calculateProgressScore = (state: any) => {
     if (!state) return -1;
     let score = 0;
-    
-    // Most important: How much did they learn?
-    if (Array.isArray(state.completedLevels)) {
-        score += state.completedLevels.length * 10000;
-    }
-
-    // Secondary: Farm progress
-    if (state.farmLevel) {
-        score += state.farmLevel * 1000;
-    }
-
-    // Tertiary: Wealth
-    if (state.coins) {
-        score += state.coins;
-    }
-
+    if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 10000;
+    if (state.farmLevel) score += state.farmLevel * 1000;
+    if (state.coins) score += state.coins;
+    // Boost score if farm has active items
+    if (state.livestockSlots?.some((s:any) => s.animalId)) score += 5000;
+    if (state.machineSlots?.some((s:any) => s.machineId)) score += 5000;
     return score;
 };
 
 export default function App() {
-  const [userState, setUserState] = useState<UserState>(() => {
+  const [isLoaded, setIsLoaded] = useState(false); // CRITICAL FLAG: Don't save until true
+  
+  const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
+  
+  // --- INITIAL LOAD EFFECT ---
+  useEffect(() => {
       try {
-        // 1. Gather all candidates from all known keys
         const candidates: { key: string, data: any, score: number }[] = [];
 
-        ALL_STORAGE_KEYS.forEach(key => {
+        // 1. Check all versions including Backup
+        [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(key => {
             const raw = localStorage.getItem(key);
             if (raw) {
                 try {
@@ -163,24 +196,66 @@ export default function App() {
             }
         });
 
-        // 2. Sort by Score Descending (Highest progress first)
+        // 2. Sort by Score Descending
         candidates.sort((a, b) => b.score - a.score);
 
         if (candidates.length > 0) {
             const best = candidates[0];
             console.log(`🏆 Restoring best save from: ${best.key} (Score: ${best.score})`);
-            return migrateState(best.data);
+            const migrated = migrateState(best.data);
+            setUserState(migrated);
+            
+            // Create a backup immediately if we loaded a good save
+            if (best.score > 500) {
+                localStorage.setItem(BACKUP_KEY, JSON.stringify(migrated));
+            }
+        } else {
+            console.log("🆕 New user or no valid save found. Starting fresh.");
+            setUserState(DEFAULT_USER_STATE);
         }
-        
-        // 3. New user (No valid data found anywhere)
-        return DEFAULT_USER_STATE;
       } catch (e) {
-        console.error("Critical State Error:", e);
-        return DEFAULT_USER_STATE;
+        console.error("Critical Load Error:", e);
+        setUserState(DEFAULT_USER_STATE);
+      } finally {
+          setIsLoaded(true); // Enable saving
       }
-  });
+  }, []);
+
+  // --- SAVE EFFECT (Only runs if isLoaded is true) ---
+  useEffect(() => {
+      if (!isLoaded) return; // BLOCKS OVERWRITING ON STARTUP
+
+      const save = () => {
+          try {
+              const json = JSON.stringify(userState);
+              localStorage.setItem(CURRENT_VERSION_KEY, json);
+              
+              // Updating backup occasionally (e.g. if significant progress)
+              // For simplicity, we assume if state is valid and loaded, we keep saving to main key.
+              // Backup is mostly for recovery on boot.
+          } catch (e) {
+              console.error("Save failed:", e);
+          }
+      };
+
+      // Debounce save slightly to avoid thrashing
+      const timeout = setTimeout(save, 500);
+      return () => clearTimeout(timeout);
+  }, [userState, isLoaded]);
+
+  const [screen, setScreen] = useState<Screen>(Screen.ONBOARDING); // Default to onboarding, effect below will fix
   
-  const [screen, setScreen] = useState<Screen>(userState.grade ? Screen.HOME : Screen.ONBOARDING);
+  // Update screen based on loaded state
+  useEffect(() => {
+      if (isLoaded) {
+          if (userState.grade) {
+              setScreen(Screen.HOME);
+          } else {
+              setScreen(Screen.ONBOARDING);
+          }
+      }
+  }, [isLoaded, userState.grade]);
+
   const [activeLevel, setActiveLevel] = useState<LessonLevel | null>(null);
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
@@ -188,11 +263,6 @@ export default function App() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
-
-  useEffect(() => {
-      // Save to the CURRENT v11 key, ensuring future reloads pick this up
-      localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(userState));
-  }, [userState]);
 
   useEffect(() => {
       setVolumes(userState.settings.sfxVolume, userState.settings.bgmVolume);
@@ -275,6 +345,8 @@ export default function App() {
   };
 
   const currentBookName = TEXTBOOKS.find(b => b.id === userState.textbook)?.name || "Chưa chọn sách";
+
+  if (!isLoaded) return <div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-400 font-bold">Đang tải dữ liệu...</div>;
 
   return (
       <div className="h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800" onClick={initAudio}>
@@ -417,7 +489,7 @@ export default function App() {
                   onUpdateSettings={(newSettings) => setUserState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
                       // Only clear keys if user explicitly resets
-                      ALL_STORAGE_KEYS.forEach(k => localStorage.removeItem(k));
+                      [...ALL_STORAGE_KEYS, BACKUP_KEY].forEach(k => localStorage.removeItem(k));
                       window.location.reload();
                   }}
                   onClose={() => setShowSettings(false)} 
