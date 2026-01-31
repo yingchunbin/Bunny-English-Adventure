@@ -47,7 +47,7 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, getDecorBonus } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
@@ -311,6 +311,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           const centerX = window.innerWidth / 2;
           const centerY = window.innerHeight / 2;
           addFloatingText(centerX, centerY, `+${res.earned} Xu`, "text-yellow-500 text-3xl font-black drop-shadow-lg");
+      }
+  };
+
+  // New: Bulk sell handler
+  const handleSellBulk = (itemsToSell: { itemId: string, amount: number }[]) => {
+      const res = sellItemsBulk(itemsToSell);
+      if (res.success && res.earned > 0) {
+          const centerX = window.innerWidth / 2;
+          const centerY = window.innerHeight / 2;
+          addFloatingText(centerX, centerY, `+${res.earned} Xu`, "text-yellow-500 text-4xl font-black drop-shadow-lg animate-bounce");
       }
   };
 
@@ -1027,9 +1037,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 crops={[...CROPS, ...PRODUCTS]} 
                 harvested={userState.harvestedCrops || {}} 
                 activeOrders={userState.activeOrders || []}
-                onSell={(itemId) => sellItem(itemId, 1)}
-                onSellAll={(itemId) => sellItem(itemId, userState.harvestedCrops?.[itemId] || 0)}
-                onSellEverything={() => {}}
+                coinBuffPercent={getDecorBonus('COIN')} 
+                onSell={(itemId) => handleSell(itemId, 1)}
+                onSellAll={(itemId) => handleSell(itemId, userState.harvestedCrops?.[itemId] || 0)}
+                onSellBulk={sellItemsBulk} // Pass the new bulk handler
                 onClose={() => setActiveModal('NONE')}
             />
         )}

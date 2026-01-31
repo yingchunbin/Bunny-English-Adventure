@@ -9,15 +9,22 @@ interface BarnModalProps {
   crops: (Crop | Product)[];
   harvested: any;
   activeOrders: FarmOrder[];
+  coinBuffPercent: number; // New prop for calculating prices
   onSell: (itemId: string) => void;
   onSellAll: (itemId: string) => void;
-  onSellEverything: () => void;
+  onSellBulk: (items: { itemId: string, amount: number }[]) => void; // New bulk handler
   onClose: () => void;
 }
 
-export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOrders, onSell, onSellAll, onSellEverything, onClose }) => {
+export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOrders, coinBuffPercent, onSell, onSellAll, onSellBulk, onClose }) => {
   const [activeTab, setActiveTab] = useState<'CROPS' | 'ANIMAL_PROD' | 'PROCESSED'>('CROPS');
   const [confirmState, setConfirmState] = useState<{ type: 'SELL_ALL_TAB' | 'SELL_SINGLE' | 'SELL_ALL_ITEM', itemId?: string, itemName?: string, value?: number } | null>(null);
+
+  // Helper: Calculate price with current buffs
+  const calculatePrice = (basePrice: number) => {
+      const bonus = Math.floor(basePrice * (coinBuffPercent / 100));
+      return basePrice + bonus;
+  };
 
   // Helper: Kiểm tra xem vật phẩm có đang cần cho đơn hàng không
   const isNeededForOrder = (itemId: string) => {
@@ -38,10 +45,6 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
 
   const hasItems = filteredItems.length > 0;
   
-  // Note: We don't have access to userState.decorations directly here to calculate exact total value shown in button
-  // But sellItem inside Farm.tsx handles the actual logic. 
-  // We can just show base value or omit exact value for "Sell All" button to avoid complexity.
-
   const handleSellClick = (item: Crop | Product, mode: 'SINGLE' | 'ALL') => {
       const isWanted = isNeededForOrder(item.id);
       
@@ -53,18 +56,37 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
       }
 
       // If wanted, show local confirmation
+      const unitPrice = calculatePrice(item.sellPrice);
       setConfirmState({
           type: mode === 'SINGLE' ? 'SELL_SINGLE' : 'SELL_ALL_ITEM',
           itemId: item.id,
           itemName: item.name,
-          value: item.sellPrice * (mode === 'SINGLE' ? 1 : (harvested[item.id] || 0))
+          value: unitPrice * (mode === 'SINGLE' ? 1 : (harvested[item.id] || 0))
+      });
+  };
+
+  const handleSellAllTab = () => {
+      const totalValue = filteredItems.reduce((sum, item) => {
+          const count = harvested[item.id] || 0;
+          return sum + (calculatePrice(item.sellPrice) * count);
+      }, 0);
+
+      setConfirmState({
+          type: 'SELL_ALL_TAB',
+          value: totalValue
       });
   };
 
   const executeConfirm = () => {
       if (!confirmState) return;
+      
       if (confirmState.type === 'SELL_ALL_TAB') {
-          filteredItems.forEach(item => onSellAll(item.id));
+          // Prepare bulk payload
+          const itemsToSell = filteredItems.map(item => ({
+              itemId: item.id,
+              amount: harvested[item.id] || 0
+          }));
+          onSellBulk(itemsToSell);
       } else if (confirmState.type === 'SELL_SINGLE' && confirmState.itemId) {
           onSell(confirmState.itemId);
       } else if (confirmState.type === 'SELL_ALL_ITEM' && confirmState.itemId) {
@@ -122,6 +144,15 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                                     ? "Bé có chắc muốn bán tất cả mọi thứ trong tab này không?" 
                                     : <span>Đơn hàng đang cần <b>{confirmState.itemName}</b>.<br/>Bán đi là không giao được đâu đó!</span>}
                             </p>
+                            
+                            {/* Profit Preview */}
+                            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-3 mb-6 flex items-center justify-center gap-2">
+                                <span className="text-xs font-bold text-yellow-700 uppercase">Sẽ nhận được:</span>
+                                <span className="text-xl font-black text-yellow-600 flex items-center gap-1">
+                                    +{confirmState.value} <Coins size={20} fill="currentColor"/>
+                                </span>
+                            </div>
+
                             <div className="flex gap-3">
                                 <button onClick={() => setConfirmState(null)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold hover:bg-slate-200">Hủy</button>
                                 <button onClick={executeConfirm} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-200 hover:bg-red-600">
@@ -135,7 +166,7 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                 {/* Global Sell All Button */}
                 {hasItems && (
                     <button 
-                        onClick={() => setConfirmState({ type: 'SELL_ALL_TAB' })}
+                        onClick={handleSellAllTab}
                         className="w-full py-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-white rounded-[2rem] font-black text-xs uppercase shadow-lg shadow-amber-200 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all mb-2 border-2 border-white"
                     >
                         <Sparkles size={18}/> Bán tất cả tab này
@@ -147,6 +178,7 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                     const count = harvested[item.id];
                     const isWanted = isNeededForOrder(item.id);
                     const imgUrl = resolveImage(item.imageUrl);
+                    const unitPrice = calculatePrice(item.sellPrice);
                     
                     return (
                         <div key={item.id} className={`flex items-center justify-between p-3 rounded-[2rem] border-4 bg-white shadow-sm transition-all group ${isWanted ? 'border-orange-200 bg-orange-50/30' : 'border-white hover:border-emerald-200'}`}>
@@ -157,7 +189,10 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                                 <div>
                                     <div className="font-black text-slate-800 text-sm uppercase tracking-tighter">{item.name}</div>
                                     <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Đang có: <span className="text-emerald-600 font-black">{count}</span></div>
-                                    <div className="text-[10px] font-bold text-amber-500 mt-0.5">Giá bán: {item.sellPrice} <Coins size={8} className="inline"/></div>
+                                    <div className="text-[10px] font-bold text-amber-500 mt-0.5 flex items-center gap-1">
+                                        Giá bán: {unitPrice} <Coins size={8} className="inline"/> 
+                                        {coinBuffPercent > 0 && <span className="text-green-500 text-[8px]">(+{coinBuffPercent}%)</span>}
+                                    </div>
                                 </div>
                                 {isWanted && (
                                     <div className="absolute -top-3 -left-2 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shadow-md flex items-center gap-1 animate-pulse">
@@ -168,16 +203,16 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                             <div className="flex flex-col gap-1.5 items-end">
                                 <button 
                                   onClick={() => handleSellClick(item, 'SINGLE')}
-                                  className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[10px] shadow-sm active:scale-90 flex items-center justify-center gap-2 border border-amber-200 transition-all uppercase w-24"
+                                  className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[9px] shadow-sm active:scale-90 flex items-center justify-center gap-1 border border-amber-200 transition-all uppercase w-28"
                                 >
-                                    Bán 1
+                                    Bán 1 (+{unitPrice})
                                 </button>
                                 {count > 1 && (
                                     <button 
                                       onClick={() => handleSellClick(item, 'ALL')}
-                                      className="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] shadow-md active:scale-90 flex items-center justify-center gap-2 transition-all uppercase w-24"
+                                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[9px] shadow-md active:scale-90 flex items-center justify-center gap-1 transition-all uppercase w-28"
                                     >
-                                        Bán hết
+                                        Bán hết (+{unitPrice * count})
                                     </button>
                                 )}
                             </div>

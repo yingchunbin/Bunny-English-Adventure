@@ -995,6 +995,46 @@ export const useFarmGame = (
       return { success: true, earned: totalEarned };
   };
 
+  // NEW: Handle batch selling for "Sell All in Tab" to avoid spamming FX
+  const sellItemsBulk = (itemsToSell: { itemId: string, amount: number }[]) => {
+      let totalEarned = 0;
+      const coinBonusPercent = getDecorBonus('COIN');
+
+      onUpdateState(prev => {
+          const newHarvest = { ...(prev.harvestedCrops || {}) };
+          
+          itemsToSell.forEach(({ itemId, amount }) => {
+              const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
+              if (item) {
+                  const currentCount = newHarvest[itemId] || 0;
+                  const sellAmount = Math.min(currentCount, amount);
+                  
+                  if (sellAmount > 0) {
+                      const basePrice = item.sellPrice;
+                      const bonusPrice = Math.floor(basePrice * (coinBonusPercent / 100));
+                      const finalPrice = basePrice + bonusPrice;
+                      totalEarned += finalPrice * sellAmount;
+                      
+                      newHarvest[itemId] = currentCount - sellAmount;
+                  }
+              }
+          });
+
+          return {
+              ...prev,
+              coins: prev.coins + totalEarned,
+              harvestedCrops: newHarvest
+          };
+      });
+
+      if (totalEarned > 0) {
+          playSFX('coins');
+          updateMissionProgress('EARN', totalEarned);
+      }
+
+      return { success: true, earned: totalEarned };
+  };
+
   return { 
       now, 
       plantSeed, 
@@ -1020,7 +1060,8 @@ export const useFarmGame = (
       speedUpItem,
       placeDecor,
       removeDecor,
-      sellItem, // Exposed
-      getDecorBonus // Exposed for UI
+      sellItem,
+      sellItemsBulk, // Exposed new function
+      getDecorBonus 
   };
 };
