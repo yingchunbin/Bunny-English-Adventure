@@ -964,6 +964,7 @@ export const useFarmGame = (
   // --- SELLING ---
   // Centralized function to handle selling items directly from Inventory/Barn
   // ensuring buffs are applied and achievements tracked.
+  // REMOVED INTERNAL SFX to allow UI component to handle it with flying coins FX
   const sellItem = (itemId: string, amount: number) => {
       const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
       if (!item) return { success: false };
@@ -989,13 +990,14 @@ export const useFarmGame = (
           };
       });
 
-      playSFX('coins');
+      // REMOVED playSFX here to prevent double sound if Farm.tsx handles it
       updateMissionProgress('EARN', totalEarned); // Track achievement progress
       
       return { success: true, earned: totalEarned };
   };
 
   // NEW: Handle batch selling for "Sell All in Tab" to avoid spamming FX
+  // REMOVED INTERNAL SFX
   const sellItemsBulk = (itemsToSell: { itemId: string, amount: number }[]) => {
       let totalEarned = 0;
       const coinBonusPercent = getDecorBonus('COIN');
@@ -1028,7 +1030,7 @@ export const useFarmGame = (
       });
 
       if (totalEarned > 0) {
-          playSFX('coins');
+          // REMOVED playSFX here
           updateMissionProgress('EARN', totalEarned);
       }
 

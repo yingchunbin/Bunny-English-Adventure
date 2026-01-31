@@ -10,15 +10,22 @@ interface BarnModalProps {
   harvested: any;
   activeOrders: FarmOrder[];
   coinBuffPercent: number; // New prop for calculating prices
-  onSell: (itemId: string) => void;
-  onSellAll: (itemId: string) => void;
-  onSellBulk: (items: { itemId: string, amount: number }[]) => void; // New bulk handler
+  onSell: (itemId: string, e: React.MouseEvent) => void; // Updated signature
+  onSellAll: (itemId: string, e: React.MouseEvent) => void; // Updated signature
+  onSellBulk: (items: { itemId: string, amount: number }[], e: React.MouseEvent) => void; // Updated signature
   onClose: () => void;
 }
 
 export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOrders, coinBuffPercent, onSell, onSellAll, onSellBulk, onClose }) => {
   const [activeTab, setActiveTab] = useState<'CROPS' | 'ANIMAL_PROD' | 'PROCESSED'>('CROPS');
-  const [confirmState, setConfirmState] = useState<{ type: 'SELL_ALL_TAB' | 'SELL_SINGLE' | 'SELL_ALL_ITEM', itemId?: string, itemName?: string, value?: number } | null>(null);
+  // State for confirm modal, now stores event coordinates too if needed, or just trigger source
+  const [confirmState, setConfirmState] = useState<{ 
+      type: 'SELL_ALL_TAB' | 'SELL_SINGLE' | 'SELL_ALL_ITEM', 
+      itemId?: string, 
+      itemName?: string, 
+      value?: number,
+      triggerEvent?: React.MouseEvent 
+  } | null>(null);
 
   // Helper: Calculate price with current buffs
   const calculatePrice = (basePrice: number) => {
@@ -45,17 +52,22 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
 
   const hasItems = filteredItems.length > 0;
   
-  const handleSellClick = (item: Crop | Product, mode: 'SINGLE' | 'ALL') => {
+  const handleSellClick = (item: Crop | Product, mode: 'SINGLE' | 'ALL', e: React.MouseEvent) => {
       const isWanted = isNeededForOrder(item.id);
       
       // If not wanted for order, just sell immediately (fast UX)
       if (!isWanted) {
-          if (mode === 'SINGLE') onSell(item.id);
-          else onSellAll(item.id);
+          if (mode === 'SINGLE') onSell(item.id, e);
+          else onSellAll(item.id, e);
           return;
       }
 
       // If wanted, show local confirmation
+      // We persist the event so we can use its target later for FX origin
+      // Note: React synthetic events are pooled, need to persist if used async, but here we just store reference for immediate use in executeConfirm which is sync called by button click. 
+      // Actually, we can't reuse the old event object easily for coordinates in a new click. 
+      // Strategy: The confirm modal's "Sell" button will be the NEW source of the FX.
+      
       const unitPrice = calculatePrice(item.sellPrice);
       setConfirmState({
           type: mode === 'SINGLE' ? 'SELL_SINGLE' : 'SELL_ALL_ITEM',
@@ -65,7 +77,7 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
       });
   };
 
-  const handleSellAllTab = () => {
+  const handleSellAllTab = (e: React.MouseEvent) => {
       const totalValue = filteredItems.reduce((sum, item) => {
           const count = harvested[item.id] || 0;
           return sum + (calculatePrice(item.sellPrice) * count);
@@ -77,7 +89,7 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
       });
   };
 
-  const executeConfirm = () => {
+  const executeConfirm = (e: React.MouseEvent) => {
       if (!confirmState) return;
       
       if (confirmState.type === 'SELL_ALL_TAB') {
@@ -86,11 +98,11 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
               itemId: item.id,
               amount: harvested[item.id] || 0
           }));
-          onSellBulk(itemsToSell);
+          onSellBulk(itemsToSell, e);
       } else if (confirmState.type === 'SELL_SINGLE' && confirmState.itemId) {
-          onSell(confirmState.itemId);
+          onSell(confirmState.itemId, e);
       } else if (confirmState.type === 'SELL_ALL_ITEM' && confirmState.itemId) {
-          onSellAll(confirmState.itemId);
+          onSellAll(confirmState.itemId, e);
       }
       setConfirmState(null);
   };
@@ -129,40 +141,6 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
 
             <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar bg-emerald-50/20 relative">
                 
-                {/* Internal Confirmation Overlay */}
-                {confirmState && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 p-6 animate-fadeIn rounded-xl">
-                        <div className="text-center w-full bg-white p-4 rounded-3xl shadow-xl border-2 border-slate-100">
-                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500 border-4 border-white shadow-lg">
-                                <AlertTriangle size={32} />
-                            </div>
-                            <h4 className="text-lg font-black text-slate-800 mb-2">
-                                {confirmState.type === 'SELL_ALL_TAB' ? "Bán hết sạch?" : "Cẩn thận!"}
-                            </h4>
-                            <p className="text-sm font-bold text-slate-500 mb-6">
-                                {confirmState.type === 'SELL_ALL_TAB' 
-                                    ? "Bé có chắc muốn bán tất cả mọi thứ trong tab này không?" 
-                                    : <span>Đơn hàng đang cần <b>{confirmState.itemName}</b>.<br/>Bán đi là không giao được đâu đó!</span>}
-                            </p>
-                            
-                            {/* Profit Preview */}
-                            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-3 mb-6 flex items-center justify-center gap-2">
-                                <span className="text-xs font-bold text-yellow-700 uppercase">Sẽ nhận được:</span>
-                                <span className="text-xl font-black text-yellow-600 flex items-center gap-1">
-                                    +{confirmState.value} <Coins size={20} fill="currentColor"/>
-                                </span>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button onClick={() => setConfirmState(null)} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold hover:bg-slate-200">Hủy</button>
-                                <button onClick={executeConfirm} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold shadow-lg shadow-red-200 hover:bg-red-600">
-                                    Bán luôn
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Global Sell All Button */}
                 {hasItems && (
                     <button 
@@ -202,14 +180,14 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                             </div>
                             <div className="flex flex-col gap-1.5 items-end">
                                 <button 
-                                  onClick={() => handleSellClick(item, 'SINGLE')}
+                                  onClick={(e) => handleSellClick(item, 'SINGLE', e)}
                                   className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-black text-[9px] shadow-sm active:scale-90 flex items-center justify-center gap-1 border border-amber-200 transition-all uppercase w-28"
                                 >
                                     Bán 1 (+{unitPrice})
                                 </button>
                                 {count > 1 && (
                                     <button 
-                                      onClick={() => handleSellClick(item, 'ALL')}
+                                      onClick={(e) => handleSellClick(item, 'ALL', e)}
                                       className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[9px] shadow-md active:scale-90 flex items-center justify-center gap-1 transition-all uppercase w-28"
                                     >
                                         Bán hết (+{unitPrice * count})
@@ -230,6 +208,48 @@ export const BarnModal: React.FC<BarnModalProps> = ({ crops, harvested, activeOr
                 )}
             </div>
         </div>
+
+        {/* OVERLAY CONFIRMATION - Fixed positioning to solve clipping */}
+        {confirmState && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 animate-fadeIn backdrop-blur-md">
+                <div className="w-full max-w-sm bg-white p-6 rounded-3xl shadow-2xl border-4 border-slate-100 flex flex-col items-center">
+                    <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6 text-red-500 border-4 border-white shadow-lg animate-bounce">
+                        <AlertTriangle size={40} />
+                    </div>
+                    <h4 className="text-2xl font-black text-slate-800 mb-2 text-center uppercase tracking-tight">
+                        {confirmState.type === 'SELL_ALL_TAB' ? "Bán hết sạch?" : "Cẩn thận!"}
+                    </h4>
+                    <p className="text-slate-500 font-bold mb-6 text-center leading-relaxed">
+                        {confirmState.type === 'SELL_ALL_TAB' 
+                            ? "Bé có chắc muốn bán tất cả mọi thứ trong tab này không?" 
+                            : <span>Đơn hàng đang cần <b>{confirmState.itemName}</b>.<br/>Bán đi là không giao được đâu đó!</span>}
+                    </p>
+                    
+                    {/* Profit Preview */}
+                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl px-6 py-4 mb-8 flex flex-col items-center justify-center gap-1 w-full shadow-inner">
+                        <span className="text-xs font-bold text-yellow-700 uppercase tracking-widest">Sẽ nhận được:</span>
+                        <span className="text-4xl font-black text-yellow-600 flex items-center gap-2 drop-shadow-sm">
+                            +{confirmState.value} <Coins size={32} fill="currentColor"/>
+                        </span>
+                    </div>
+
+                    <div className="flex gap-4 w-full">
+                        <button 
+                            onClick={() => setConfirmState(null)} 
+                            className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black hover:bg-slate-200 transition-colors uppercase tracking-wider"
+                        >
+                            Hủy
+                        </button>
+                        <button 
+                            onClick={executeConfirm} 
+                            className="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black shadow-lg shadow-red-200 hover:bg-red-600 transition-transform active:scale-95 uppercase tracking-wider"
+                        >
+                            Bán luôn
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };

@@ -31,7 +31,7 @@ type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
 interface FlyingItem {
     id: number;
-    emoji: string;
+    content: React.ReactNode; // Changed from emoji string to ReactNode for flexibility
     x: number;
     y: number;
     targetX: number;
@@ -70,6 +70,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   // Refs
   const prevLevelRef = useRef(userState.farmLevel || 1);
   const barnBtnRef = useRef<HTMLButtonElement>(null); 
+  const coinRef = useRef<HTMLDivElement>(null); // Ref for Coin HUD
+  const starRef = useRef<HTMLDivElement>(null); // Ref for Star HUD
+  const expRef = useRef<HTMLDivElement>(null);  // Ref for Exp HUD
 
   // --- LEVEL UP CHECK ---
   useEffect(() => {
@@ -89,28 +92,46 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       setAlertConfig({ isOpen: true, message: msg, type });
   };
 
-  const triggerHarvestFX = (rect: DOMRect, emoji: string, amount: number, exp: number) => {
-      if (barnBtnRef.current) {
-          const targetRect = barnBtnRef.current.getBoundingClientRect();
-          const newItem: FlyingItem = {
-              id: Date.now() + Math.random(),
-              emoji,
-              x: rect.left + rect.width / 2,
-              y: rect.top + rect.height / 2,
-              targetX: targetRect.left + targetRect.width / 2,
-              targetY: targetRect.top + targetRect.height / 2
-          };
-          setFlyingItems(prev => [...prev, newItem]);
-          setTimeout(() => setFlyingItems(prev => prev.filter(i => i.id !== newItem.id)), 800);
+  // Improved FX Trigger
+  const triggerFlyFX = (startRect: DOMRect, type: 'COIN' | 'STAR' | 'EXP' | 'PRODUCT', content: React.ReactNode, amount: number) => {
+      let targetX = window.innerWidth / 2;
+      let targetY = 0;
+
+      if (type === 'COIN' && coinRef.current) {
+          const r = coinRef.current.getBoundingClientRect();
+          targetX = r.left + r.width/2;
+          targetY = r.top + r.height/2;
+      } else if (type === 'STAR' && starRef.current) {
+          const r = starRef.current.getBoundingClientRect();
+          targetX = r.left + r.width/2;
+          targetY = r.top + r.height/2;
+      } else if (type === 'EXP' && expRef.current) {
+           const r = expRef.current.getBoundingClientRect();
+           targetX = r.left + r.width/2;
+           targetY = r.top + r.height/2;
+      } else if (type === 'PRODUCT' && barnBtnRef.current) {
+           const r = barnBtnRef.current.getBoundingClientRect();
+           targetX = r.left + r.width/2;
+           targetY = r.top + r.height/2;
       }
 
-      const texts: FloatingText[] = [
-          { id: Date.now(), text: `+${exp} XP`, x: rect.left, y: rect.top - 20, color: 'text-blue-600' }
-      ];
-      if (amount > 1) texts.push({ id: Date.now()+1, text: `x${amount}`, x: rect.left + 40, y: rect.top - 10, color: 'text-green-600' });
+      // Spawn multiple particles for larger amounts (max 5)
+      const particleCount = Math.min(amount, 5); 
       
-      setFloatingTexts(prev => [...prev, ...texts]);
-      setTimeout(() => setFloatingTexts(prev => prev.filter(t => !texts.includes(t))), 1500);
+      for(let i=0; i<particleCount; i++) {
+          setTimeout(() => {
+              const newItem: FlyingItem = {
+                  id: Date.now() + Math.random(),
+                  content,
+                  x: startRect.left + startRect.width / 2 + (Math.random() * 40 - 20),
+                  y: startRect.top + startRect.height / 2 + (Math.random() * 40 - 20),
+                  targetX,
+                  targetY
+              };
+              setFlyingItems(prev => [...prev, newItem]);
+              setTimeout(() => setFlyingItems(prev => prev.filter(item => item.id !== newItem.id)), 800);
+          }, i * 100);
+      }
   };
 
   const addFloatingText = (x: number, y: number, text: React.ReactNode, color: string = 'text-yellow-500') => {
@@ -124,7 +145,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const crop = CROPS.find(c => c.id === plot.cropId);
       if (crop) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          triggerHarvestFX(rect, crop.emoji, 1, crop.exp);
+          // Fly Product to Barn
+          triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">{crop.emoji}</span>, 1);
+          // Fly EXP to Bar
+          triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500 fill-blue-500" size={20}/>, 1);
+          
           harvestPlot(plot.id, crop);
       }
   };
@@ -237,14 +262,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (quizContext?.type === 'WATER') {
           useWell();
           const rect = document.getElementById('well-btn')?.getBoundingClientRect();
-          if(rect) addFloatingText(rect.left, rect.top, "+Nước", "text-blue-500");
+          if(rect) triggerFlyFX(rect, 'PRODUCT', <Droplets className="text-blue-500" size={24} fill="currentColor"/>, 3);
       } else if (quizContext?.type === 'PEST' && quizContext.plotId) {
           resolvePest(quizContext.plotId);
-          const plot = userState.farmPlots.find(p => p.id === quizContext.plotId);
-          if (plot) addFloatingText(window.innerWidth/2, window.innerHeight/2, "Sạch sẽ!", "text-green-500");
+          const rect = document.getElementById(`plot-${quizContext.plotId}`)?.getBoundingClientRect();
+          if(rect) triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500" size={24} fill="currentColor"/>, 1);
       } else if (quizContext?.type === 'SPEED_UP' && quizContext.slotId && quizContext.entityType) {
           speedUpItem(quizContext.entityType, quizContext.slotId);
-          addFloatingText(window.innerWidth/2, window.innerHeight/2, "Tăng tốc!", "text-yellow-500");
+          addFloatingText(window.innerWidth/2, window.innerHeight/2, <Zap size={40} className="text-yellow-400 fill-yellow-400"/>, "text-yellow-500");
       } else if (quizContext?.type === 'NEW_ORDER') {
           const newOrders = generateOrders(userState.grade || 1, userState.completedLevels?.length || 0, userState.livestockSlots || []);
           onUpdateState(prev => ({ ...prev, activeOrders: newOrders }));
@@ -261,7 +286,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           const count = slot.storage?.length || 0;
           
           if (count > 0) {
-              triggerHarvestFX(rect, animal.emoji, count, animal.exp * count);
+              triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">{animal.emoji}</span>, count);
+              triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500" size={20} fill="currentColor"/>, 1);
               collectProduct(slot.id);
           }
       }
@@ -288,13 +314,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const res = collectMachine(slot.id);
       if (res && res.success) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          addFloatingText(rect.left, rect.top, `+${res.count} Sản phẩm`, "text-green-500");
           const lastItem = slot.storage?.[slot.storage.length-1];
           if(lastItem) {
               const recipe = RECIPES.find(r => r.id === lastItem);
               const prod = PRODUCTS.find(p => p.id === recipe?.outputId);
-              if(prod) triggerHarvestFX(rect, prod.emoji, res.count, 0); 
+              if(prod) triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">{prod.emoji}</span>, res.count);
           }
+          triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500" size={20} fill="currentColor"/>, 1);
       } else if (res && !res.success) {
           const machine = MACHINES.find(m => m.id === slot.machineId);
           if(machine) {
@@ -305,22 +331,25 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   // Centralized function for UI to call sell logic
-  const handleSell = (itemId: string, amount: number) => {
+  const handleSell = (itemId: string, amount: number, e?: React.MouseEvent) => {
       const res = sellItem(itemId, amount);
       if (res.success && res.earned) {
-          const centerX = window.innerWidth / 2;
-          const centerY = window.innerHeight / 2;
-          addFloatingText(centerX, centerY, `+${res.earned} Xu`, "text-yellow-500 text-3xl font-black drop-shadow-lg");
+          playSFX('coins');
+          const rect = e ? (e.currentTarget as HTMLElement).getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 } as DOMRect;
+          triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 5); // 5 particles for effect
+          addFloatingText(rect.left, rect.top - 50, `+${res.earned}`, "text-yellow-500 font-black text-2xl drop-shadow-md");
       }
   };
 
   // New: Bulk sell handler
-  const handleSellBulk = (itemsToSell: { itemId: string, amount: number }[]) => {
+  const handleSellBulk = (itemsToSell: { itemId: string, amount: number }[], e?: React.MouseEvent) => {
       const res = sellItemsBulk(itemsToSell);
       if (res.success && res.earned > 0) {
-          const centerX = window.innerWidth / 2;
-          const centerY = window.innerHeight / 2;
-          addFloatingText(centerX, centerY, `+${res.earned} Xu`, "text-yellow-500 text-4xl font-black drop-shadow-lg animate-bounce");
+          playSFX('coins');
+          const rect = e ? (e.currentTarget as HTMLElement).getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 } as DOMRect;
+          // Spawn lots of coins
+          triggerFlyFX(rect, 'COIN', <Coins size={28} className="text-yellow-400 fill-yellow-400"/>, 10);
+          addFloatingText(rect.left, rect.top - 50, `+${res.earned} Xu`, "text-yellow-500 text-4xl font-black drop-shadow-lg animate-bounce");
       }
   };
 
@@ -421,6 +450,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
               return (
                   <button 
+                    id={`plot-${plot.id}`}
                     key={plot.id}
                     onClick={(e) => handlePlotClick(plot, e)}
                     className={`
@@ -844,7 +874,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             <button onClick={onExit} className="p-2 text-slate-600 hover:bg-slate-100 rounded-2xl active:scale-90 transition-all bg-white border border-slate-200 shadow-sm z-50 relative"><Home size={24}/></button>
             
             <div className="flex flex-1 mx-4 items-center gap-2">
-                <div className="flex-1 bg-slate-100 h-9 rounded-full border-2 border-slate-200 relative overflow-hidden flex items-center px-3">
+                <div ref={expRef} className="flex-1 bg-slate-100 h-9 rounded-full border-2 border-slate-200 relative overflow-hidden flex items-center px-3">
                     <div className="absolute left-0 top-0 h-full bg-blue-400 transition-all duration-500" style={{ width: `${Math.min(100, ((userState.farmExp || 0) / nextLevelExp) * 100)}%` }} />
                     <div className="relative z-10 flex w-full justify-between items-center text-[10px] font-black text-slate-600">
                         <span className="bg-white/50 px-1 rounded">LV {userState.farmLevel || 1}</span>
@@ -852,10 +882,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     </div>
                 </div>
                 <div className="flex flex-col gap-1 items-end">
-                    <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 text-[10px] font-black text-amber-700 min-w-[60px] justify-between">
+                    <div ref={coinRef} className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 text-[10px] font-black text-amber-700 min-w-[60px] justify-between">
                         <Coins size={10} fill="currentColor"/> {userState.coins}
                     </div>
-                    <div className="flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200 text-[10px] font-black text-purple-700 min-w-[60px] justify-between">
+                    <div ref={starRef} className="flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-lg border border-purple-200 text-[10px] font-black text-purple-700 min-w-[60px] justify-between">
                         <Star size={10} fill="currentColor"/> {userState.stars}
                     </div>
                 </div>
@@ -888,7 +918,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             playSFX('success');
                             if(barnBtnRef.current) {
                                 const rect = barnBtnRef.current.getBoundingClientRect();
-                                addFloatingText(rect.left, rect.top, `+${res.count} Sản phẩm`, "text-orange-500");
+                                triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">📦</span>, res.count);
+                                triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500" size={24} fill="currentColor"/>, 2);
                             }
                         }
                     }}
@@ -915,14 +946,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
         {flyingItems.map(item => (
             <div
                 key={item.id}
-                className="fixed z-[100] text-4xl pointer-events-none"
+                className="fixed z-[100] pointer-events-none"
                 style={{
                     left: item.x,
                     top: item.y,
                     animation: `flyToBarn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards`
                 }}
             >
-                {item.emoji}
+                {/* Dynamically set target for animation via CSS variable if possible, or assume fixed */}
+                <style>{`
+                    @keyframes flyToBarn {
+                        0% { transform: scale(1) translate(0, 0); opacity: 1; }
+                        100% { transform: scale(0.5) translate(${item.targetX - item.x}px, ${item.targetY - item.y}px); opacity: 0; }
+                    }
+                `}</style>
+                {item.content}
             </div>
         ))}
 
@@ -1038,8 +1076,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 harvested={userState.harvestedCrops || {}} 
                 activeOrders={userState.activeOrders || []}
                 coinBuffPercent={getDecorBonus('COIN')} 
-                onSell={(itemId) => handleSell(itemId, 1)}
-                onSellAll={(itemId) => handleSell(itemId, userState.harvestedCrops?.[itemId] || 0)}
+                onSell={(itemId, e) => handleSell(itemId, 1, e)}
+                onSellAll={(itemId, e) => handleSell(itemId, userState.harvestedCrops?.[itemId] || 0, e)}
                 onSellBulk={sellItemsBulk} // Pass the new bulk handler
                 onClose={() => setActiveModal('NONE')}
             />
