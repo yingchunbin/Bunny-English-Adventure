@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
-import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock } from 'lucide-react';
+import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { resolveImage } from '../../utils/imageUtils';
 
@@ -51,7 +51,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       );
   };
 
-  // Helper to sort items: Unlocked first, then by level, then by cost
+  // Helper to sort items
   const sortItems = <T extends { unlockReq?: number, minLevel?: number, cost: number }>(items: T[]) => {
       return [...items].sort((a, b) => {
           const levelA = a.unlockReq ?? a.minLevel ?? 0;
@@ -59,9 +59,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           const lockedA = farmLevel < levelA;
           const lockedB = farmLevel < levelB;
 
-          if (lockedA !== lockedB) return lockedA ? 1 : -1; // Locked items at bottom
-          if (levelA !== levelB) return levelA - levelB; // Lower level requirement first
-          return a.cost - b.cost; // Cheaper items first
+          if (lockedA !== lockedB) return lockedA ? 1 : -1;
+          if (levelA !== levelB) return levelA - levelB;
+          return a.cost - b.cost;
       });
   };
 
@@ -72,12 +72,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       return 'hover:scale-110';
   };
 
-  // Helper to determine rarity glow based on cost (Stars) - APPLIED ONLY TO IMAGE
   const getRarityImageStyle = (cost: number) => {
-      if(cost >= 50) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; // Legendary
-      if(cost >= 20) return 'drop-shadow-[0_0_10px_rgba(192,132,252,0.6)]'; // Epic
-      if(cost >= 8) return 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]'; // Rare
-      return 'drop-shadow-sm'; // Common
+      if(cost >= 50) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; 
+      if(cost >= 20) return 'drop-shadow-[0_0_10px_rgba(192,132,252,0.6)]'; 
+      if(cost >= 8) return 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]'; 
+      return 'drop-shadow-sm'; 
   };
 
   const getRarityBadgeStyle = (cost: number) => {
@@ -149,7 +148,14 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                                         {imgUrl ? <img src={imgUrl} alt={crop.name} className="w-full h-full object-contain" /> : <div className="text-5xl">{crop.emoji}</div>}
                                     </div>
                                     <div className="flex-1">
-                                        <div className="font-black text-slate-700 text-sm">{crop.name}</div>
+                                        <div className="flex justify-between items-start">
+                                            <div className="font-black text-slate-700 text-sm">{crop.name}</div>
+                                            {!isLocked && (
+                                                <div className="text-[10px] font-bold text-green-600 flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-lg border border-green-100">
+                                                    <TrendingUp size={10} /> Bán: {crop.sellPrice}
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="text-[10px] text-slate-500 font-bold">Thu hoạch: {crop.growthTime}s</div>
                                         
                                         {!isLocked ? (
@@ -199,12 +205,18 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                                                     <span className="text-blue-600 text-[10px]">x{animal.feedAmount}</span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                                <span className="text-[10px] uppercase text-slate-400 w-6">Đẻ:</span>
-                                                <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm">
-                                                    <span>{produceItem?.emoji}</span>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                                                    <span className="text-[10px] uppercase text-slate-400 w-6">Đẻ:</span>
+                                                    <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-lg border border-slate-100 shadow-sm">
+                                                        <span>{produceItem?.emoji}</span>
+                                                    </div>
                                                 </div>
-                                                <span className="flex items-center gap-1 text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md"><Clock size={8}/> {Math.ceil(animal.produceTime / 60)}p</span>
+                                                {!isLocked && produceItem && (
+                                                    <div className="text-[9px] font-bold text-green-600">
+                                                        Bán: {produceItem.sellPrice} <Coins size={8} className="inline"/>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
@@ -239,20 +251,19 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
                                     {/* RECIPES PREVIEW */}
                                     <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
-                                        <div className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-wider">Chế tạo:</div>
+                                        <div className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-wider">Chế tạo & Lợi nhuận:</div>
                                         <div className="space-y-1.5">
                                             {machineRecipes.slice(0, 3).map(r => { // Show max 3 examples
                                                 const out = allItems.find(i => i.id === r.outputId);
                                                 return (
-                                                    <div key={r.id} className="flex items-center gap-1.5 text-xs font-bold text-slate-600 bg-white p-1 rounded-lg shadow-sm border border-slate-100">
-                                                        <div className="flex items-center -space-x-1">
-                                                            {r.input.map(input => {
-                                                                const item = allItems.find(i => i.id === input.id);
-                                                                return <span key={input.id} className="bg-slate-100 rounded-full w-5 h-5 flex items-center justify-center text-xs border border-white">{item?.emoji}</span>
-                                                            })}
+                                                    <div key={r.id} className="flex items-center justify-between text-xs font-bold text-slate-600 bg-white p-1 rounded-lg shadow-sm border border-slate-100">
+                                                        <div className="flex items-center gap-1">
+                                                            <span>{out?.emoji}</span>
+                                                            <span className="text-[10px] truncate max-w-[60px]">{out?.name}</span>
                                                         </div>
-                                                        <ArrowRight size={10} className="text-blue-300"/>
-                                                        <span className="text-lg">{out?.emoji}</span>
+                                                        <div className="text-[9px] text-green-600 font-black">
+                                                            +{out?.sellPrice} <Coins size={8} className="inline"/>
+                                                        </div>
                                                     </div>
                                                 )
                                             })}

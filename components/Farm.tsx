@@ -47,7 +47,7 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, getDecorBonus } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
@@ -133,6 +133,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const baseCost = 500;
       let currentCount = 0;
       let defaultSlots = 0;
+      let multiplier = 1.5;
 
       if (type === 'PLOT') {
           currentCount = userState.farmPlots.length;
@@ -146,13 +147,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       } else if (type === 'DECOR') {
           currentCount = userState.decorSlots?.length || 0;
           defaultSlots = 3;
+          multiplier = 2.0; // Higher multiplier for decor slots as requested
       }
 
-      // Calculate cost: 500 for first expansion, then increases.
-      // Formula: 500 * 1.5 ^ (count - default)
       const extraSlots = Math.max(0, currentCount - defaultSlots);
-      const cost = Math.floor(baseCost * Math.pow(1.5, extraSlots));
-      const finalCost = Math.floor(cost / 100) * 100; 
+      const cost = Math.floor(baseCost * Math.pow(multiplier, extraSlots));
+      // Round to nearest 50 for cleaner numbers
+      const finalCost = Math.ceil(cost / 50) * 50; 
 
       setConfirmConfig({
           isOpen: true,
@@ -300,6 +301,16 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               setProductionConfig({ slotId: slot.id, machineId: machine.id });
               setActiveModal('PRODUCTION');
           }
+      }
+  };
+
+  // Centralized function for UI to call sell logic
+  const handleSell = (itemId: string, amount: number) => {
+      const res = sellItem(itemId, amount);
+      if (res.success && res.earned) {
+          const centerX = window.innerWidth / 2;
+          const centerY = window.innerHeight / 2;
+          addFloatingText(centerX, centerY, `+${res.earned} Xu`, "text-yellow-500 text-3xl font-black drop-shadow-lg");
       }
   };
 
@@ -1016,29 +1027,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 crops={[...CROPS, ...PRODUCTS]} 
                 harvested={userState.harvestedCrops || {}} 
                 activeOrders={userState.activeOrders || []}
-                onSell={(itemId) => {
-                    const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
-                    if (item && (userState.harvestedCrops?.[itemId] || 0) > 0) {
-                        onUpdateState(prev => ({
-                            ...prev,
-                            coins: prev.coins + item.sellPrice,
-                            harvestedCrops: { ...prev.harvestedCrops, [itemId]: (prev.harvestedCrops?.[itemId] || 0) - 1 }
-                        }));
-                        playSFX('coins');
-                    }
-                }}
-                onSellAll={(itemId) => {
-                    const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
-                    const count = userState.harvestedCrops?.[itemId] || 0;
-                    if (item && count > 0) {
-                        onUpdateState(prev => ({
-                            ...prev,
-                            coins: prev.coins + (item.sellPrice * count),
-                            harvestedCrops: { ...prev.harvestedCrops, [itemId]: 0 }
-                        }));
-                        playSFX('coins');
-                    }
-                }}
+                onSell={(itemId) => sellItem(itemId, 1)}
+                onSellAll={(itemId) => sellItem(itemId, userState.harvestedCrops?.[itemId] || 0)}
                 onSellEverything={() => {}}
                 onClose={() => setActiveModal('NONE')}
             />

@@ -139,16 +139,15 @@ export const useFarmGame = (
 
       const durationMinutes = Math.max(15, maxProductionTime * 3);
 
-      // Reward Calculation: 2.0x to 3.0x of the TRUE COST
-      const multiplier = 2.5 + Math.random() * 1.5; // Random between 2.5 and 4.0
-      // Ensure a minimum base reward of 100 to prevent tiny orders feeling worthless
-      const baseReward = Math.ceil(totalCost * multiplier);
-      const finalCoins = Math.max(100, Math.ceil(baseReward / 10) * 10);
-
-      const rewardStars = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0;
+      // Reward Calculation: SIGNIFICANTLY BOOSTED
+      const multiplier = 4.0 + Math.random() * 2.0; // Boosted multiplier (4.0x - 6.0x)
       
-      // STRICT fertilizer control: 0, 1, 2, or 3.
-      const rewardFertilizer = Math.random() < 0.3 ? Math.floor(Math.random() * 3) + 1 : 0; 
+      const baseReward = Math.ceil(totalCost * multiplier);
+      // Ensure minimum reward is substantial
+      const finalCoins = Math.max(200, Math.ceil(baseReward / 10) * 10);
+
+      const rewardStars = Math.random() < 0.4 ? Math.floor(Math.random() * 3) + 1 : 0;
+      const rewardFertilizer = Math.random() < 0.4 ? Math.floor(Math.random() * 3) + 1 : 0; 
 
       return {
           id: Math.random().toString(36).substr(2, 9),
@@ -476,8 +475,8 @@ export const useFarmGame = (
       
       if (count <= 0) return { success: false, msg: "Hết hạt giống rồi bé ơi! Hãy vào Cửa Hàng mua thêm." };
       
-      // Calculate reduction based on TIME buff
-      const timeBonus = getDecorBonus('TIME');
+      // Calculate reduction based on TIME buff, capped at 50%
+      const timeBonus = Math.min(50, getDecorBonus('TIME'));
       const crop = CROPS.find(c => c.id === seedId);
       const growthTime = crop?.growthTime || 0;
       const reduceSeconds = (growthTime * timeBonus) / 100;
@@ -962,6 +961,40 @@ export const useFarmGame = (
       return { success: true, amount: animal.feedAmount, feedEmoji: feedItem?.emoji };
   };
 
+  // --- SELLING ---
+  // Centralized function to handle selling items directly from Inventory/Barn
+  // ensuring buffs are applied and achievements tracked.
+  const sellItem = (itemId: string, amount: number) => {
+      const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
+      if (!item) return { success: false };
+
+      // Calculate Price with Buffs
+      const coinBonusPercent = getDecorBonus('COIN');
+      const basePrice = item.sellPrice;
+      const bonusPrice = Math.floor(basePrice * (coinBonusPercent / 100));
+      const finalPrice = basePrice + bonusPrice;
+      const totalEarned = finalPrice * amount;
+
+      onUpdateState(prev => {
+          const currentCount = prev.harvestedCrops?.[itemId] || 0;
+          if (currentCount < amount) return prev; // Should be handled by UI, but safety check
+
+          const newHarvest = { ...(prev.harvestedCrops || {}) };
+          newHarvest[itemId] = currentCount - amount;
+
+          return {
+              ...prev,
+              coins: prev.coins + totalEarned,
+              harvestedCrops: newHarvest
+          };
+      });
+
+      playSFX('coins');
+      updateMissionProgress('EARN', totalEarned); // Track achievement progress
+      
+      return { success: true, earned: totalEarned };
+  };
+
   return { 
       now, 
       plantSeed, 
@@ -986,6 +1019,8 @@ export const useFarmGame = (
       useWell,
       speedUpItem,
       placeDecor,
-      removeDecor
+      removeDecor,
+      sellItem, // Exposed
+      getDecorBonus // Exposed for UI
   };
 };
