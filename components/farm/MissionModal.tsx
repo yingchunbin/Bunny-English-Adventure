@@ -6,17 +6,13 @@ import { Avatar } from '../Avatar';
 
 interface MissionModalProps {
   missions: Mission[];
-  onClaim: (mission: Mission) => void;
+  onClaim: (mission: Mission, e: React.MouseEvent) => void;
   onClose: () => void;
 }
 
 export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, onClose }) => {
   const [activeTab, setActiveTab] = useState<'DAILY' | 'ACHIEVEMENT'>('DAILY');
   
-  // Sorting Logic:
-  // 1. Completed & NOT Claimed (Priority!)
-  // 2. In Progress (Sorted by percentage descending)
-  // 3. Claimed (Bottom)
   const filteredMissions = missions
     .filter(m => m.category === activeTab)
     .sort((a, b) => {
@@ -36,7 +32,6 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
         return progB - progA;
     });
 
-  // Helper to get icon based on mission type
   const getMissionIcon = (type: Mission['type']) => {
       switch (type) {
           case 'HARVEST': return <Tractor size={24} className="text-orange-500" />;
@@ -123,7 +118,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                     </div>
                                     
                                     {isClaimable ? (
-                                        <button onClick={() => onClaim(m)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce">
+                                        <button onClick={(e) => onClaim(m, e)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce">
                                             <Gift size={14}/> Nhận Quà
                                         </button>
                                     ) : m.claimed ? (

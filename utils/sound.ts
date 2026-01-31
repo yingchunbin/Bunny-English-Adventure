@@ -150,64 +150,59 @@ export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip'
   try {
     switch (type) {
       case 'correct':
-        // Happy ascending arpeggio
         playTone(523.25, 'sine', 0.2, 0); // C5
         playTone(659.25, 'sine', 0.2, 0.1); // E5
         playTone(783.99, 'sine', 0.4, 0.2); // G5
         break;
       case 'wrong':
-        // Sad descending wobble
         playTone(300, 'sawtooth', 0.3, 0);
         playTone(200, 'sawtooth', 0.4, 0.15);
         break;
       case 'click':
-        // Crisp UI click
         playTone(1200, 'sine', 0.05, 0, 0.5);
         break;
       case 'flip':
-        // Soft swish
         playTone(400, 'triangle', 0.1, 0, 0.3);
         break;
       case 'success':
-        // Victory fanfare snippet
         playTone(523.25, 'square', 0.1, 0, 0.5);
         playTone(523.25, 'square', 0.1, 0.1, 0.5);
         playTone(523.25, 'square', 0.1, 0.2, 0.5);
         playTone(659.25, 'square', 0.6, 0.3, 0.6);
         break;
       case 'harvest':
-        // Satisfying pop
         playTone(600, 'sine', 0.1, 0);
         playTone(1200, 'sine', 0.1, 0.05);
         break;
       case 'water':
-        // Water drop sound
         playTone(800, 'sine', 0.1, 0);
         playTone(600, 'sine', 0.2, 0.05);
         break;
       case 'cheer':
-          // Crowd cheer simulation
           for(let i=0; i<6; i++) {
             playTone(400 + Math.random()*300, 'sawtooth', 0.5, i * 0.05, 0.4);
             playTone(200 + Math.random()*200, 'triangle', 0.5, i * 0.08, 0.3);
           }
           break;
       case 'eat':
-          // Crunching sound
           playTone(300, 'sawtooth', 0.1, 0);
           playTone(450, 'sawtooth', 0.1, 0.1);
           playTone(250, 'sawtooth', 0.15, 0.2);
           break;
       case 'powerup':
-          // Ascending fast sweep
           playTone(400, 'sine', 0.1, 0);
           playTone(600, 'sine', 0.1, 0.1);
           playTone(800, 'sine', 0.2, 0.2);
           break;
       case 'coins':
-          // High pitch ding
-          playTone(1000, 'sine', 0.1, 0);
-          playTone(1500, 'sine', 0.2, 0.05);
+          // EXTENDED COIN SOUND
+          const baseTime = 0;
+          playTone(1000, 'sine', 0.15, baseTime, 0.7);
+          playTone(1500, 'sine', 0.15, baseTime + 0.1, 0.7);
+          playTone(2000, 'sine', 0.15, baseTime + 0.2, 0.7);
+          playTone(1200, 'sine', 0.2, baseTime + 0.3, 0.6);
+          playTone(1800, 'sine', 0.25, baseTime + 0.4, 0.5);
+          playTone(2400, 'sine', 0.3, baseTime + 0.5, 0.4);
           break;
     }
   } catch (e) {

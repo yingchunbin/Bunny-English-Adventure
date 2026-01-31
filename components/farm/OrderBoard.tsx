@@ -10,7 +10,7 @@ interface OrderBoardProps {
   orders: FarmOrder[];
   items: FarmItem[];
   inventory: any;
-  onDeliver: (order: FarmOrder) => void;
+  onDeliver: (order: FarmOrder, e: React.MouseEvent) => void;
   onRefresh: () => void;
   onClose: () => void;
   onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
@@ -36,17 +36,18 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
       return `${minutes} phút`;
   };
 
-  const handleDeliverClick = (order: FarmOrder) => {
+  const handleDeliverClick = (order: FarmOrder, e: React.MouseEvent) => {
       if (deliveringId) return; // Prevent double clicks
 
-      playSFX('coins'); // Success sound
       setDeliveringId(order.id);
+      
+      // Call parent to trigger effects immediately when clicked
+      onDeliver(order, e);
 
-      // Wait for animation to finish before actually removing the order
+      // Wait for animation to finish before actually removing the order ID locally (visual consistency)
       setTimeout(() => {
-          onDeliver(order);
           setDeliveringId(null);
-      }, 2500); // Increased delay to show off rewards
+      }, 2500); 
   };
 
   const handleItemClick = (item: FarmItem) => {
@@ -193,10 +194,10 @@ export const OrderBoard: React.FC<OrderBoardProps> = ({ orders, items, inventory
                                         })}
                                     </div>
                                     <button 
-                                        onClick={() => {
+                                        onClick={(e) => {
                                             if (isExpired) return;
                                             if (canDeliver) {
-                                                handleDeliverClick(order);
+                                                handleDeliverClick(order, e);
                                             } else {
                                                 playSFX('wrong');
                                                 onShowAlert("Bé chưa đủ hàng trong Kho nông sản để giao nhé!", "DANGER");

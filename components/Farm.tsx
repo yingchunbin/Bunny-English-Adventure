@@ -1,7 +1,7 @@
 
 // ... existing imports ...
 import React, { useState, useEffect, useRef } from 'react';
-import { UserState, FarmPlot, Decor } from '../types';
+import { UserState, FarmPlot, Decor, FarmOrder } from '../types';
 import { CROPS, ANIMALS, MACHINES, DECORATIONS, RECIPES, PRODUCTS } from '../data/farmData';
 import { PlotModal } from './farm/PlotModal';
 import { ShopModal } from './farm/ShopModal';
@@ -47,7 +47,7 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
@@ -351,6 +351,39 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           triggerFlyFX(rect, 'COIN', <Coins size={28} className="text-yellow-400 fill-yellow-400"/>, 10);
           addFloatingText(rect.left, rect.top - 50, `+${res.earned} Xu`, "text-yellow-500 text-4xl font-black drop-shadow-lg animate-bounce");
       }
+  };
+
+  const handleDeliverOrder = (order: FarmOrder, e: React.MouseEvent) => {
+      const res = deliverOrder(order);
+      if (res.success) {
+          playSFX('coins');
+          const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+          triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 5);
+          triggerFlyFX(rect, 'EXP', <Zap size={24} className="text-blue-500 fill-blue-500"/>, 3);
+          
+          if(order.rewardStars) triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 2);
+          
+          addFloatingText(rect.left, rect.top - 50, "Giao thành công!", "text-green-500 font-black text-xl drop-shadow-md");
+      } else {
+          playSFX('wrong');
+          handleShowAlert(res.msg || "Không đủ hàng!", "DANGER");
+      }
+  };
+
+  const handleClaimMission = (mission: any, e: React.MouseEvent) => {
+      playSFX('coins');
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      
+      if(mission.reward.type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
+      if(mission.reward.type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);
+      if(mission.reward.type === 'WATER') triggerFlyFX(rect, 'PRODUCT', <Droplets size={24} className="text-blue-400 fill-blue-400"/>, 2);
+      if(mission.reward.type === 'FERTILIZER') triggerFlyFX(rect, 'PRODUCT', <Zap size={24} className="text-green-400 fill-green-400"/>, 1);
+      
+      addReward(mission.reward.type, mission.reward.amount);
+      onUpdateState(prev => ({
+          ...prev,
+          missions: prev.missions?.map(miss => miss.id === mission.id ? { ...miss, claimed: true } : miss)
+      }));
   };
 
   const renderSectionTabs = () => (
@@ -1115,14 +1148,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
         {activeModal === 'MISSIONS' && (
             <MissionModal 
                 missions={userState.missions || []} 
-                onClaim={(m) => {
-                    playSFX('success');
-                    addReward(m.reward.type, m.reward.amount);
-                    onUpdateState(prev => ({
-                        ...prev,
-                        missions: prev.missions?.map(miss => miss.id === m.id ? { ...miss, claimed: true } : miss)
-                    }));
-                }}
+                onClaim={handleClaimMission}
                 onClose={() => setActiveModal('NONE')} 
             />
         )}
@@ -1132,7 +1158,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 orders={userState.activeOrders || []} 
                 items={[...CROPS, ...PRODUCTS]} 
                 inventory={userState.harvestedCrops || {}}
-                onDeliver={(o) => deliverOrder(o)}
+                onDeliver={handleDeliverOrder}
                 onRefresh={() => {
                     playSFX('click');
                     setQuizContext({ type: 'NEW_ORDER' });
