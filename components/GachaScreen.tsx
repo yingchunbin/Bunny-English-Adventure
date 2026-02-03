@@ -7,6 +7,7 @@ import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield
 import { playSFX } from '../utils/sound';
 import { LearningQuizModal } from './farm/LearningQuizModal';
 import { LEVELS } from '../constants';
+import { resolveImage } from '../utils/imageUtils';
 
 interface GachaScreenProps {
   userState: UserState;
@@ -104,28 +105,29 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
               bg: 'bg-yellow-100', 
               text: 'text-yellow-700', 
               shadow: 'shadow-yellow-200',
-              glow: 'shadow-[0_0_20px_rgba(250,204,21,0.6)] animate-pulse'
+              // Image specific glow - applied directly to img tag for contour glow
+              imageGlow: 'drop-shadow-[0_0_20px_rgba(250,204,21,1)] filter brightness-110 animate-pulse' 
           };
           case 'EPIC': return { 
               border: 'border-purple-400', 
               bg: 'bg-purple-100', 
               text: 'text-purple-700', 
               shadow: 'shadow-purple-200',
-              glow: 'shadow-[0_0_15px_rgba(168,85,247,0.5)]'
+              imageGlow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] filter contrast-125'
           };
           case 'RARE': return { 
               border: 'border-blue-400', 
               bg: 'bg-blue-100', 
               text: 'text-blue-700', 
               shadow: 'shadow-blue-200',
-              glow: 'shadow-[0_0_10px_rgba(96,165,250,0.3)]'
+              imageGlow: 'drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]'
           };
           default: return { 
               border: 'border-slate-300', 
               bg: 'bg-slate-100', 
               text: 'text-slate-600', 
               shadow: 'shadow-slate-200',
-              glow: '' 
+              imageGlow: '' 
           };
       }
   };
@@ -407,7 +409,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                       {/* The Revealed Item */}
                       <div className="relative animate-scaleIn">
                           <div className={`absolute inset-0 bg-white/50 blur-3xl animate-pulse`}></div>
-                          <div className={`relative w-72 aspect-square bg-white rounded-[2.5rem] border-8 ${style.border} p-6 shadow-2xl flex flex-col items-center justify-center ${style.glow}`}>
+                          <div className={`relative w-72 aspect-square bg-white rounded-[2.5rem] border-8 ${style.border} p-6 shadow-2xl flex flex-col items-center justify-center`}>
                               
                               {['LEGENDARY', 'EPIC'].includes(bestItem.rarity) && (
                                    <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
@@ -415,8 +417,13 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                    </div>
                               )}
                               
-                              <div className="w-48 h-48 relative z-10 mb-4">
-                                  <Avatar imageId={bestItem.imageId} size="xl" className="w-full h-full shadow-lg" />
+                              <div className="w-48 h-48 relative z-10 mb-4 flex items-center justify-center">
+                                  {/* Using direct IMG for glow effects to avoid overflow clipping in Avatar component */}
+                                  <img 
+                                    src={resolveImage(bestItem.imageId)} 
+                                    alt={bestItem.name} 
+                                    className={`w-full h-full object-contain ${style.imageGlow}`} 
+                                  />
                               </div>
                               
                               <div className={`px-4 py-1 rounded-full text-xs font-black text-white uppercase tracking-widest mb-2 z-10 ${style.border.replace('border', 'bg').replace('400', '500')}`}>
@@ -449,9 +456,13 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
               {pendingRewards.map((item, idx) => {
                   const style = getRarityStyle(item.rarity);
                   return (
-                      <div key={idx} className={`bg-white rounded-xl p-2 flex flex-col items-center border-b-4 ${style.border} animate-scaleIn ${style.glow}`} style={{animationDelay: `${idx*50}ms`}}>
-                          <div className="w-16 h-16 mb-2">
-                              <Avatar imageId={item.imageId} size="sm" className="w-full h-full rounded-lg" />
+                      <div key={idx} className={`bg-white rounded-xl p-2 flex flex-col items-center border-b-4 ${style.border} animate-scaleIn`} style={{animationDelay: `${idx*50}ms`}}>
+                          <div className="w-16 h-16 mb-2 flex items-center justify-center">
+                              <img 
+                                src={resolveImage(item.imageId)} 
+                                alt={item.name} 
+                                className={`w-full h-full object-contain ${style.imageGlow}`} 
+                              />
                           </div>
                           <div className={`text-[8px] font-black text-white px-2 py-0.5 rounded-full mb-1 ${style.border.replace('border','bg').replace('400','500')}`}>
                               {getRarityLabel(item.rarity)}
@@ -519,19 +530,23 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                               onClick={() => isOwned && setConfirmEquip(item)}
                                               disabled={!isOwned}
                                               className={`
-                                                  relative w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center overflow-hidden transition-all mb-1
+                                                  relative w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center overflow-visible transition-all mb-1
                                                   ${isOwned 
-                                                      ? `bg-white border-white shadow-sm active:scale-95 cursor-pointer ${rarityStyle.glow}` 
+                                                      ? `bg-white border-white shadow-sm active:scale-95 cursor-pointer` 
                                                       : 'bg-black/5 border-black/5 cursor-not-allowed'}
                                                   ${isEquipped ? 'ring-4 ring-green-400 z-10' : ''}
                                               `}
                                           >
                                               {isOwned ? (
                                                   <>
-                                                      <div className="absolute inset-0 p-2">
-                                                          <Avatar imageId={item.imageId} size="md" className="w-full h-full rounded-none shadow-none border-none bg-transparent" />
+                                                      <div className="absolute inset-0 p-2 flex items-center justify-center">
+                                                          <img 
+                                                              src={resolveImage(item.imageId)} 
+                                                              alt={item.name} 
+                                                              className={`w-full h-full object-contain ${rarityStyle.imageGlow}`} 
+                                                          />
                                                       </div>
-                                                      <div className="absolute bottom-0 w-full bg-black/70 backdrop-blur-[1px] py-0.5 px-1">
+                                                      <div className="absolute bottom-0 w-full bg-black/70 backdrop-blur-[1px] py-0.5 px-1 rounded-b-lg">
                                                           <div className="text-[7px] font-bold text-center text-white truncate w-full uppercase">{item.name}</div>
                                                       </div>
                                                   </>
@@ -555,8 +570,12 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           {confirmEquip && (
               <div className="fixed bottom-0 left-0 w-full bg-white p-6 shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-30 rounded-t-[2.5rem] flex flex-col items-center animate-slideUp border-t-4 border-slate-100">
                   <div className="flex items-center gap-6 mb-6">
-                      <div className={`p-1 rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border} shadow-lg ${getRarityStyle(confirmEquip.rarity).glow}`}>
-                          <Avatar imageId={confirmEquip.imageId} size="lg" className="rounded-xl" />
+                      <div className={`p-4 w-24 h-24 flex items-center justify-center rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border} shadow-lg`}>
+                           <img 
+                                src={resolveImage(confirmEquip.imageId)} 
+                                alt={confirmEquip.name} 
+                                className={`w-full h-full object-contain ${getRarityStyle(confirmEquip.rarity).imageGlow}`} 
+                           />
                       </div>
                       <div>
                           <div className={`text-[10px] font-black uppercase mb-1 inline-block px-2 py-0.5 rounded-md text-white ${getRarityStyle(confirmEquip.rarity).border.replace('border', 'bg').replace('400', '500')}`}>
