@@ -17,7 +17,6 @@ interface GachaScreenProps {
 // Config for Ticker
 const CARD_WIDTH = 120; // Width of each item in ticker
 const CARD_GAP = 12; // Gap between items
-const VISIBLE_ITEMS = 5; // How many items visible roughly
 const WINNING_INDEX = 45; // The index where the slider stops
 const TOTAL_DUMMY_ITEMS = 60; // Total items in strip
 
@@ -63,7 +62,6 @@ const DinoEgg = ({ size = 100, className = "" }: { size?: number, className?: st
 
     {/* Spots */}
     <g clipPath="url(#eggClip)">
-        {/* Clip path definition inline for simplicity or just keep spots inside bounds approximately */}
         <circle cx="30" cy="40" r="8" fill="#FCA5A5" opacity="0.8" />
         <circle cx="70" cy="30" r="6" fill="#93C5FD" opacity="0.8" />
         <circle cx="80" cy="60" r="10" fill="#86EFAC" opacity="0.8" />
@@ -85,8 +83,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   const [tickerItems, setTickerItems] = useState<Rarity[]>([]); 
   const [scrollX, setScrollX] = useState(0);
   const [transitionDuration, setTransitionDuration] = useState(0);
-  const tickerRef = useRef<HTMLDivElement>(null);
-  const lastTickRef = useRef(0);
   
   // Reveal State
   const [pendingRewards, setPendingRewards] = useState<GachaItem[]>([]); // Array to support bulk
@@ -100,14 +96,37 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   // -- HELPERS --
   const ownedIds = userState.gachaCollection || [];
   const ownedItems = GACHA_ITEMS.filter(item => ownedIds.includes(item.id));
-  const legendaryCount = ownedItems.filter(i => i.rarity === 'LEGENDARY').length;
 
   const getRarityStyle = (rarity: Rarity) => {
       switch(rarity) {
-          case 'LEGENDARY': return { border: 'border-yellow-400', bg: 'bg-yellow-100', text: 'text-yellow-700', shadow: 'shadow-yellow-200' };
-          case 'EPIC': return { border: 'border-purple-400', bg: 'bg-purple-100', text: 'text-purple-700', shadow: 'shadow-purple-200' };
-          case 'RARE': return { border: 'border-blue-400', bg: 'bg-blue-100', text: 'text-blue-700', shadow: 'shadow-blue-200' };
-          default: return { border: 'border-slate-300', bg: 'bg-slate-100', text: 'text-slate-600', shadow: 'shadow-slate-200' };
+          case 'LEGENDARY': return { 
+              border: 'border-yellow-400', 
+              bg: 'bg-yellow-100', 
+              text: 'text-yellow-700', 
+              shadow: 'shadow-yellow-200',
+              glow: 'shadow-[0_0_20px_rgba(250,204,21,0.6)] animate-pulse'
+          };
+          case 'EPIC': return { 
+              border: 'border-purple-400', 
+              bg: 'bg-purple-100', 
+              text: 'text-purple-700', 
+              shadow: 'shadow-purple-200',
+              glow: 'shadow-[0_0_15px_rgba(168,85,247,0.5)]'
+          };
+          case 'RARE': return { 
+              border: 'border-blue-400', 
+              bg: 'bg-blue-100', 
+              text: 'text-blue-700', 
+              shadow: 'shadow-blue-200',
+              glow: 'shadow-[0_0_10px_rgba(96,165,250,0.3)]'
+          };
+          default: return { 
+              border: 'border-slate-300', 
+              bg: 'bg-slate-100', 
+              text: 'text-slate-600', 
+              shadow: 'shadow-slate-200',
+              glow: '' 
+          };
       }
   };
 
@@ -120,26 +139,25 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       }
   };
 
+  // Adjusted Rates: Common is much higher now
   const getRandomRarity = (): Rarity => {
       const rand = Math.random() * 100;
-      if (rand < 5) return 'LEGENDARY';
-      if (rand < 20) return 'EPIC';
-      if (rand < 50) return 'RARE';
-      return 'COMMON';
+      if (rand < 1) return 'LEGENDARY'; // 1%
+      if (rand < 5) return 'EPIC';      // 4%
+      if (rand < 25) return 'RARE';     // 20%
+      return 'COMMON';                  // 75%
   };
 
   // --- SOUND TICKER EFFECT ---
   useEffect(() => {
       if (!isSpinning) return;
       
-      // Simulation of slowing down ticks
       let speed = 50;
       let time = 0;
       const tickLoop = () => {
           if (!isSpinning) return;
           playSFX('tick');
           
-          // Slow down curve
           time += speed;
           if (time > 3000) speed += 10;
           if (time > 4000) speed += 30;
@@ -150,7 +168,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       };
       
       tickLoop();
-
       return () => {};
   }, [isSpinning]);
 
@@ -160,20 +177,15 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       const results: GachaItem[] = [];
       
       for(let i=0; i<count; i++) {
-          const rand = Math.random() * 100;
-          let pool: Rarity = 'COMMON';
-          if (rand < 5) pool = 'LEGENDARY'; 
-          else if (rand < 20) pool = 'EPIC'; 
-          else if (rand < 50) pool = 'RARE'; 
+          const rarity = getRandomRarity(); // Use new weighted function
           
-          const candidates = GACHA_ITEMS.filter(item => item.rarity === pool);
+          const candidates = GACHA_ITEMS.filter(item => item.rarity === rarity);
           const winner = candidates[Math.floor(Math.random() * candidates.length)];
           results.push(winner);
       }
       
       setPendingRewards(results);
 
-      // Find the "Best" item to show in the ticker animation
       const rarityOrder = { 'LEGENDARY': 3, 'EPIC': 2, 'RARE': 1, 'COMMON': 0 };
       const bestItem = [...results].sort((a,b) => rarityOrder[b.rarity] - rarityOrder[a.rarity])[0];
 
@@ -181,14 +193,13 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       const items: Rarity[] = [];
       for (let i = 0; i < TOTAL_DUMMY_ITEMS; i++) {
           if (i === WINNING_INDEX) {
-              items.push(bestItem.rarity); // Force winner rarity at stopping point
+              items.push(bestItem.rarity); 
           } else {
               items.push(getRandomRarity());
           }
       }
       setTickerItems(items);
       
-      // Reset Positions
       setTransitionDuration(0);
       setScrollX(0);
       
@@ -205,25 +216,21 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       const bestItem = prepareSpin(count);
       if (!bestItem) return;
 
-      // Deduct Cost
       onUpdateState(prev => ({ ...prev, stars: prev.stars - cost }));
       setIsSpinning(true);
       playSFX('click');
 
-      // Start Animation after a brief render delay
       setTimeout(() => {
           const itemFullWidth = CARD_WIDTH + CARD_GAP;
           const targetX = (WINNING_INDEX * itemFullWidth) - (window.innerWidth < 640 ? window.innerWidth/2 : 200) + (CARD_WIDTH / 2);
           const jitter = (Math.random() * 40) - 20; 
 
-          setTransitionDuration(5000); // 5 seconds spin
+          setTransitionDuration(5000); 
           setScrollX(targetX + jitter);
       }, 100);
 
-      // End Spin
       setTimeout(() => {
           setIsSpinning(false);
-          // Auto transition to reveal
           setTimeout(() => {
               setRevealProgress(0);
               setIsRevealed(false);
@@ -236,7 +243,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
 
   const handleRevealInteraction = () => {
       if (isRevealed) {
-          // If bulk, go to summary, else close
           onUpdateState(prev => ({
               ...prev,
               gachaCollection: Array.from(new Set([...(prev.gachaCollection || []), ...pendingRewards.map(r => r.id)]))
@@ -251,10 +257,8 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           return;
       }
 
-      // Increment progress
-      const step = 20; // 5 taps
+      const step = 20;
       const next = revealProgress + step;
-      
       playSFX('crack');
 
       if (next >= 100) {
@@ -299,12 +303,10 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
 
            {/* CS:GO Ticker Machine */}
            <div className="w-full max-w-2xl bg-slate-800 p-1 py-8 relative shadow-2xl border-y-8 border-slate-900 overflow-hidden mb-10">
-               {/* Center Marker */}
                <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-yellow-400 z-20 shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
                <div className="absolute left-1/2 top-0 -translate-x-1/2 -mt-2 text-yellow-400 z-20">▼</div>
                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 -mb-2 text-yellow-400 z-20">▲</div>
 
-               {/* Scrolling Strip */}
                <div 
                   className="flex items-center will-change-transform"
                   style={{
@@ -321,10 +323,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                 style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
                            >
                                <div className="absolute inset-0 bg-white/10 opacity-50 rounded-lg"></div>
-                               
-                               {/* Use Custom Dino Egg */}
                                <DinoEgg size={70} className="z-10" />
-
                                <span className="absolute bottom-2 text-[10px] font-black uppercase opacity-60 text-slate-900 tracking-wider">
                                    {rarity === 'LEGENDARY' ? '???' : '?'}
                                </span>
@@ -333,12 +332,10 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                    })}
                </div>
                
-               {/* Overlay Gradients for Depth */}
                <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-900 to-transparent z-10 pointer-events-none"></div>
                <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-900 to-transparent z-10 pointer-events-none"></div>
            </div>
 
-           {/* Spin Buttons */}
            <div className="px-4 w-full max-w-sm flex flex-col gap-3">
                <button 
                   onClick={() => handleSpin(1)} 
@@ -369,7 +366,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   const renderReveal = () => {
       if (pendingRewards.length === 0) return null;
       
-      // For bulk reveal, we prioritize showing the "Best" item first
       const rarityOrder = { 'LEGENDARY': 3, 'EPIC': 2, 'RARE': 1, 'COMMON': 0 };
       const bestItem = [...pendingRewards].sort((a,b) => rarityOrder[b.rarity] - rarityOrder[a.rarity])[0];
       
@@ -385,7 +381,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                           <span className="text-sm font-normal opacity-70 normal-case">(Nhấp liên tục vào trứng)</span>
                       </div>
                       
-                      {/* The Mystery Egg (SVG) */}
                       <div 
                           className={`w-64 h-80 rounded-[3rem] border-8 ${style.border} ${style.bg} shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform ${shakeClass}`}
                           onClick={handleRevealInteraction}
@@ -394,7 +389,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                <DinoEgg size={180} />
                            </div>
                            
-                           {/* Cracks Overlay based on progress */}
                            {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/40 rotate-45 rounded-full filter blur-[1px]"></div>}
                            {revealProgress > 60 && <div className="absolute bottom-1/3 right-1/3 w-16 h-1 bg-black/40 -rotate-12 rounded-full filter blur-[1px]"></div>}
                            {revealProgress > 80 && <div className="absolute inset-0 bg-white/30 animate-pulse rounded-[2.5rem]"></div>}
@@ -404,7 +398,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                            </div>
                       </div>
 
-                      {/* Progress Bar */}
                       <div className="w-64 h-4 bg-slate-700 rounded-full mt-8 overflow-hidden border-2 border-slate-600">
                           <div className="h-full bg-yellow-400 transition-all duration-200" style={{ width: `${revealProgress}%` }}></div>
                       </div>
@@ -413,9 +406,9 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                   <>
                       {/* The Revealed Item */}
                       <div className="relative animate-scaleIn">
-                          <div className="absolute inset-0 bg-white/50 blur-3xl animate-pulse"></div>
-                          <div className={`relative w-72 aspect-square bg-white rounded-[2.5rem] border-8 ${style.border} p-6 shadow-2xl flex flex-col items-center justify-center`}>
-                              {/* Rays background for high rarity */}
+                          <div className={`absolute inset-0 bg-white/50 blur-3xl animate-pulse`}></div>
+                          <div className={`relative w-72 aspect-square bg-white rounded-[2.5rem] border-8 ${style.border} p-6 shadow-2xl flex flex-col items-center justify-center ${style.glow}`}>
+                              
                               {['LEGENDARY', 'EPIC'].includes(bestItem.rarity) && (
                                    <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] bg-gradient-to-r from-transparent via-yellow-200/30 to-transparent animate-spin-slow"></div>
@@ -436,7 +429,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                       </div>
 
                       <button 
-                          onClick={handleRevealInteraction} // Goes to summary or close
+                          onClick={handleRevealInteraction} 
                           className="mt-10 px-12 py-4 bg-white text-slate-900 rounded-full font-black text-xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                       >
                           {pendingRewards.length > 1 ? `XEM TẤT CẢ (${pendingRewards.length})` : <><Check size={24} className="text-green-500" /> NHẬN</>}
@@ -456,7 +449,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
               {pendingRewards.map((item, idx) => {
                   const style = getRarityStyle(item.rarity);
                   return (
-                      <div key={idx} className={`bg-white rounded-xl p-2 flex flex-col items-center border-b-4 ${style.border} animate-scaleIn`} style={{animationDelay: `${idx*50}ms`}}>
+                      <div key={idx} className={`bg-white rounded-xl p-2 flex flex-col items-center border-b-4 ${style.border} animate-scaleIn ${style.glow}`} style={{animationDelay: `${idx*50}ms`}}>
                           <div className="w-16 h-16 mb-2">
                               <Avatar imageId={item.imageId} size="sm" className="w-full h-full rounded-lg" />
                           </div>
@@ -478,12 +471,12 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   );
 
   const renderCollection = () => {
-      // Group items by rarity for Pokedex view, ordered by Level (Common -> Legendary)
+      // Group items by rarity for Pokedex view
       const pools = [
-          { type: 'COMMON', label: 'Thường', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', prob: 50 },
-          { type: 'RARE', label: 'Hiếm', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', prob: 30 },
-          { type: 'EPIC', label: 'Sử Thi', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', prob: 15 },
-          { type: 'LEGENDARY', label: 'Thần Thoại', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', prob: 5 },
+          { type: 'COMMON', label: 'Thường', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', prob: 75 },
+          { type: 'RARE', label: 'Hiếm', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', prob: 20 },
+          { type: 'EPIC', label: 'Sử Thi', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', prob: 4 },
+          { type: 'LEGENDARY', label: 'Thần Thoại', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', prob: 1 },
       ];
 
       return (
@@ -501,19 +494,21 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           <div className="space-y-8 pb-10">
               {pools.map((pool) => {
                   const poolItems = GACHA_ITEMS.filter(i => i.rarity === pool.type);
-                  const specificRate = (pool.prob / poolItems.length).toFixed(2);
                   const poolOwned = poolItems.filter(i => ownedIds.includes(i.id)).length;
+                  const rarityStyle = getRarityStyle(pool.type as Rarity);
 
                   return (
-                      <div key={pool.type} className={`rounded-3xl border-4 ${pool.border} ${pool.bg} p-4`}>
-                          <div className="flex justify-between items-center mb-4">
-                              <h4 className={`font-black uppercase tracking-wider ${pool.text}`}>{pool.label}</h4>
+                      <div key={pool.type} className={`rounded-3xl border-4 ${pool.border} ${pool.bg} p-4 relative overflow-hidden`}>
+                          <div className="flex justify-between items-center mb-4 relative z-10">
+                              <h4 className={`font-black uppercase tracking-wider ${pool.text}`}>
+                                  {pool.label} <span className="text-xs opacity-80 normal-case ml-1">({pool.prob}%)</span>
+                              </h4>
                               <span className="text-[10px] font-bold bg-white/50 px-2 py-1 rounded-lg text-slate-500">
                                   {poolOwned}/{poolItems.length}
                               </span>
                           </div>
                           
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 relative z-10">
                               {poolItems.map(item => {
                                   const isOwned = ownedIds.includes(item.id);
                                   const isEquipped = item.id === userState.currentGachaAvatarId;
@@ -526,7 +521,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                               className={`
                                                   relative w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center overflow-hidden transition-all mb-1
                                                   ${isOwned 
-                                                      ? 'bg-white border-white shadow-sm active:scale-95 cursor-pointer' 
+                                                      ? `bg-white border-white shadow-sm active:scale-95 cursor-pointer ${rarityStyle.glow}` 
                                                       : 'bg-black/5 border-black/5 cursor-not-allowed'}
                                                   ${isEquipped ? 'ring-4 ring-green-400 z-10' : ''}
                                               `}
@@ -548,10 +543,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                                   </>
                                               )}
                                           </button>
-                                          {/* Drop Rate below frame */}
-                                          <div className="text-[9px] font-bold text-slate-400">
-                                              {specificRate}%
-                                          </div>
                                       </div>
                                   )
                               })}
@@ -564,7 +555,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           {confirmEquip && (
               <div className="fixed bottom-0 left-0 w-full bg-white p-6 shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-30 rounded-t-[2.5rem] flex flex-col items-center animate-slideUp border-t-4 border-slate-100">
                   <div className="flex items-center gap-6 mb-6">
-                      <div className={`p-1 rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border} shadow-lg`}>
+                      <div className={`p-1 rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border} shadow-lg ${getRarityStyle(confirmEquip.rarity).glow}`}>
                           <Avatar imageId={confirmEquip.imageId} size="lg" className="rounded-xl" />
                       </div>
                       <div>
@@ -645,7 +636,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
               </button>
           </div>
 
-          {/* BG Decoration */}
           <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                {[...Array(20)].map((_, i) => (
                    <Star key={i} className="absolute animate-pulse" style={{ left: `${Math.random()*100}%`, top: `${Math.random()*100}%`, animationDelay: `${Math.random()}s` }} size={Math.random()*20 + 10} />
@@ -654,12 +644,11 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       </div>
   );
 
-  // Pick random words for quiz from ALL levels to ensure variety
   const allWords = LEVELS.flatMap(l => l.words);
   
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-fadeIn relative overflow-hidden">
-        {/* Top Nav (Only visible in Machine/Collection view) */}
+        {/* Top Nav */}
         {view !== 'QUIZ_SELECT' && view !== 'REVEAL' && view !== 'BULK_SUMMARY' && (
             <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between shadow-md z-30 text-white">
                 <div className="flex items-center gap-4">
@@ -694,9 +683,9 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
 
         {activeQuiz && (
             <LearningQuizModal 
-                words={allWords} // Pass huge pool
-                type={activeQuiz === 'EASY' ? 'WATER' : activeQuiz === 'MEDIUM' ? 'PEST' : 'NEW_ORDER'} // Reuse types for visual styles roughly
-                questionCount={activeQuiz === 'EASY' ? 5 : activeQuiz === 'MEDIUM' ? 10 : 15} // Modified component to accept count (see below change)
+                words={allWords} 
+                type={activeQuiz === 'EASY' ? 'WATER' : activeQuiz === 'MEDIUM' ? 'PEST' : 'NEW_ORDER'} 
+                questionCount={activeQuiz === 'EASY' ? 5 : activeQuiz === 'MEDIUM' ? 10 : 15}
                 onSuccess={handleQuizSuccess}
                 onClose={() => setActiveQuiz(null)}
                 onShowAlert={(msg) => alert(msg)}
