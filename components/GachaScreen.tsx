@@ -3,11 +3,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GachaItem, UserState, Rarity, Word } from '../types';
 import { GACHA_ITEMS } from '../data/gachaData';
 import { Avatar } from './Avatar';
-import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield, Zap, Plus, Sparkles, Lock, Egg } from 'lucide-react';
+import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield, Zap, Plus, Sparkles, Lock } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 import { LearningQuizModal } from './farm/LearningQuizModal';
 import { LEVELS } from '../constants';
-import { resolveImage } from '../utils/imageUtils';
 
 interface GachaScreenProps {
   userState: UserState;
@@ -21,7 +20,62 @@ const CARD_GAP = 12; // Gap between items
 const VISIBLE_ITEMS = 5; // How many items visible roughly
 const WINNING_INDEX = 45; // The index where the slider stops
 const TOTAL_DUMMY_ITEMS = 60; // Total items in strip
-const MYSTERY_EGG_ID = "12UCwL_Pd3Y10eT74MqUg9dhB_3D7qAxA";
+
+// --- CUSTOM EGG COMPONENT ---
+const DinoEgg = ({ size = 100, className = "" }: { size?: number, className?: string }) => (
+  <svg
+    width={size}
+    height={size * 1.2}
+    viewBox="0 0 100 120"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={`drop-shadow-xl ${className}`}
+    style={{ overflow: 'visible' }}
+  >
+    <defs>
+      <radialGradient id="eggBase" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(30 30) rotate(50) scale(100)">
+        <stop stopColor="#FFFBEB" />
+        <stop offset="1" stopColor="#FDE68A" />
+      </radialGradient>
+      <filter id="insetShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feComponentTransfer in="SourceAlpha">
+          <feFuncA type="table" tableValues="1 0" />
+        </feComponentTransfer>
+        <feGaussianBlur stdDeviation="3" />
+        <feOffset dx="2" dy="4" result="offsetblur" />
+        <feFlood floodColor="rgba(0,0,0,0.1)" result="color" />
+        <feComposite in2="offsetblur" operator="in" />
+        <feComposite in2="SourceAlpha" operator="in" />
+        <feMerge>
+          <feMergeNode in="SourceGraphic" />
+          <feMergeNode />
+        </feMerge>
+      </filter>
+    </defs>
+    
+    {/* Main Egg Body */}
+    <path
+      d="M50 2C25 2 2 35 2 70C2 105 25 118 50 118C75 118 98 105 98 70C98 35 75 2 50 2Z"
+      fill="url(#eggBase)"
+      stroke="#F59E0B"
+      strokeWidth="2"
+    />
+
+    {/* Spots */}
+    <g clipPath="url(#eggClip)">
+        {/* Clip path definition inline for simplicity or just keep spots inside bounds approximately */}
+        <circle cx="30" cy="40" r="8" fill="#FCA5A5" opacity="0.8" />
+        <circle cx="70" cy="30" r="6" fill="#93C5FD" opacity="0.8" />
+        <circle cx="80" cy="60" r="10" fill="#86EFAC" opacity="0.8" />
+        <circle cx="20" cy="80" r="12" fill="#C4B5FD" opacity="0.8" />
+        <circle cx="55" cy="95" r="9" fill="#FDBA74" opacity="0.8" />
+        <circle cx="50" cy="55" r="5" fill="#FCD34D" opacity="0.6" />
+    </g>
+
+    {/* Highlight/Shine */}
+    <ellipse cx="30" cy="25" rx="8" ry="12" fill="white" fillOpacity="0.6" transform="rotate(-20 30 25)" />
+  </svg>
+);
 
 export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateState, onExit }) => {
   const [view, setView] = useState<'MACHINE' | 'REVEAL' | 'COLLECTION' | 'QUIZ_SELECT' | 'BULK_SUMMARY'>('MACHINE');
@@ -42,9 +96,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   // Collection State
   const [confirmEquip, setConfirmEquip] = useState<GachaItem | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<'EASY' | 'MEDIUM' | 'HARD' | null>(null);
-
-  // Fallback state for egg image
-  const [imageError, setImageError] = useState(false);
 
   // -- HELPERS --
   const ownedIds = userState.gachaCollection || [];
@@ -270,16 +321,10 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                 style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
                            >
                                <div className="absolute inset-0 bg-white/10 opacity-50 rounded-lg"></div>
-                               {!imageError ? (
-                                   <img 
-                                      src={resolveImage(MYSTERY_EGG_ID)} 
-                                      alt="Egg" 
-                                      className="w-20 h-20 object-contain drop-shadow-md z-10"
-                                      onError={() => setImageError(true)}
-                                   />
-                               ) : (
-                                   <Egg size={60} className={style.text} fill="currentColor" fillOpacity={0.2} />
-                               )}
+                               
+                               {/* Use Custom Dino Egg */}
+                               <DinoEgg size={70} className="z-10" />
+
                                <span className="absolute bottom-2 text-[10px] font-black uppercase opacity-60 text-slate-900 tracking-wider">
                                    {rarity === 'LEGENDARY' ? '???' : '?'}
                                </span>
@@ -340,22 +385,14 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                           <span className="text-sm font-normal opacity-70 normal-case">(Nhấp liên tục vào trứng)</span>
                       </div>
                       
-                      {/* The Mystery Egg */}
+                      {/* The Mystery Egg (SVG) */}
                       <div 
                           className={`w-64 h-80 rounded-[3rem] border-8 ${style.border} ${style.bg} shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform ${shakeClass}`}
                           onClick={handleRevealInteraction}
                       >
-                           {!imageError ? (
-                               <img 
-                                  src={resolveImage(MYSTERY_EGG_ID)} 
-                                  alt="Mystery Egg" 
-                                  className="w-48 h-64 object-contain drop-shadow-2xl transition-transform duration-100"
-                                  style={{ transform: `scale(${1 + (revealProgress / 500)})` }}
-                                  onError={() => setImageError(true)}
-                               />
-                           ) : (
-                               <Egg size={150} className={`${style.text} drop-shadow-2xl`} fill="currentColor" fillOpacity={0.3 + (revealProgress/200)} />
-                           )}
+                           <div className="transition-transform duration-100" style={{ transform: `scale(${1 + (revealProgress / 500)})` }}>
+                               <DinoEgg size={180} />
+                           </div>
                            
                            {/* Cracks Overlay based on progress */}
                            {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/40 rotate-45 rounded-full filter blur-[1px]"></div>}
