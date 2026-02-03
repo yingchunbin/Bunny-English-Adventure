@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot, Decor } from '../types';
 import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL, DECORATIONS } from '../data/farmData';
@@ -10,16 +9,25 @@ export const useFarmGame = (
 ) => {
   const [now, setNow] = useState(Date.now());
   
-  // Helper: Calculate total buff for a type from active slots
-  const getDecorBonus = (type: 'EXP' | 'COIN' | 'TIME' | 'PEST'): number => {
+  // Helper: Calculate total buff for a type from active slots (Supports Multi-buffs)
+  const getDecorBonus = (type: 'EXP' | 'COIN' | 'TIME' | 'PEST' | 'YIELD'): number => {
       const activeSlots = userState.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
       if (activeSlots.length === 0) return 0;
       
       let total = 0;
       activeSlots.forEach(slot => {
           const decor = DECORATIONS.find(d => d.id === slot.decorId);
-          if (decor && decor.buff && decor.buff.type === type) {
-              total += decor.buff.value;
+          if (decor) {
+              // Check legacy single buff
+              if (decor.buff && decor.buff.type === type) {
+                  total += decor.buff.value;
+              }
+              // Check new multi buffs
+              if (decor.multiBuffs) {
+                  decor.multiBuffs.forEach(buff => {
+                      if (buff.type === type) total += buff.value;
+                  });
+              }
           }
       });
       return total;
@@ -167,7 +175,6 @@ export const useFarmGame = (
       return ownedMachineIds.includes(recipe.machineId);
   };
 
-  // ... (No changes to INIT LOGIC) ...
   useEffect(() => {
       const todayStr = new Date().toDateString();
       onUpdateState(prev => {
@@ -220,7 +227,6 @@ export const useFarmGame = (
       });
   }, []); 
 
-  // ... (No changes to MAIN GAME LOOP) ...
   useEffect(() => {
     const interval = setInterval(() => {
         const currentTime = Date.now();
@@ -249,7 +255,12 @@ export const useFarmGame = (
             let pestReduction = 0;
             activeSlots.forEach(slot => {
                 const decor = DECORATIONS.find(d => d.id === slot.decorId);
+                // Legacy
                 if (decor?.buff?.type === 'PEST') pestReduction += decor.buff.value;
+                // Multi
+                if (decor?.multiBuffs) {
+                    decor.multiBuffs.forEach(b => { if(b.type === 'PEST') pestReduction += b.value; });
+                }
             });
             // Cap reduction at 90%
             bugChance = bugChance * (1 - Math.min(0.9, pestReduction / 100));
@@ -371,7 +382,6 @@ export const useFarmGame = (
     return () => clearInterval(interval);
   }, []);
 
-  // ... (Existing helpers) ...
   const updateMissionProgress = useCallback((type: Mission['type'], amount: number) => {
       onUpdateState(prev => {
           if (!prev.missions) return prev;
@@ -389,14 +399,6 @@ export const useFarmGame = (
           return changed ? { ...prev, missions: newMissions } : prev;
       });
   }, [onUpdateState]);
-
-  const generateOrders = useCallback((grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
-      const newOrders: FarmOrder[] = [];
-      while (newOrders.length < 3) {
-          newOrders.push(createSingleOrder(grade, completedCount, currentLivestock));
-      }
-      return newOrders;
-  }, []);
 
   const canAfford = (amount: number, currency: 'COIN' | 'STAR' = 'COIN') => {
       if (currency === 'STAR') return (userState.stars || 0) >= amount;
@@ -597,14 +599,20 @@ export const useFarmGame = (
   const harvestPlot = (plotId: number, crop: Crop) => {
       playSFX('harvest');
       
+      // Calculate Buffs
       const expBonus = getDecorBonus('EXP');
       const bonusExp = Math.floor(crop.exp * (expBonus / 100));
       const finalExp = crop.exp + bonusExp;
 
+      // Yield Buff
+      const yieldBonus = getDecorBonus('YIELD');
+      const isDouble = Math.random() * 100 < yieldBonus;
+      const amount = isDouble ? 2 : 1;
+
       onUpdateState(prev => {
           const currentHarvest = prev.harvestedCrops || {};
           const newHarvest = { ...currentHarvest };
-          newHarvest[crop.id] = (newHarvest[crop.id] || 0) + 1;
+          newHarvest[crop.id] = (newHarvest[crop.id] || 0) + amount;
           
           let newExp = (prev.farmExp || 0) + finalExp;
           let newLevel = prev.farmLevel || 1;
@@ -622,7 +630,7 @@ export const useFarmGame = (
           };
       });
       updateMissionProgress('HARVEST', 1);
-      return { success: true };
+      return { success: true, amount };
   };
 
   const harvestAll = () => {
@@ -633,6 +641,7 @@ export const useFarmGame = (
       const newFarmPlots = [...userState.farmPlots];
       
       const expBonusPercent = getDecorBonus('EXP');
+      const yieldBonus = getDecorBonus('YIELD');
 
       newFarmPlots.forEach((plot, index) => {
           if (plot.cropId && plot.plantedAt && !plot.hasBug && !plot.hasWeed) { 
@@ -645,7 +654,10 @@ export const useFarmGame = (
                       const bonusExp = Math.floor(crop.exp * (expBonusPercent / 100));
                       expGained += (crop.exp + bonusExp);
                       
-                      newHarvestedCrops[crop.id] = (newHarvestedCrops[crop.id] || 0) + 1;
+                      const isDouble = Math.random() * 100 < yieldBonus;
+                      const amount = isDouble ? 2 : 1;
+
+                      newHarvestedCrops[crop.id] = (newHarvestedCrops[crop.id] || 0) + amount;
                       
                       newFarmPlots[index] = { 
                           ...plot, 
@@ -862,6 +874,14 @@ export const useFarmGame = (
       }));
   };
 
+  const generateOrders = (grade: number, completedCount: number, currentLivestock: LivestockSlot[] = []) => {
+      return [
+          createSingleOrder(grade, completedCount, currentLivestock),
+          createSingleOrder(grade, completedCount, currentLivestock),
+          createSingleOrder(grade, completedCount, currentLivestock)
+      ];
+  };
+
   // --- SPEED UP LOGIC ---
   const speedUpItem = (type: 'CROP' | 'ANIMAL' | 'MACHINE', slotId: number) => {
       const now = Date.now();
@@ -963,8 +983,6 @@ export const useFarmGame = (
 
   // --- SELLING ---
   // Centralized function to handle selling items directly from Inventory/Barn
-  // ensuring buffs are applied and achievements tracked.
-  // REMOVED INTERNAL SFX to allow UI component to handle it with flying coins FX
   const sellItem = (itemId: string, amount: number) => {
       const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
       if (!item) return { success: false };
@@ -978,7 +996,7 @@ export const useFarmGame = (
 
       onUpdateState(prev => {
           const currentCount = prev.harvestedCrops?.[itemId] || 0;
-          if (currentCount < amount) return prev; // Should be handled by UI, but safety check
+          if (currentCount < amount) return prev; 
 
           const newHarvest = { ...(prev.harvestedCrops || {}) };
           newHarvest[itemId] = currentCount - amount;
@@ -990,14 +1008,11 @@ export const useFarmGame = (
           };
       });
 
-      // REMOVED playSFX here to prevent double sound if Farm.tsx handles it
       updateMissionProgress('EARN', totalEarned); // Track achievement progress
       
       return { success: true, earned: totalEarned };
   };
 
-  // NEW: Handle batch selling for "Sell All in Tab" to avoid spamming FX
-  // REMOVED INTERNAL SFX
   const sellItemsBulk = (itemsToSell: { itemId: string, amount: number }[]) => {
       let totalEarned = 0;
       const coinBonusPercent = getDecorBonus('COIN');
@@ -1030,7 +1045,6 @@ export const useFarmGame = (
       });
 
       if (totalEarned > 0) {
-          // REMOVED playSFX here
           updateMissionProgress('EARN', totalEarned);
       }
 
@@ -1063,7 +1077,7 @@ export const useFarmGame = (
       placeDecor,
       removeDecor,
       sellItem,
-      sellItemsBulk, // Exposed new function
+      sellItemsBulk, 
       getDecorBonus 
   };
 };

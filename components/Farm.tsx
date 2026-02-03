@@ -1,5 +1,4 @@
 
-// ... existing imports ...
 import React, { useState, useEffect, useRef } from 'react';
 import { UserState, FarmPlot, Decor, FarmOrder } from '../types';
 import { CROPS, ANIMALS, MACHINES, DECORATIONS, RECIPES, PRODUCTS } from '../data/farmData';
@@ -16,9 +15,8 @@ import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
 import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, Settings, Layers, Armchair, Plus, Sparkles } from 'lucide-react';
 import { playSFX } from '../utils/sound';
-import { resolveImage } from '../utils/imageUtils'; // Import utility
+import { resolveImage } from '../utils/imageUtils';
 
-// ... existing props and types ...
 interface FarmProps {
   userState: UserState;
   onUpdateState: (newState: UserState | ((prev: UserState) => UserState)) => void;
@@ -31,7 +29,7 @@ type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
 interface FlyingItem {
     id: number;
-    content: React.ReactNode; // Changed from emoji string to ReactNode for flexibility
+    content: React.ReactNode;
     x: number;
     y: number;
     targetX: number;
@@ -70,9 +68,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   // Refs
   const prevLevelRef = useRef(userState.farmLevel || 1);
   const barnBtnRef = useRef<HTMLButtonElement>(null); 
-  const coinRef = useRef<HTMLDivElement>(null); // Ref for Coin HUD
-  const starRef = useRef<HTMLDivElement>(null); // Ref for Star HUD
-  const expRef = useRef<HTMLDivElement>(null);  // Ref for Exp HUD
+  const coinRef = useRef<HTMLDivElement>(null);
+  const starRef = useRef<HTMLDivElement>(null);
+  const expRef = useRef<HTMLDivElement>(null);
 
   // --- LEVEL UP CHECK ---
   useEffect(() => {
@@ -85,14 +83,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
 
-  // ... (Keep existing helpers) ...
-  
   const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
       playSFX('wrong');
       setAlertConfig({ isOpen: true, message: msg, type });
   };
 
-  // Improved FX Trigger
   const triggerFlyFX = (startRect: DOMRect, type: 'COIN' | 'STAR' | 'EXP' | 'PRODUCT', content: React.ReactNode, amount: number) => {
       let targetX = window.innerWidth / 2;
       let targetY = 0;
@@ -115,8 +110,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
            targetY = r.top + r.height/2;
       }
 
-      // Spawn multiple particles for larger amounts (max 5)
-      const particleCount = Math.min(amount, 5); 
+      const particleCount = Math.min(amount, 8); 
       
       for(let i=0; i<particleCount; i++) {
           setTimeout(() => {
@@ -130,7 +124,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               };
               setFlyingItems(prev => [...prev, newItem]);
               setTimeout(() => setFlyingItems(prev => prev.filter(item => item.id !== newItem.id)), 800);
-          }, i * 100);
+          }, i * 80);
       }
   };
 
@@ -145,12 +139,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       const crop = CROPS.find(c => c.id === plot.cropId);
       if (crop) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-          // Fly Product to Barn
-          triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">{crop.emoji}</span>, 1);
-          // Fly EXP to Bar
+          const result = harvestPlot(plot.id, crop); 
+          const amount = (result as any).amount || 1;
+
+          triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">{crop.emoji}</span>, amount);
           triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500 fill-blue-500" size={20}/>, 1);
           
-          harvestPlot(plot.id, crop);
+          if(amount > 1) {
+              addFloatingText(rect.left, rect.top - 50, "Bội thu!", "text-green-500 font-black");
+          }
       }
   };
 
@@ -172,12 +169,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       } else if (type === 'DECOR') {
           currentCount = userState.decorSlots?.length || 0;
           defaultSlots = 3;
-          multiplier = 2.0; // Higher multiplier for decor slots as requested
+          multiplier = 2.0; 
       }
 
       const extraSlots = Math.max(0, currentCount - defaultSlots);
       const cost = Math.floor(baseCost * Math.pow(multiplier, extraSlots));
-      // Round to nearest 50 for cleaner numbers
       const finalCost = Math.ceil(cost / 50) * 50; 
 
       setConfirmConfig({
@@ -223,15 +219,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           setActiveModal('PLOT');
           return;
       }
-
       const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
-      
       if (crop && (plot.hasBug || plot.hasWeed)) {
           setQuizContext({ type: 'PEST', plotId: plot.id });
           setActiveModal('QUIZ');
           return;
       }
-
       if (!crop) {
           setSelectedId(plot.id);
           setInventoryMode('SELECT_SEED');
@@ -284,7 +277,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if(animal) {
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           const count = slot.storage?.length || 0;
-          
           if (count > 0) {
               triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">{animal.emoji}</span>, count);
               triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500" size={20} fill="currentColor"/>, 1);
@@ -330,24 +322,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
-  // Centralized function for UI to call sell logic
   const handleSell = (itemId: string, amount: number, e?: React.MouseEvent) => {
       const res = sellItem(itemId, amount);
       if (res.success && res.earned) {
           playSFX('coins');
           const rect = e ? (e.currentTarget as HTMLElement).getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 } as DOMRect;
-          triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 5); // 5 particles for effect
+          triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 5); 
           addFloatingText(rect.left, rect.top - 50, `+${res.earned}`, "text-yellow-500 font-black text-2xl drop-shadow-md");
       }
   };
 
-  // New: Bulk sell handler
   const handleSellBulk = (itemsToSell: { itemId: string, amount: number }[], e?: React.MouseEvent) => {
       const res = sellItemsBulk(itemsToSell);
       if (res.success && res.earned > 0) {
           playSFX('coins');
           const rect = e ? (e.currentTarget as HTMLElement).getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 } as DOMRect;
-          // Spawn lots of coins
           triggerFlyFX(rect, 'COIN', <Coins size={28} className="text-yellow-400 fill-yellow-400"/>, 10);
           addFloatingText(rect.left, rect.top - 50, `+${res.earned} Xu`, "text-yellow-500 text-4xl font-black drop-shadow-lg animate-bounce");
       }
@@ -386,6 +375,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }));
   };
 
+  // --- RENDER HELPERS ---
+
   const renderSectionTabs = () => (
       <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1 overflow-x-auto no-scrollbar">
           {[
@@ -420,18 +411,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           <button ref={barnBtnRef} onClick={() => setActiveModal('BARN')} className="w-12 h-12 bg-emerald-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all">
               <Warehouse size={22} />
           </button>
-
           <button onClick={() => setActiveModal('MISSIONS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-md border-2 border-indigo-100 text-indigo-600 font-black text-xs active:scale-95 transition-all relative">
               <Scroll size={16} /> Nhiệm Vụ
-              {/* Notification Dot */}
               {userState.missions?.some(m => m.completed && !m.claimed) && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full animate-ping"></span>}
           </button>
-          
           <button onClick={() => setActiveModal('ORDERS')} className="flex-1 flex items-center justify-center gap-2 bg-white px-3 py-2 rounded-2xl shadow-md border-2 border-orange-100 text-orange-600 font-black text-xs active:scale-95 transition-all relative">
               <Truck size={16} /> Đơn Hàng
               {userState.activeOrders?.some(o => o.expiresAt > now) && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center border border-white animate-pulse">!</span>}
           </button>
-          
           <button id="well-btn" onClick={handleWellClick} className="w-12 h-12 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
               <Droplets size={22} />
               <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 rounded-full border border-white font-bold">
@@ -555,12 +542,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const storageItems = slot.storage || [];
                   const hasStorage = storageItems.length > 0;
                   const queueCount = slot.queue || 0;
-                  
                   const produce = animal ? PRODUCTS.find(p => p.id === animal.produceId) : null;
                   const feedItem = animal ? [...CROPS, ...PRODUCTS].find(c => c.id === animal.feedCropId) : null;
                   const userHas = animal ? (userState.harvestedCrops?.[animal.feedCropId] || 0) : 0;
                   const canFeed = animal && userHas >= animal.feedAmount;
-                  
                   const imgUrl = resolveImage(animal?.imageUrl);
 
                   return (
@@ -612,13 +597,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           </div>
                                       ))}
                                   </div>
-
                                   {queueCount > 0 && (
                                       <div className="absolute top-2 left-2 z-20 flex items-center justify-center w-6 h-6 bg-orange-100 rounded-full border border-orange-200 shadow-sm">
                                           <span className="text-[9px] font-black text-orange-600">+{queueCount}</span>
                                       </div>
                                   )}
-
                                   {imgUrl ? (
                                       <img 
                                         src={imgUrl} 
@@ -630,13 +613,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           {animal.emoji}
                                       </div>
                                   )}
-                                  
                                   {hasStorage && (
                                       <div className="absolute top-12 z-30 animate-bounce bg-green-500 text-white p-1.5 rounded-full shadow-md border-2 border-white">
                                           <Hand size={16} fill="currentColor" />
                                       </div>
                                   )}
-
                                   {!isFed && !hasStorage && (
                                       <div className="absolute bottom-3 z-20">
                                           <div className={`px-3 py-1 rounded-full text-[10px] font-black shadow-lg flex items-center gap-1.5 border-2 border-white transition-all ${canFeed ? 'bg-green-500 text-white animate-pulse' : 'bg-white/90 text-slate-600 backdrop-blur-sm'}`}>
@@ -645,7 +626,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           </div>
                                       </div>
                                   )}
-                                  
                                   {isFed && (
                                       <div className="absolute bottom-6 w-16 h-2 bg-black/10 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-orange-400 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
@@ -671,15 +651,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const progress = recipe && slot.startedAt ? Math.min(100, ((now - slot.startedAt)/1000 / recipe.duration) * 100) : 0;
                   const storageItems = slot.storage || [];
                   const hasStorage = storageItems.length > 0;
-                  
                   const storedRecipeId = storageItems[storageItems.length - 1];
                   const storedRecipe = storedRecipeId ? RECIPES.find(r => r.id === storedRecipeId) : null;
                   const storedProduct = storedRecipe ? PRODUCTS.find(p => p.id === storedRecipe.outputId) : null;
-
                   const possibleOutputs = machine ? RECIPES.filter(r => r.machineId === machine.id).map(r => r.outputId) : [];
                   const uniqueOutputs = [...new Set(possibleOutputs)]; 
                   const outputProducts = uniqueOutputs.map(oid => PRODUCTS.find(p => p.id === oid)).filter(Boolean);
-                  
                   const imgUrl = resolveImage(machine?.imageUrl);
 
                   return (
@@ -715,9 +692,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                   <Settings size={14} />
                               </div>
                           )}
-
                           {machine && recipe && renderSpeedUpButton('MACHINE', slot.id, 'absolute bottom-2 left-2')}
-
                           {!slot.isUnlocked ? (
                               <Lock className="text-slate-400" />
                           ) : !machine ? (
@@ -734,7 +709,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           ))}
                                       </div>
                                   )}
-
                                   {imgUrl ? (
                                       <img 
                                         src={imgUrl} 
@@ -746,18 +720,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           {machine.emoji}
                                       </div>
                                   )}
-                                  
                                   <div className="absolute bottom-2 z-10 bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-black text-slate-600 truncate max-w-[80%] uppercase tracking-tighter backdrop-blur-sm">
                                       {machine.name}
                                   </div>
-                                  
                                   {recipe && (
                                       <>
                                           <div className="absolute -top-4 right-0 text-xl animate-float-smoke opacity-70 pointer-events-none">💨</div>
                                           <div className="absolute bottom-2 right-2 text-slate-400 animate-spin-slow pointer-events-none"><Settings size={18} /></div>
                                       </>
                                   )}
-
                                   {hasStorage && (
                                       <div className="absolute inset-0 bg-white/60 flex flex-col items-center justify-center z-20 backdrop-blur-[2px]">
                                           <div className="text-6xl animate-bounce mb-2 drop-shadow-lg relative">
@@ -771,13 +742,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           {renderHarvestButton()}
                                       </div>
                                   )}
-
                                   {recipe && (
                                       <div className="absolute bottom-8 w-16 h-2 bg-slate-200 rounded-full overflow-hidden border border-white z-10">
                                           <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${progress}%` }}></div>
                                       </div>
                                   )}
-
                                   {slot.queue && slot.queue.length > 0 && (
                                       <div className="absolute top-2 left-2 z-20 flex gap-1">
                                           {[...Array(slot.queue.length)].map((_, i) => (
@@ -802,7 +771,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {slots.map(slot => {
                   const decor = slot.decorId ? DECORATIONS.find(d => d.id === slot.decorId) : null;
                   const imgUrl = resolveImage(decor?.imageUrl);
-                  
                   let animClass = "";
                   if (decor?.id === 'fountain') animClass = "animate-bounce";
                   else if (decor?.id === 'lamp_post') animClass = "animate-pulse";
@@ -863,14 +831,19 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           {decor.emoji}
                                       </div>
                                   )}
-                                  
-                                  {/* Decor Name & Buff - Only show label if it's emoji or to clarify */}
                                   <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 px-2 py-1 rounded-lg backdrop-blur-sm border border-purple-100 shadow-sm flex flex-col items-center min-w-[80px] z-20">
                                       <span className="text-[9px] font-black text-slate-700 uppercase tracking-tighter truncate max-w-[70px]">{decor.name}</span>
                                       {decor.buff && (
                                           <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-1 rounded flex items-center gap-0.5">
                                               <Plus size={6}/>{decor.buff.value}% {decor.buff.type}
                                           </span>
+                                      )}
+                                      {decor.multiBuffs && (
+                                          <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
+                                             {decor.multiBuffs.map((b,i) => (
+                                                <span key={i} className="text-[6px] font-bold text-purple-600 bg-purple-50 px-1 rounded">{b.type}</span>
+                                             ))}
+                                          </div>
                                       )}
                                   </div>
                               </>
@@ -899,13 +872,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   return (
     <div className="w-full h-full bg-[#E0F7FA] relative overflow-y-auto no-scrollbar flex flex-col">
-        {/* ... (Styles and Header - Unchanged) ... */}
-        {/* ... */}
-        
         {/* HEADER WITH LV AND XP */}
         <div className="bg-white/90 backdrop-blur-md px-4 py-3 shadow-lg flex justify-between items-center z-40 sticky top-0 border-b-4 border-green-100/50">
             <button onClick={onExit} className="p-2 text-slate-600 hover:bg-slate-100 rounded-2xl active:scale-90 transition-all bg-white border border-slate-200 shadow-sm z-50 relative"><Home size={24}/></button>
-            
             <div className="flex flex-1 mx-4 items-center gap-2">
                 <div ref={expRef} className="flex-1 bg-slate-100 h-9 rounded-full border-2 border-slate-200 relative overflow-hidden flex items-center px-3">
                     <div className="absolute left-0 top-0 h-full bg-blue-400 transition-all duration-500" style={{ width: `${Math.min(100, ((userState.farmExp || 0) / nextLevelExp) * 100)}%` }} />
@@ -941,7 +910,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             {renderSectionTabs()}
         </div>
 
-        {/* Harvest All Button - Fixed Position Icon */}
+        {/* Harvest All Button */}
         {readyCount >= 2 && (
             <div className="fixed bottom-24 right-4 z-[60] animate-bounce">
                 <button 
@@ -986,7 +955,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                     animation: `flyToBarn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards`
                 }}
             >
-                {/* Dynamically set target for animation via CSS variable if possible, or assume fixed */}
                 <style>{`
                     @keyframes flyToBarn {
                         0% { transform: scale(1) translate(0, 0); opacity: 1; }
@@ -1068,7 +1036,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 onAction={(action, data) => {
                     if (action === 'PLANT') {
                         const res = plantSeed(selectedId, data);
-                        if(res.success) { playSFX('success'); setActiveModal('NONE'); }
+                        if(res.success) { 
+                            playSFX('success'); 
+                            updateMissionProgress('HARVEST', 1); // Generic progress
+                            setActiveModal('NONE'); 
+                        }
                         else { handleShowAlert(res.msg); }
                     }
                     if (action === 'WATER') {
@@ -1086,12 +1058,18 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 fertilizers: prev.fertilizers - 1,
                                 farmPlots: prev.farmPlots.map(p => p.id === selectedId ? { ...p, plantedAt: (p.plantedAt || 0) - (CROPS.find(c=>c.id===p.cropId)?.growthTime || 0)*500 } : p)
                             }));
+                            updateMissionProgress('FERTILIZE', 1);
                             playSFX('powerup');
                             setActiveModal('NONE');
                         }
                     }
                     if (action === 'HARVEST') {
-                        harvestPlot(selectedId, CROPS.find(c => c.id === userState.farmPlots.find(p => p.id === selectedId)?.cropId)!); 
+                        const plot = userState.farmPlots.find(p => p.id === selectedId)!;
+                        const crop = CROPS.find(c => c.id === plot.cropId);
+                        if(crop) {
+                            const res = harvestPlot(selectedId, crop);
+                            playSFX('harvest');
+                        }
                         setActiveModal('NONE');
                     }
                     if (action === 'UNLOCK') {
@@ -1111,7 +1089,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 coinBuffPercent={getDecorBonus('COIN')} 
                 onSell={(itemId, e) => handleSell(itemId, 1, e)}
                 onSellAll={(itemId, e) => handleSell(itemId, userState.harvestedCrops?.[itemId] || 0, e)}
-                onSellBulk={sellItemsBulk} // Pass the new bulk handler
+                onSellBulk={(items, e) => handleSellBulk(items, e)}
                 onClose={() => setActiveModal('NONE')}
             />
         )}

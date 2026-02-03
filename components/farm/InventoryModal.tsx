@@ -49,16 +49,20 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
   // Helper to determine rarity glow based on cost (Stars) - APPLIED ONLY TO IMAGE
   const getRarityImageStyle = (cost: number) => {
-      if(cost >= 50) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; 
-      if(cost >= 20) return 'drop-shadow-[0_0_10px_rgba(192,132,252,0.6)]'; 
-      if(cost >= 8) return 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]'; 
-      return 'drop-shadow-sm'; 
+      if(cost >= 500) return 'drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] filter brightness-110 contrast-125'; 
+      if(cost >= 250) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; 
+      if(cost >= 100) return 'drop-shadow-[0_0_12px_rgba(168,85,247,0.7)]'; 
+      if(cost >= 50) return 'drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]'; 
+      if(cost >= 20) return 'drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]'; 
+      return 'drop-shadow-sm grayscale-[0.2]'; 
   };
 
   const getRarityBadgeStyle = (cost: number) => {
-      if(cost >= 50) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      if(cost >= 20) return 'bg-purple-100 text-purple-800 border-purple-200';
-      if(cost >= 8) return 'bg-blue-100 text-blue-800 border-blue-200';
+      if(cost >= 500) return 'bg-red-100 text-red-800 border-red-300 ring-1 ring-red-400';
+      if(cost >= 250) return 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-1 ring-yellow-400';
+      if(cost >= 100) return 'bg-purple-100 text-purple-800 border-purple-200';
+      if(cost >= 50) return 'bg-blue-100 text-blue-800 border-blue-200';
+      if(cost >= 20) return 'bg-green-100 text-green-800 border-green-200';
       return 'bg-slate-100 text-slate-500 border-slate-200';
   };
 
@@ -94,16 +98,28 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       if (activeTab === 'DECOR') {
           const decor = decorations.find(d => d.id === item.id);
-          const buffText = decor?.buff?.desc || "";
           
           imageStyle = getRarityImageStyle(decor?.cost || 0);
           const badgeStyle = getRarityBadgeStyle(decor?.cost || 0);
 
-          extraInfo = buffText ? (
-            <div className={`text-[9px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1 mt-1 ${badgeStyle}`}>
-                <Plus size={8}/> {buffText}
-            </div>
-          ) : null;
+          if (decor?.multiBuffs) {
+              extraInfo = (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                      {decor.multiBuffs.slice(0, 2).map((buff, idx) => (
+                          <div key={idx} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${badgeStyle}`}>
+                              <Plus size={6}/> {buff.desc}
+                          </div>
+                      ))}
+                      {decor.multiBuffs.length > 2 && <span className="text-[8px] text-slate-400">...</span>}
+                  </div>
+              );
+          } else if (decor?.buff) {
+              extraInfo = (
+                <div className={`text-[9px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1 mt-1 ${badgeStyle}`}>
+                    <Plus size={8}/> {decor.buff.desc}
+                </div>
+              );
+          }
           
           // Check if placed
           const isPlaced = activeDecorIds.includes(item.id);
@@ -126,7 +142,7 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       return (
           <div key={item.id} className="bg-white border-slate-200 shadow-sm border-4 rounded-3xl p-3 flex items-center justify-between animate-fadeIn relative overflow-hidden">
               <div className="flex items-center gap-3 z-10">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative overflow-hidden ${activeTab === 'DECOR' ? `bg-white ${imageStyle}` : activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative overflow-hidden ${activeTab === 'DECOR' ? `bg-white` : activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
                       {imgUrl ? <img src={imgUrl} alt={item.name} className={`w-full h-full object-contain ${imageStyle}`} /> : <div className={imageStyle}>{item.emoji}</div>}
                   </div>
                   <div>

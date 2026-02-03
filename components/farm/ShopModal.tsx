@@ -1,4 +1,5 @@
 
+// ... imports
 import React, { useState } from 'react';
 import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
 import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp } from 'lucide-react';
@@ -29,6 +30,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [seedAmounts, setSeedAmounts] = useState<Record<string, number>>({});
   const farmLevel = userState.farmLevel || 1;
 
+  // ... (adjustSeedAmount, handleBuySeed, renderBuyButton helpers same as before) ...
   const adjustSeedAmount = (id: string, delta: number) => {
     const current = seedAmounts[id] || 1;
     const next = Math.max(1, current + delta);
@@ -66,23 +68,28 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   };
 
   const getDecorAnimation = (decorId: string) => {
-      if (['fountain', 'lamp_post', 'statue'].includes(decorId)) return 'animate-pulse';
-      if (['scarecrow', 'flower_pot'].includes(decorId)) return 'animate-bounce';
-      if (['hay_bale', 'bench'].includes(decorId)) return 'hover:animate-spin';
+      if (['fountain', 'lamp_post', 'statue', 'dragon_statue', 'phoenix_totem'].includes(decorId)) return 'animate-pulse';
+      if (['scarecrow', 'flower_pot', 'magic_beanstalk'].includes(decorId)) return 'animate-bounce';
+      if (['hay_bale', 'bench', 'windmill_decor'].includes(decorId)) return 'hover:animate-spin';
       return 'hover:scale-110';
   };
 
+  // UPDATED: Rarity tiers based on Cost (Stars)
   const getRarityImageStyle = (cost: number) => {
-      if(cost >= 50) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; 
-      if(cost >= 20) return 'drop-shadow-[0_0_10px_rgba(192,132,252,0.6)]'; 
-      if(cost >= 8) return 'drop-shadow-[0_0_8px_rgba(96,165,250,0.5)]'; 
-      return 'drop-shadow-sm'; 
+      if(cost >= 500) return 'drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] filter brightness-110 contrast-125'; // MYTHIC (RED)
+      if(cost >= 250) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; // LEGENDARY (GOLD)
+      if(cost >= 100) return 'drop-shadow-[0_0_12px_rgba(168,85,247,0.7)]'; // EPIC (PURPLE)
+      if(cost >= 50) return 'drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]'; // RARE (BLUE)
+      if(cost >= 20) return 'drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]'; // UNCOMMON (GREEN)
+      return 'drop-shadow-sm grayscale-[0.2]'; // COMMON (WHITE)
   };
 
   const getRarityBadgeStyle = (cost: number) => {
-      if(cost >= 50) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      if(cost >= 20) return 'bg-purple-100 text-purple-800 border-purple-200';
-      if(cost >= 8) return 'bg-blue-100 text-blue-800 border-blue-200';
+      if(cost >= 500) return 'bg-red-100 text-red-800 border-red-300 ring-1 ring-red-400';
+      if(cost >= 250) return 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-1 ring-yellow-400';
+      if(cost >= 100) return 'bg-purple-100 text-purple-800 border-purple-200';
+      if(cost >= 50) return 'bg-blue-100 text-blue-800 border-blue-200';
+      if(cost >= 20) return 'bg-green-100 text-green-800 border-green-200';
       return 'bg-slate-100 text-slate-500 border-slate-200';
   };
 
@@ -183,7 +190,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                         {sortedAnimals.map(animal => {
                             const isLocked = farmLevel < (animal.minLevel || 0);
                             const currency = animal.currency || 'COIN';
-                            
                             const feedItem = allItems.find(c => c.id === animal.feedCropId);
                             const produceItem = allItems.find(p => p.id === animal.produceId);
                             const imgUrl = resolveImage(animal.imageUrl);
@@ -196,7 +202,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                                     <div className="flex-1">
                                         <div className="font-black text-slate-700 text-sm">{animal.name}</div>
                                         
-                                        {/* DETAIL BOX */}
                                         <div className="bg-orange-50 rounded-xl p-2 border border-orange-100 flex flex-col gap-1 my-2">
                                             <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
                                                 <span className="text-[10px] uppercase text-slate-400 w-6">Ăn:</span>
@@ -249,11 +254,10 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* RECIPES PREVIEW */}
                                     <div className="bg-slate-50 rounded-xl p-2 border border-slate-100">
                                         <div className="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-wider">Chế tạo & Lợi nhuận:</div>
                                         <div className="space-y-1.5">
-                                            {machineRecipes.slice(0, 3).map(r => { // Show max 3 examples
+                                            {machineRecipes.slice(0, 3).map(r => { 
                                                 const out = allItems.find(i => i.id === r.outputId);
                                                 return (
                                                     <div key={r.id} className="flex items-center justify-between text-xs font-bold text-slate-600 bg-white p-1 rounded-lg shadow-sm border border-slate-100">
@@ -278,7 +282,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
-                {/* DECOR - FIXED GLOW */}
+                {/* DECOR */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedDecor.map(decor => {
@@ -289,6 +293,29 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             
                             const imageGlow = getRarityImageStyle(decor.cost);
                             const badgeStyle = getRarityBadgeStyle(decor.cost);
+
+                            // Handle multiple buffs presentation
+                            const renderBuffs = () => {
+                                if (decor.multiBuffs) {
+                                    return (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {decor.multiBuffs.map((buff, idx) => (
+                                                <div key={idx} className={`text-[9px] font-bold px-2 py-0.5 rounded-lg inline-flex items-center gap-1 border shadow-sm ${badgeStyle}`}>
+                                                    <Plus size={8}/> {buff.desc}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    );
+                                }
+                                if (decor.buff) {
+                                    return (
+                                        <div className={`text-[9px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm ${badgeStyle}`}>
+                                            <Plus size={8}/> {decor.buff.desc}
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            };
 
                             return (
                                 <div 
@@ -301,11 +328,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                                     
                                     <div className="flex-1 z-10">
                                         <div className="font-black text-sm text-slate-700 uppercase tracking-tight">{decor.name}</div>
-                                        {decor.buff && (
-                                            <div className={`text-[10px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm ${badgeStyle}`}>
-                                                <Plus size={8}/> {decor.buff.desc}
-                                            </div>
-                                        )}
+                                        {renderBuffs()}
                                         
                                         {!owned ? (
                                             <div className="mt-2">

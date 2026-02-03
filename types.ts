@@ -109,14 +109,17 @@ export interface ProcessingRecipe {
     exp: number;
 }
 
+export interface DecorBuff {
+    type: 'EXP' | 'COIN' | 'TIME' | 'PEST' | 'YIELD'; 
+    value: number; 
+    desc: string;
+}
+
 export interface Decor extends FarmItem {
   type: 'DECOR';
   effect?: string; 
-  buff?: {
-      type: 'EXP' | 'COIN' | 'TIME' | 'PEST'; 
-      value: number; 
-      desc: string;
-  }
+  buff?: DecorBuff; // Legacy single buff
+  multiBuffs?: DecorBuff[]; // NEW: Support multiple buffs
 }
 
 export interface FarmPlot {
