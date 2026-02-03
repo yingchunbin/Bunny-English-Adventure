@@ -10,7 +10,8 @@ export const resolveImage = (url: string | undefined): string | undefined => {
     if (!url) return undefined;
 
     // Check if it's a Google Drive link or ID
-    if (url.includes('drive.google.com') || (url.length > 25 && !url.includes('/'))) {
+    // ID format often looks like: 12UCwL_Pd3Y10eT74MqUg9dhB_3D7qAxA (long alphanumeric string)
+    if (url.includes('drive.google.com') || (url.length > 20 && !url.includes('/') && !url.includes('.'))) {
         let id = '';
         
         // Case 1: Full URL provided
@@ -43,9 +44,8 @@ export const resolveImage = (url: string | undefined): string | undefined => {
                 id = id.split('?')[0];
             }
             
-            // Use the thumbnail endpoint with size w500 (width 500px)
-            // This is often more reliable for game assets than the download endpoint
-            return `https://drive.google.com/thumbnail?id=${id}&sz=w500`;
+            // Use the export=view endpoint which is more reliable for direct embedding
+            return `https://drive.google.com/uc?export=view&id=${id}`;
         }
     }
 

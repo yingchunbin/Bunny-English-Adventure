@@ -3,10 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GachaItem, UserState, Rarity, Word } from '../types';
 import { GACHA_ITEMS } from '../data/gachaData';
 import { Avatar } from './Avatar';
-import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield, Zap, Plus, Egg, Sparkles } from 'lucide-react';
+import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield, Zap, Plus, Sparkles, Lock, Egg } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 import { LearningQuizModal } from './farm/LearningQuizModal';
 import { LEVELS } from '../constants';
+import { resolveImage } from '../utils/imageUtils';
 
 interface GachaScreenProps {
   userState: UserState;
@@ -20,6 +21,7 @@ const CARD_GAP = 12; // Gap between items
 const VISIBLE_ITEMS = 5; // How many items visible roughly
 const WINNING_INDEX = 45; // The index where the slider stops
 const TOTAL_DUMMY_ITEMS = 60; // Total items in strip
+const MYSTERY_EGG_ID = "12UCwL_Pd3Y10eT74MqUg9dhB_3D7qAxA";
 
 export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateState, onExit }) => {
   const [view, setView] = useState<'MACHINE' | 'REVEAL' | 'COLLECTION' | 'QUIZ_SELECT' | 'BULK_SUMMARY'>('MACHINE');
@@ -40,6 +42,9 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   // Collection State
   const [confirmEquip, setConfirmEquip] = useState<GachaItem | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<'EASY' | 'MEDIUM' | 'HARD' | null>(null);
+
+  // Fallback state for egg image
+  const [imageError, setImageError] = useState(false);
 
   // -- HELPERS --
   const ownedIds = userState.gachaCollection || [];
@@ -73,17 +78,8 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   };
 
   // --- SOUND TICKER EFFECT ---
-  // We use requestAnimationFrame to check scroll position and play sound
   useEffect(() => {
       if (!isSpinning) return;
-      
-      const itemWidth = CARD_WIDTH + CARD_GAP;
-      const checkTick = () => {
-          if (!isSpinning) return;
-          // We can't easily read DOM scroll from React state transition, so we estimate or use a ref if we were doing JS animation.
-          // Since we use CSS transition, precise tick sync is hard. 
-          // We will simulate ticking sound with a slowing interval.
-      };
       
       // Simulation of slowing down ticks
       let speed = 50;
@@ -274,7 +270,16 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                 style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
                            >
                                <div className="absolute inset-0 bg-white/10 opacity-50 rounded-lg"></div>
-                               <Egg size={60} className={style.text} fill="currentColor" fillOpacity={0.2} />
+                               {!imageError ? (
+                                   <img 
+                                      src={resolveImage(MYSTERY_EGG_ID)} 
+                                      alt="Egg" 
+                                      className="w-20 h-20 object-contain drop-shadow-md z-10"
+                                      onError={() => setImageError(true)}
+                                   />
+                               ) : (
+                                   <Egg size={60} className={style.text} fill="currentColor" fillOpacity={0.2} />
+                               )}
                                <span className="absolute bottom-2 text-[10px] font-black uppercase opacity-60 text-slate-900 tracking-wider">
                                    {rarity === 'LEGENDARY' ? '???' : '?'}
                                </span>
@@ -340,12 +345,22 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                           className={`w-64 h-80 rounded-[3rem] border-8 ${style.border} ${style.bg} shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform ${shakeClass}`}
                           onClick={handleRevealInteraction}
                       >
-                           <Egg size={150} className={`${style.text} drop-shadow-2xl`} fill="currentColor" fillOpacity={0.3 + (revealProgress/200)} />
+                           {!imageError ? (
+                               <img 
+                                  src={resolveImage(MYSTERY_EGG_ID)} 
+                                  alt="Mystery Egg" 
+                                  className="w-48 h-64 object-contain drop-shadow-2xl transition-transform duration-100"
+                                  style={{ transform: `scale(${1 + (revealProgress / 500)})` }}
+                                  onError={() => setImageError(true)}
+                               />
+                           ) : (
+                               <Egg size={150} className={`${style.text} drop-shadow-2xl`} fill="currentColor" fillOpacity={0.3 + (revealProgress/200)} />
+                           )}
                            
                            {/* Cracks Overlay based on progress */}
-                           {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/20 rotate-45 rounded-full"></div>}
-                           {revealProgress > 60 && <div className="absolute bottom-1/3 right-1/3 w-16 h-1 bg-black/20 -rotate-12 rounded-full"></div>}
-                           {revealProgress > 80 && <div className="absolute inset-0 bg-white/20 animate-pulse rounded-[2.5rem]"></div>}
+                           {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/40 rotate-45 rounded-full filter blur-[1px]"></div>}
+                           {revealProgress > 60 && <div className="absolute bottom-1/3 right-1/3 w-16 h-1 bg-black/40 -rotate-12 rounded-full filter blur-[1px]"></div>}
+                           {revealProgress > 80 && <div className="absolute inset-0 bg-white/30 animate-pulse rounded-[2.5rem]"></div>}
                            
                            <div className="absolute bottom-6 font-black text-2xl text-slate-900/20 uppercase tracking-widest">
                                ???
@@ -425,65 +440,94 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       </div>
   );
 
-  const renderCollection = () => (
-      <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
-          <div className="flex justify-between items-center mb-4 px-2">
+  const renderCollection = () => {
+      // Group items by rarity for Pokedex view, ordered by Level (Common -> Legendary)
+      const pools = [
+          { type: 'COMMON', label: 'Thường', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', prob: 50 },
+          { type: 'RARE', label: 'Hiếm', bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-700', prob: 30 },
+          { type: 'EPIC', label: 'Sử Thi', bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', prob: 15 },
+          { type: 'LEGENDARY', label: 'Thần Thoại', bg: 'bg-yellow-50', border: 'border-yellow-200', text: 'text-yellow-700', prob: 5 },
+      ];
+
+      return (
+      <div className="w-full h-full overflow-y-auto p-4 bg-slate-50 pb-24">
+          <div className="flex justify-between items-center mb-6 px-2">
                <div>
-                   <h3 className="text-xl font-black text-slate-800">Bộ Sưu Tập</h3>
-                   <p className="text-xs text-slate-400 font-bold">Đã sở hữu: {ownedItems.length}/{GACHA_ITEMS.length}</p>
+                   <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Bộ Sưu Tập</h3>
+                   <p className="text-xs text-slate-400 font-bold">Thu thập trọn bộ {GACHA_ITEMS.length} bảo bối!</p>
                </div>
-               <div className="text-right">
-                   <div className="text-2xl font-black text-yellow-500">{legendaryCount}</div>
-                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Thần Thoại</div>
+               <div className="text-right bg-white px-4 py-2 rounded-xl border-2 border-slate-100 shadow-sm">
+                   <div className="text-2xl font-black text-blue-600">{ownedItems.length}<span className="text-sm text-slate-300">/{GACHA_ITEMS.length}</span></div>
                </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3 pb-20">
-              {ownedItems.sort((a,b) => {
-                  const rarityOrder = { 'LEGENDARY': 0, 'EPIC': 1, 'RARE': 2, 'COMMON': 3 };
-                  return rarityOrder[a.rarity] - rarityOrder[b.rarity];
-              }).map(item => {
-                  const style = getRarityStyle(item.rarity);
-                  return (
-                    <button 
-                        key={item.id} 
-                        onClick={() => setConfirmEquip(item)}
-                        className={`
-                            relative aspect-square rounded-2xl overflow-hidden border-4 shadow-sm hover:scale-105 transition-transform active:scale-95
-                            ${item.id === confirmEquip?.id ? 'ring-4 ring-green-400 z-10' : ''} 
-                            ${style.border} bg-white
-                        `}
-                    >
-                        {/* Image - Full Size */}
-                        <div className="absolute inset-0 p-2">
-                            <Avatar imageId={item.imageId} size="md" className="w-full h-full rounded-none shadow-none border-none bg-transparent" />
-                        </div>
-                        
-                        {/* Name Badge - Bottom */}
-                        <div className="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-[2px] py-1 px-1">
-                            <div className={`text-[8px] font-black text-center text-white truncate uppercase tracking-tight`}>
-                                {item.name}
-                            </div>
-                        </div>
+          <div className="space-y-8 pb-10">
+              {pools.map((pool) => {
+                  const poolItems = GACHA_ITEMS.filter(i => i.rarity === pool.type);
+                  const specificRate = (pool.prob / poolItems.length).toFixed(2);
+                  const poolOwned = poolItems.filter(i => ownedIds.includes(i.id)).length;
 
-                        {/* Rarity Dot - Top Right */}
-                        <div className={`absolute top-1 right-1 w-3 h-3 rounded-full border border-white ${style.border.replace('border', 'bg').replace('400', '500')}`}></div>
-                    </button>
+                  return (
+                      <div key={pool.type} className={`rounded-3xl border-4 ${pool.border} ${pool.bg} p-4`}>
+                          <div className="flex justify-between items-center mb-4">
+                              <h4 className={`font-black uppercase tracking-wider ${pool.text}`}>{pool.label}</h4>
+                              <span className="text-[10px] font-bold bg-white/50 px-2 py-1 rounded-lg text-slate-500">
+                                  {poolOwned}/{poolItems.length}
+                              </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                              {poolItems.map(item => {
+                                  const isOwned = ownedIds.includes(item.id);
+                                  const isEquipped = item.id === userState.currentGachaAvatarId;
+                                  
+                                  return (
+                                      <div key={item.id} className="flex flex-col items-center">
+                                          <button 
+                                              onClick={() => isOwned && setConfirmEquip(item)}
+                                              disabled={!isOwned}
+                                              className={`
+                                                  relative w-full aspect-square rounded-xl border-2 flex flex-col items-center justify-center overflow-hidden transition-all mb-1
+                                                  ${isOwned 
+                                                      ? 'bg-white border-white shadow-sm active:scale-95 cursor-pointer' 
+                                                      : 'bg-black/5 border-black/5 cursor-not-allowed'}
+                                                  ${isEquipped ? 'ring-4 ring-green-400 z-10' : ''}
+                                              `}
+                                          >
+                                              {isOwned ? (
+                                                  <>
+                                                      <div className="absolute inset-0 p-2">
+                                                          <Avatar imageId={item.imageId} size="md" className="w-full h-full rounded-none shadow-none border-none bg-transparent" />
+                                                      </div>
+                                                      <div className="absolute bottom-0 w-full bg-black/70 backdrop-blur-[1px] py-0.5 px-1">
+                                                          <div className="text-[7px] font-bold text-center text-white truncate w-full uppercase">{item.name}</div>
+                                                      </div>
+                                                  </>
+                                              ) : (
+                                                  <>
+                                                      <HelpCircle className="text-slate-300 mb-1" size={24}/>
+                                                      <Lock size={12} className="text-slate-400 absolute top-1 right-1"/>
+                                                      <div className="absolute bottom-1 text-[8px] font-bold text-slate-400 opacity-60">???</div>
+                                                  </>
+                                              )}
+                                          </button>
+                                          {/* Drop Rate below frame */}
+                                          <div className="text-[9px] font-bold text-slate-400">
+                                              {specificRate}%
+                                          </div>
+                                      </div>
+                                  )
+                              })}
+                          </div>
+                      </div>
                   )
               })}
-              
-              {/* Placeholders */}
-              {[...Array(Math.max(0, 9 - ownedItems.length))].map((_, i) => (
-                  <div key={i} className="aspect-square rounded-2xl border-4 border-dashed border-slate-200 flex items-center justify-center text-slate-200 bg-slate-50">
-                      <HelpCircle size={24}/>
-                  </div>
-              ))}
           </div>
 
           {confirmEquip && (
-              <div className="fixed bottom-0 left-0 w-full bg-white p-6 shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-30 rounded-t-[2.5rem] flex flex-col items-center animate-slideUp">
+              <div className="fixed bottom-0 left-0 w-full bg-white p-6 shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-30 rounded-t-[2.5rem] flex flex-col items-center animate-slideUp border-t-4 border-slate-100">
                   <div className="flex items-center gap-6 mb-6">
-                      <div className={`p-1 rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border}`}>
+                      <div className={`p-1 rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border} shadow-lg`}>
                           <Avatar imageId={confirmEquip.imageId} size="lg" className="rounded-xl" />
                       </div>
                       <div>
@@ -496,12 +540,13 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                   </div>
                   <div className="flex gap-4 w-full">
                       <button onClick={() => setConfirmEquip(null)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-colors">Thôi</button>
-                      <button onClick={() => handleEquip(confirmEquip)} className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-bold shadow-lg shadow-green-200 hover:bg-green-600 transition-colors">Dùng Ngay</button>
+                      <button onClick={() => handleEquip(confirmEquip)} className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-bold shadow-lg shadow-green-200 hover:bg-green-600 transition-colors flex items-center justify-center gap-2"><Check size={20}/> Dùng Ngay</button>
                   </div>
               </div>
           )}
       </div>
-  );
+      );
+  };
 
   const renderQuizSelect = () => (
       <div className="flex flex-col h-full bg-slate-900 text-white p-6 relative overflow-hidden">

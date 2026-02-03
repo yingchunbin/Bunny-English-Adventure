@@ -21,15 +21,6 @@ import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprou
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 import { Avatar } from './components/Avatar'; // Import Avatar
 
-// ... (Constants, DEFAULT_USER_STATE, smartMergeArray, migrateState, calculateProgressScore - KEEP AS IS)
-
-// ... (DEFAULT_USER_STATE needs to include the new fields defined in types.ts implicitly handled by migrateState usually, but good to ensure keys exist)
-// Since we updated types.ts, TS might complain if DEFAULT_USER_STATE misses keys.
-// However, the previous App.tsx snippet used `as UserState` or implicit typing. 
-// Let's ensure migrateState handles new keys.
-// The provided previous App.tsx content for migrateState includes `currentGachaAvatarId`? No.
-// Let's update `migrateState` function within App.tsx to be safe.
-
 const ALL_STORAGE_KEYS = [
   'turtle_english_state',
   'turtle_english_state_v1',
@@ -47,10 +38,11 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v13',
   'turtle_english_state_v14',
   'turtle_english_state_v15',
-  'turtle_english_state_v16'
+  'turtle_english_state_v16',
+  'turtle_english_state_v17',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v17'; // Increment version
+const CURRENT_VERSION_KEY = 'turtle_english_state_v18'; // Increment version
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -140,49 +132,78 @@ const migrateState = (oldState: any): UserState => {
 };
 
 // ... (calculateProgressScore - no changes)
+const calculateProgressScore = (state: UserState) => {
+    let score = 0;
+    score += (state.completedLevels?.length || 0) * 10;
+    score += (state.stars || 0) * 5;
+    score += (state.coins || 0) / 100;
+    return Math.floor(score);
+};
 
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false); 
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   const userStateRef = useRef(userState);
 
-  // ... (useEffect for loading state - same as before)
+  // Improved Data Loading Logic: Scans backwards for ANY valid save
   useEffect(() => {
       try {
         let loadedState: any = null;
-        const currentRaw = localStorage.getItem(CURRENT_VERSION_KEY);
-        if (currentRaw) {
-             try {
-                const parsed = JSON.parse(currentRaw);
-                if (parsed && typeof parsed === 'object') {
-                    console.log(`✅ Loaded directly from ${CURRENT_VERSION_KEY}`);
-                    loadedState = parsed;
-                }
-             } catch(e) { console.error(e); }
+        
+        // Scan keys from newest to oldest (including current)
+        const keysToCheck = [CURRENT_VERSION_KEY, ...[...ALL_STORAGE_KEYS].reverse()];
+        
+        for (const key of keysToCheck) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                try {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed === 'object') {
+                        console.log(`✅ Loaded data from ${key}`);
+                        loadedState = parsed;
+                        break; // Stop at first valid data found
+                    }
+                } catch(e) { console.warn(`Failed to parse ${key}`, e); }
+            }
         }
+
         if (!loadedState) {
-            // Simple fallback to default
-            loadedState = DEFAULT_USER_STATE; 
+            // Check backup key
+            const backup = localStorage.getItem(BACKUP_KEY);
+            if (backup) {
+                try { loadedState = JSON.parse(backup); console.log("✅ Loaded from backup"); } catch(e) {}
+            }
         }
+
+        if (!loadedState) {
+            console.log("ℹ️ No previous data found, starting new.");
+            loadedState = DEFAULT_USER_STATE;
+        }
+
         if (loadedState) {
             const migrated = migrateState(loadedState);
             setUserState(migrated);
             userStateRef.current = migrated;
+            
+            // Save immediately to current version key to ensure migration persists
+            localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
         } 
       } catch (e) {
+        console.error("Critical loading error", e);
         setUserState(DEFAULT_USER_STATE);
       } finally {
           setIsLoaded(true); 
       }
   }, []);
 
-  // ... (handleUpdateState - same)
   const handleUpdateState = useCallback((update: UserState | ((prev: UserState) => UserState)) => {
       if (!isLoaded) return;
       setUserState(prev => {
           const newState = typeof update === 'function' ? (update as any)(prev) : update;
           try {
               localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
+              // Also save backup occasionally (simple implementation: always save backup on important state changes)
+              if (Math.random() < 0.1) localStorage.setItem(BACKUP_KEY, JSON.stringify(newState));
               userStateRef.current = newState; 
           } catch (e) { console.error(e); }
           return newState;
