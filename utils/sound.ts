@@ -146,7 +146,7 @@ const playTone = (freq: number, type: OscillatorType, duration: number, startTim
   osc.stop(ctx.currentTime + startTime + duration);
 };
 
-export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer' | 'eat' | 'powerup' | 'coins') => {
+export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer' | 'eat' | 'powerup' | 'coins' | 'tick' | 'crack') => {
   try {
     switch (type) {
       case 'correct':
@@ -163,6 +163,13 @@ export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip'
         break;
       case 'flip':
         playTone(400, 'triangle', 0.1, 0, 0.3);
+        break;
+      case 'tick': // Ticker sound
+        playTone(800, 'square', 0.03, 0, 0.2);
+        break;
+      case 'crack': // Egg crack
+        playTone(150, 'sawtooth', 0.1, 0, 0.8);
+        playTone(100, 'sawtooth', 0.1, 0.05, 0.8);
         break;
       case 'success':
         playTone(523.25, 'square', 0.1, 0, 0.5);

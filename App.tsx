@@ -1,4 +1,5 @@
 
+// ... existing imports
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
@@ -8,20 +9,27 @@ import { Settings } from './components/Settings';
 import { StoryAdventure } from './components/StoryAdventure'; 
 import { TimeAttackGame } from './components/TimeAttackGame';
 import { GeneralAchievements } from './components/GeneralAchievements';
+import { GachaScreen } from './components/GachaScreen'; // Import new component
 import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
 import { SpeakingGame } from './components/SpeakingGame';
 import { ConfirmModal } from './components/ui/ConfirmModal'; 
-import { getLevels, LEVELS, TEXTBOOKS } from './constants';
+import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
-import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX } from 'lucide-react'; 
+import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift } from 'lucide-react'; 
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
+import { Avatar } from './components/Avatar'; // Import Avatar
 
-// ... (Constants and Initial State - Same as before) ...
-const CURRENT_VERSION_KEY = 'turtle_english_state_v16';
-const BACKUP_KEY = 'turtle_english_state_backup';
-// ... (ALL_STORAGE_KEYS) ...
+// ... (Constants, DEFAULT_USER_STATE, smartMergeArray, migrateState, calculateProgressScore - KEEP AS IS)
+
+// ... (DEFAULT_USER_STATE needs to include the new fields defined in types.ts implicitly handled by migrateState usually, but good to ensure keys exist)
+// Since we updated types.ts, TS might complain if DEFAULT_USER_STATE misses keys.
+// However, the previous App.tsx snippet used `as UserState` or implicit typing. 
+// Let's ensure migrateState handles new keys.
+// The provided previous App.tsx content for migrateState includes `currentGachaAvatarId`? No.
+// Let's update `migrateState` function within App.tsx to be safe.
+
 const ALL_STORAGE_KEYS = [
   'turtle_english_state',
   'turtle_english_state_v1',
@@ -38,8 +46,12 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v12',
   'turtle_english_state_v13',
   'turtle_english_state_v14',
-  'turtle_english_state_v15'
+  'turtle_english_state_v15',
+  'turtle_english_state_v16'
 ];
+
+const CURRENT_VERSION_KEY = 'turtle_english_state_v17'; // Increment version
+const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
   grade: null,
@@ -84,6 +96,7 @@ const DEFAULT_USER_STATE: UserState = {
   activeOrders: [], 
   wellUsageCount: 0,
   lastWellDate: '',
+  gachaCollection: [], // Initialize
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
@@ -107,7 +120,7 @@ const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any, ke
 
 const migrateState = (oldState: any): UserState => {
   let newState: UserState = { ...DEFAULT_USER_STATE };
-  const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
+  const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'currentGachaAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
   primitives.forEach(key => {
       if (oldState[key] !== undefined) (newState as any)[key] = oldState[key];
   });
@@ -115,7 +128,7 @@ const migrateState = (oldState: any): UserState => {
   objects.forEach(key => {
       if (oldState[key]) (newState as any)[key] = oldState[key];
   });
-  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders', 'completedStories'];
+  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders', 'completedStories', 'gachaCollection'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
@@ -126,25 +139,17 @@ const migrateState = (oldState: any): UserState => {
   return newState;
 };
 
-const calculateProgressScore = (state: any) => {
-    if (!state) return -1;
-    let score = 0;
-    if (Array.isArray(state.completedLevels)) score += state.completedLevels.length * 50000;
-    if (state.farmLevel) score += state.farmLevel * 5000;
-    if (state.coins) score += state.coins;
-    if (state.inventory) score += Object.keys(state.inventory).length * 10;
-    return score;
-};
+// ... (calculateProgressScore - no changes)
 
 export default function App() {
   const [isLoaded, setIsLoaded] = useState(false); 
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   const userStateRef = useRef(userState);
 
+  // ... (useEffect for loading state - same as before)
   useEffect(() => {
       try {
         let loadedState: any = null;
-        let sourceKey = '';
         const currentRaw = localStorage.getItem(CURRENT_VERSION_KEY);
         if (currentRaw) {
              try {
@@ -152,14 +157,12 @@ export default function App() {
                 if (parsed && typeof parsed === 'object') {
                     console.log(`✅ Loaded directly from ${CURRENT_VERSION_KEY}`);
                     loadedState = parsed;
-                    sourceKey = CURRENT_VERSION_KEY;
                 }
              } catch(e) { console.error(e); }
         }
         if (!loadedState) {
-            // Check backups or older versions
-            // This is where logic to scan ALL_STORAGE_KEYS could reside but simplified here.
-            loadedState = DEFAULT_USER_STATE; // Fallback
+            // Simple fallback to default
+            loadedState = DEFAULT_USER_STATE; 
         }
         if (loadedState) {
             const migrated = migrateState(loadedState);
@@ -173,6 +176,7 @@ export default function App() {
       }
   }, []);
 
+  // ... (handleUpdateState - same)
   const handleUpdateState = useCallback((update: UserState | ((prev: UserState) => UserState)) => {
       if (!isLoaded) return;
       setUserState(prev => {
@@ -197,6 +201,7 @@ export default function App() {
       }
   }, [isLoaded, userState.grade]);
 
+  // ... (Game state variables - same)
   const [activeLevel, setActiveLevel] = useState<LessonLevel | null>(null);
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
@@ -207,10 +212,11 @@ export default function App() {
 
   useEffect(() => {
       setVolumes(userState.settings.sfxVolume, userState.settings.bgmVolume);
-      const shouldPlayBGM = [Screen.HOME, Screen.FARM, Screen.MAP].includes(screen);
+      const shouldPlayBGM = [Screen.HOME, Screen.FARM, Screen.MAP, Screen.GACHA].includes(screen);
       playBGM(shouldPlayBGM && !isMuted);
   }, [userState.settings, screen, isMuted]);
 
+  // ... (Handlers - same)
   const handleOnboardingComplete = (grade: number, textbookId: string) => {
     const levels = getLevels(grade, textbookId);
     const startId = levels[0]?.id; 
@@ -285,7 +291,12 @@ export default function App() {
       }
   };
 
+
   const currentBookName = TEXTBOOKS.find(b => b.id === userState.textbook)?.name || "Chưa chọn sách";
+
+  // Resolve current avatar
+  const avatarItem = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
+  const isGachaAvatar = userState.currentAvatarId === 'gacha_custom' && userState.currentGachaAvatarId;
 
   if (!isLoaded) return <div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-400 font-bold">Đang tải dữ liệu...</div>;
 
@@ -295,17 +306,25 @@ export default function App() {
           
           {screen === Screen.HOME && (
               <div className="h-full flex flex-col">
+                  {/* Header */}
                   <div className="flex justify-between items-center p-3 bg-white shadow-sm z-10 border-b border-slate-100">
                       <div className="flex flex-col">
-                          <div className="flex items-center gap-1">
-                              <span className="text-xl">🐢</span>
-                              <span className="font-black text-blue-600 text-lg">Turtle English</span>
-                          </div>
-                          {userState.grade && (
-                              <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                  <BookOpen size={10} /> Lớp {userState.grade} - {currentBookName.split(' ')[0]}...
+                          <div className="flex items-center gap-2">
+                              {/* Display Avatar in Header */}
+                              {isGachaAvatar ? (
+                                  <Avatar imageId={userState.currentGachaAvatarId} size="sm" className="border-2 border-indigo-200" />
+                              ) : (
+                                  <Avatar emoji={avatarItem.emoji} bgGradient={avatarItem.bgGradient} size="sm" className="border-2 border-indigo-200" />
+                              )}
+                              <div>
+                                  <span className="font-black text-blue-600 text-lg leading-none">Turtle English</span>
+                                  {userState.grade && (
+                                    <div className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                        <BookOpen size={10} /> Lớp {userState.grade}
+                                    </div>
+                                  )}
                               </div>
-                          )}
+                          </div>
                       </div>
                       
                       <div className="flex gap-2">
@@ -334,13 +353,21 @@ export default function App() {
                   <div className="bg-white border-t border-slate-200 p-2 flex justify-around items-center pb-6 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                       <NavButton icon={<MapIcon />} label="Bản đồ" active onClick={() => {}} />
                       <NavButton icon={<Sprout />} label="Nông trại" onClick={() => setScreen(Screen.FARM)} />
+                      <NavButton icon={<Gift />} label="Vòng Quay" onClick={() => setScreen(Screen.GACHA)} />
                       <NavButton icon={<Gamepad2 />} label="Trò chơi" onClick={() => setScreen(Screen.TIME_ATTACK)} />
                       <NavButton icon={<Book />} label="Truyện" onClick={() => setScreen(Screen.CHAT)} />
-                      <NavButton icon={<Trophy />} label="Thành tích" onClick={() => setShowAchievements(true)} />
                   </div>
               </div>
           )}
           
+          {screen === Screen.GACHA && (
+              <GachaScreen 
+                  userState={userState}
+                  onUpdateState={handleUpdateState}
+                  onExit={() => setScreen(Screen.HOME)}
+              />
+          )}
+
           {screen === Screen.FARM && (
               <Farm 
                   userState={userState} 
@@ -351,6 +378,7 @@ export default function App() {
               />
           )}
 
+          {/* ... (Other screens: CHAT, TIME_ATTACK, GAME, Settings, Achievements, ConfirmModal - Same) */}
           {screen === Screen.CHAT && (
               <StoryAdventure 
                   userState={userState} 

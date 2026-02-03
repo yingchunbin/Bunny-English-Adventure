@@ -8,6 +8,7 @@ export enum Screen {
   FARM = 'FARM',
   SETTINGS = 'SETTINGS', 
   TIME_ATTACK = 'TIME_ATTACK',
+  GACHA = 'GACHA', // NEW SCREEN
 }
 
 export enum GameType {
@@ -150,7 +151,7 @@ export interface MachineSlot {
     activeRecipeId: string | null;
     startedAt: number | null;
     queue?: string[]; // Array of recipeIds waiting in line
-    storage?: string[]; // Array of recipeIds that are finished and waiting to be collected
+    storage?: string[]; // Array of recipeIds waiting to be collected
     isReady?: boolean;
 }
 
@@ -191,12 +192,22 @@ export interface UserSettings {
   userName?: string;
 }
 
+export type Rarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY';
+
+export interface GachaItem {
+  id: string;
+  name: string;
+  imageId: string;
+  rarity: Rarity;
+}
+
 export interface UserState {
   grade: number | null;
   textbook: string | null;
   coins: number;
-  stars: number; // Added Premium Currency
+  stars: number; // Premium Currency
   currentAvatarId: string;
+  currentGachaAvatarId?: string; // New: To use Gacha items as avatars
   completedLevels: number[];
   levelStars: Record<number, number>; 
   unlockedLevels: number[];
@@ -207,15 +218,15 @@ export interface UserState {
   farmPlots: FarmPlot[];
   livestockSlots?: LivestockSlot[]; 
   machineSlots?: MachineSlot[]; 
-  inventory: { [itemId: string]: number }; // Seeds & Items
-  harvestedCrops?: { [itemId: string]: number }; // Harvested Products
+  inventory: { [itemId: string]: number }; 
+  harvestedCrops?: { [itemId: string]: number }; 
   fertilizers: number; 
   waterDrops: number; 
   weather?: 'SUNNY' | 'RAINY'; 
   lastWeatherUpdate?: number; 
-  decorations?: string[]; // Owned decoration IDs
-  decorSlots?: DecorSlot[]; // Placed decorations logic
-  completedStories?: string[]; // NEW: Track IDs of completed stories
+  decorations?: string[]; 
+  decorSlots?: DecorSlot[]; 
+  completedStories?: string[]; 
   
   farmLevel?: number;
   farmExp?: number;
@@ -225,8 +236,12 @@ export interface UserState {
   wellUsageCount?: number;
 
   missions?: Mission[];
-  lastMissionUpdate?: string; // Track day for daily reset
+  lastMissionUpdate?: string; 
   activeOrders?: FarmOrder[]; 
+  
+  // Gacha Collection
+  gachaCollection?: string[]; // Array of Gacha IDs owned
+
   settings: UserSettings; 
 }
 

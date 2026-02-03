@@ -1,7 +1,8 @@
 
 import React, { memo, useMemo, useEffect, useRef } from 'react';
-import { LessonLevel } from '../types';
+import { LessonLevel, UserState } from '../types'; // Import UserState to type check props if needed, though props here are specific
 import { Map, Star, Skull, Gamepad2, Lock, Play } from 'lucide-react';
+import { Avatar } from './Avatar'; // Ensure we import the updated Avatar
 
 interface MapScreenProps {
   levels: LessonLevel[];
@@ -9,6 +10,17 @@ interface MapScreenProps {
   completedLevels: number[];
   levelStars: Record<number, number>;
   onStartLevel: (id: number) => void;
+  // Note: To show the avatar, we might need access to userState or pass avatar props.
+  // Currently MapScreen doesn't receive UserState. 
+  // Ideally, the parent (App.tsx) renders the header, but MapScreen has the "Bản đồ học tập" header inside it.
+  // Wait, looking at the previous MapScreen code, it doesn't render the user profile/avatar. 
+  // The header with "Turtle English" and settings is in App.tsx. 
+  // Let's check App.tsx again. Ah, App.tsx renders the header.
+  // So I need to update App.tsx header part, not MapScreen itself for the avatar display?
+  // Let's check where the Avatar is displayed.
+  // It seems the current App doesn't display the User Avatar in the main header of App.tsx.
+  // It only displays the turtle logo.
+  // I will update App.tsx to show the current avatar next to the name.
 }
 
 export const MapScreen: React.FC<MapScreenProps> = memo(({ levels, unlockedLevels, completedLevels, levelStars, onStartLevel }) => {

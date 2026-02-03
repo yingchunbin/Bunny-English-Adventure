@@ -430,14 +430,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       };
   };
 
-  const getBuffIcon = (type: string) => {
+  const getBuffIcon = (type: string, size: number = 10) => {
       switch(type) {
-          case 'EXP': return <Zap size={10} />;
-          case 'COIN': return <Coins size={10} />;
-          case 'TIME': return <Clock size={10} />;
-          case 'PEST': return <Shield size={10} />;
-          case 'YIELD': return <Sprout size={10} />;
-          default: return <Plus size={10} />;
+          case 'EXP': return <Zap size={size} className="text-yellow-400 fill-yellow-400" />;
+          case 'COIN': return <Coins size={size} className="text-amber-400 fill-amber-400" />;
+          case 'TIME': return <Clock size={size} className="text-blue-400" />;
+          case 'PEST': return <Shield size={size} className="text-emerald-400 fill-emerald-400" />;
+          case 'YIELD': return <Sprout size={size} className="text-lime-400 fill-lime-400" />;
+          default: return <Plus size={size} />;
       }
   };
 
@@ -890,13 +890,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  {/* Rarity Label (Top Left) */}
-                                  <div className={`absolute top-0 left-0 px-2 py-0.5 text-[7px] font-black text-white uppercase rounded-br-lg ${rarity?.bg.replace('bg-','bg-').replace('50','500')}`}>
+                                  {/* Rarity Label (Centered Top) - Fixed clipping */}
+                                  <div className={`absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-black text-white uppercase rounded-full shadow-md z-20 border border-white/20 ${rarity?.bg.replace('bg-','bg-').replace('50','500')} whitespace-nowrap`}>
                                       {rarity?.label}
                                   </div>
 
                                   {imgUrl ? (
-                                      <div className={`w-full h-full p-2 z-10 transition-all ${animClass} ${rarity?.anim} ${rarity?.glow}`}>
+                                      <div className={`w-full h-full p-4 z-10 transition-all ${animClass} ${rarity?.anim} ${rarity?.glow} mb-6`}>
                                           <img 
                                             src={imgUrl} 
                                             alt={decor.name} 
@@ -904,18 +904,18 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           />
                                       </div>
                                   ) : (
-                                      <div className={`text-7xl z-10 transition-all drop-shadow-md ${animClass} ${rarity?.anim} ${rarity?.glow}`}>
+                                      <div className={`text-7xl z-10 transition-all drop-shadow-md ${animClass} ${rarity?.anim} ${rarity?.glow} mb-6`}>
                                           {decor.emoji}
                                       </div>
                                   )}
                                   
-                                  {/* Detailed Buff Box */}
-                                  <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 w-[90%] px-1 py-1 rounded-lg backdrop-blur-md shadow-sm flex flex-col items-center z-20 border ${rarity?.border} ${rarity?.bg} bg-opacity-90`}>
-                                      <span className={`text-[8px] font-black uppercase tracking-tighter truncate w-full text-center mb-0.5 ${rarity?.color}`}>{decor.name}</span>
-                                      <div className="flex flex-wrap justify-center gap-0.5">
+                                  {/* Detailed Buff Box - Larger */}
+                                  <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-[96%] px-2 py-1.5 rounded-xl backdrop-blur-md shadow-lg flex flex-col items-center z-20 border-2 ${rarity?.border} ${rarity?.bg} bg-opacity-95`}>
+                                      <span className={`text-[10px] font-black uppercase tracking-tight truncate w-full text-center mb-1 ${rarity?.color}`}>{decor.name}</span>
+                                      <div className="flex flex-wrap justify-center gap-1.5">
                                           {buffs.map((b,i) => (
-                                              <span key={i} className="text-[6px] font-black text-white bg-slate-800/80 px-1 rounded flex items-center gap-0.5">
-                                                  {getBuffIcon(b.type)} {b.value}%
+                                              <span key={i} className="text-[10px] font-black text-white bg-slate-800/90 px-2 py-1 rounded-lg flex items-center gap-1.5 shadow-sm border border-slate-600">
+                                                  {getBuffIcon(b.type, 14)} {b.value}%
                                               </span>
                                           ))}
                                       </div>

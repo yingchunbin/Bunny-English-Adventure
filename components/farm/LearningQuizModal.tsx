@@ -1,42 +1,58 @@
 
 import React, { useState, useEffect } from 'react';
 import { Word } from '../../types';
-import { X, Zap, Volume2, Truck, Droplets, Bug } from 'lucide-react';
+import { X, Zap, Volume2, Truck, Droplets, Bug, Star } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 
 interface LearningQuizModalProps {
   words: Word[];
   type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER'; 
+  questionCount?: number; 
   onSuccess: () => void;
   onClose: () => void;
   onShowAlert: (msg: string, type: 'INFO' | 'DANGER') => void;
 }
 
-const QUESTION_COUNT = 3;
+interface Question {
+    id: number;
+    target: Word;
+    options: Word[];
+    mode: 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN';
+}
 
-export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, onSuccess, onClose, onShowAlert }) => {
-  const [questions, setQuestions] = useState<Array<{ target: Word, options: Word[], mode: 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN' }>>([]);
+export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, type, questionCount = 3, onSuccess, onClose, onShowAlert }) => {
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQIdx, setCurrentQIdx] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false); // Prevent double clicks
+  const [isProcessing, setIsProcessing] = useState(false); 
   
+  // Initialize Questions Once on Mount
   useEffect(() => {
       if (words.length >= 4) {
-          const newQuestions = [];
-          for (let i = 0; i < QUESTION_COUNT; i++) {
+          const newQuestions: Question[] = [];
+          for (let i = 0; i < questionCount; i++) {
               const target = words[Math.floor(Math.random() * words.length)];
-              const distractors = words.filter(w => w.id !== target.id).sort(() => 0.5 - Math.random()).slice(0, 3);
               
-              // Only text-based and audio modes now. Removed IMAGE_TO_EN.
+              // Ensure we get exactly 3 unique distractors
+              const distractors = words
+                  .filter(w => w.id !== target.id)
+                  .sort(() => 0.5 - Math.random())
+                  .slice(0, 3);
+              
               const modes: ('EN_TO_VI' | 'VI_TO_EN' | 'LISTEN')[] = ['EN_TO_VI', 'VI_TO_EN', 'LISTEN'];
-              
               const mode = modes[Math.floor(Math.random() * modes.length)];
+              
+              // Important: Shuffle options here and store them fixed for this question
+              const options = [target, ...distractors].sort(() => 0.5 - Math.random());
+
               newQuestions.push({
+                  id: i,
                   target,
-                  options: [target, ...distractors].sort(() => 0.5 - Math.random()),
+                  options,
                   mode
               });
           }
           setQuestions(newQuestions);
+          setCurrentQIdx(0);
           
           // Auto play first audio if listen mode
           if (newQuestions[0].mode === 'LISTEN') {
@@ -47,7 +63,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
               }, 500);
           }
       }
-  }, []);
+  }, [questionCount]); // Re-run if count changes, but ideally stable on mount
 
   const playAudio = () => {
       if (!questions[currentQIdx]) return;
@@ -59,15 +75,17 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
   const handleAnswer = (wordId: string) => {
       if (isProcessing || !questions[currentQIdx]) return;
       
-      if (wordId === questions[currentQIdx].target.id) {
+      const currentQ = questions[currentQIdx];
+
+      if (wordId === currentQ.target.id) {
           setIsProcessing(true); // Lock immediately
           playSFX('correct');
           
-          if (currentQIdx < QUESTION_COUNT - 1) {
-              // Add delay before moving to next question to allow sound to play and prevent accidental double taps
+          if (currentQIdx < questionCount - 1) {
               setTimeout(() => {
                   const nextIdx = currentQIdx + 1;
                   setCurrentQIdx(nextIdx);
+                  
                   // Auto play next audio
                   if (questions[nextIdx].mode === 'LISTEN') {
                       setTimeout(() => {
@@ -83,13 +101,11 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
               setTimeout(() => {
                   playSFX('success');
                   onSuccess();
-                  // Do NOT set isProcessing to false here to prevent re-clicking while modal is closing
               }, 500);
           }
       } else {
           playSFX('wrong');
           onShowAlert("Sai rồi! Bé thử lại câu này nhé!", "DANGER");
-          // No need to lock for wrong answer, or unlock immediately if you want
       }
   };
 
@@ -97,25 +113,26 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
 
   const currentQ = questions[currentQIdx];
 
+  // Dynamic Styles based on "Type"
   let icon = <Zap size={32} />;
-  let title = "Học Để Tăng Tốc";
-  let desc = `Trả lời đúng ${QUESTION_COUNT} câu để giảm thời gian!`;
+  let title = "Thử Thách";
+  let desc = `Trả lời đúng ${questionCount} câu!`;
   let bg = "bg-yellow-100 text-yellow-600";
 
   if (type === 'WATER') {
       icon = <Droplets size={32} />;
-      title = "Giếng Thần Tri Thức";
-      desc = `Trả lời đúng ${QUESTION_COUNT} câu để lấy nước!`;
+      title = questionCount > 3 ? "Kiếm Sao (Dễ)" : "Giếng Thần Tri Thức";
+      desc = `Trả lời đúng ${questionCount} câu!`;
       bg = "bg-blue-100 text-blue-500";
   } else if (type === 'PEST') {
-      icon = <Bug size={32} />;
-      title = "Dũng Sĩ Diệt Sâu";
-      desc = `Trả lời đúng ${QUESTION_COUNT} câu để dọn dẹp!`;
+      icon = questionCount > 10 ? <Star size={32}/> : <Bug size={32} />;
+      title = questionCount > 10 ? "Kiếm Sao (Vừa)" : "Dũng Sĩ Diệt Sâu";
+      desc = `Trả lời đúng ${questionCount} câu!`;
       bg = "bg-green-100 text-green-500";
   } else if (type === 'NEW_ORDER') {
-      icon = <Truck size={32} />;
-      title = "Tìm Kiếm Đơn Hàng";
-      desc = `Hoàn thành ${QUESTION_COUNT} bài tập để nhận đơn mới!`;
+      icon = questionCount > 10 ? <Star size={32}/> : <Truck size={32} />;
+      title = questionCount > 10 ? "Kiếm Sao (Khó)" : "Tìm Kiếm Đơn Hàng";
+      desc = `Hoàn thành ${questionCount} bài tập!`;
       bg = "bg-orange-100 text-orange-500";
   }
 
@@ -135,9 +152,9 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
                     {desc}
                 </p>
                 {/* Progress Dots */}
-                <div className="flex justify-center gap-2 mt-3">
-                    {[...Array(QUESTION_COUNT)].map((_, i) => (
-                        <div key={i} className={`w-3 h-3 rounded-full transition-all ${i < currentQIdx ? 'bg-green-500' : i === currentQIdx ? 'bg-blue-500 scale-125' : 'bg-slate-200'}`} />
+                <div className="flex justify-center gap-1 mt-3 flex-wrap px-4">
+                    {[...Array(questionCount)].map((_, i) => (
+                        <div key={i} className={`w-2 h-2 rounded-full transition-all ${i < currentQIdx ? 'bg-green-500' : i === currentQIdx ? 'bg-blue-500 scale-125' : 'bg-slate-200'}`} />
                     ))}
                 </div>
             </div>

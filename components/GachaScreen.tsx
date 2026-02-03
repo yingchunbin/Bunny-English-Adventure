@@ -1,0 +1,625 @@
+
+import React, { useState, useEffect, useRef } from 'react';
+import { GachaItem, UserState, Rarity, Word } from '../types';
+import { GACHA_ITEMS } from '../data/gachaData';
+import { Avatar } from './Avatar';
+import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield, Zap, Plus, Egg, Sparkles } from 'lucide-react';
+import { playSFX } from '../utils/sound';
+import { LearningQuizModal } from './farm/LearningQuizModal';
+import { LEVELS } from '../constants';
+
+interface GachaScreenProps {
+  userState: UserState;
+  onUpdateState: (newState: UserState | ((prev: UserState) => UserState)) => void;
+  onExit: () => void;
+}
+
+// Config for Ticker
+const CARD_WIDTH = 120; // Width of each item in ticker
+const CARD_GAP = 12; // Gap between items
+const VISIBLE_ITEMS = 5; // How many items visible roughly
+const WINNING_INDEX = 45; // The index where the slider stops
+const TOTAL_DUMMY_ITEMS = 60; // Total items in strip
+
+export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateState, onExit }) => {
+  const [view, setView] = useState<'MACHINE' | 'REVEAL' | 'COLLECTION' | 'QUIZ_SELECT' | 'BULK_SUMMARY'>('MACHINE');
+  
+  // Ticker State
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [tickerItems, setTickerItems] = useState<Rarity[]>([]); 
+  const [scrollX, setScrollX] = useState(0);
+  const [transitionDuration, setTransitionDuration] = useState(0);
+  const tickerRef = useRef<HTMLDivElement>(null);
+  const lastTickRef = useRef(0);
+  
+  // Reveal State
+  const [pendingRewards, setPendingRewards] = useState<GachaItem[]>([]); // Array to support bulk
+  const [revealProgress, setRevealProgress] = useState(0); 
+  const [isRevealed, setIsRevealed] = useState(false);
+
+  // Collection State
+  const [confirmEquip, setConfirmEquip] = useState<GachaItem | null>(null);
+  const [activeQuiz, setActiveQuiz] = useState<'EASY' | 'MEDIUM' | 'HARD' | null>(null);
+
+  // -- HELPERS --
+  const ownedIds = userState.gachaCollection || [];
+  const ownedItems = GACHA_ITEMS.filter(item => ownedIds.includes(item.id));
+  const legendaryCount = ownedItems.filter(i => i.rarity === 'LEGENDARY').length;
+
+  const getRarityStyle = (rarity: Rarity) => {
+      switch(rarity) {
+          case 'LEGENDARY': return { border: 'border-yellow-400', bg: 'bg-yellow-100', text: 'text-yellow-700', shadow: 'shadow-yellow-200' };
+          case 'EPIC': return { border: 'border-purple-400', bg: 'bg-purple-100', text: 'text-purple-700', shadow: 'shadow-purple-200' };
+          case 'RARE': return { border: 'border-blue-400', bg: 'bg-blue-100', text: 'text-blue-700', shadow: 'shadow-blue-200' };
+          default: return { border: 'border-slate-300', bg: 'bg-slate-100', text: 'text-slate-600', shadow: 'shadow-slate-200' };
+      }
+  };
+
+  const getRarityLabel = (rarity: Rarity) => {
+      switch(rarity) {
+          case 'LEGENDARY': return 'THẦN THOẠI';
+          case 'EPIC': return 'SỬ THI';
+          case 'RARE': return 'HIẾM';
+          default: return 'THƯỜNG';
+      }
+  };
+
+  const getRandomRarity = (): Rarity => {
+      const rand = Math.random() * 100;
+      if (rand < 5) return 'LEGENDARY';
+      if (rand < 20) return 'EPIC';
+      if (rand < 50) return 'RARE';
+      return 'COMMON';
+  };
+
+  // --- SOUND TICKER EFFECT ---
+  // We use requestAnimationFrame to check scroll position and play sound
+  useEffect(() => {
+      if (!isSpinning) return;
+      
+      const itemWidth = CARD_WIDTH + CARD_GAP;
+      const checkTick = () => {
+          if (!isSpinning) return;
+          // We can't easily read DOM scroll from React state transition, so we estimate or use a ref if we were doing JS animation.
+          // Since we use CSS transition, precise tick sync is hard. 
+          // We will simulate ticking sound with a slowing interval.
+      };
+      
+      // Simulation of slowing down ticks
+      let speed = 50;
+      let time = 0;
+      const tickLoop = () => {
+          if (!isSpinning) return;
+          playSFX('tick');
+          
+          // Slow down curve
+          time += speed;
+          if (time > 3000) speed += 10;
+          if (time > 4000) speed += 30;
+          
+          if (time < 5000) {
+              setTimeout(tickLoop, speed);
+          }
+      };
+      
+      tickLoop();
+
+      return () => {};
+  }, [isSpinning]);
+
+  // --- ACTIONS ---
+
+  const prepareSpin = (count: number) => {
+      const results: GachaItem[] = [];
+      
+      for(let i=0; i<count; i++) {
+          const rand = Math.random() * 100;
+          let pool: Rarity = 'COMMON';
+          if (rand < 5) pool = 'LEGENDARY'; 
+          else if (rand < 20) pool = 'EPIC'; 
+          else if (rand < 50) pool = 'RARE'; 
+          
+          const candidates = GACHA_ITEMS.filter(item => item.rarity === pool);
+          const winner = candidates[Math.floor(Math.random() * candidates.length)];
+          results.push(winner);
+      }
+      
+      setPendingRewards(results);
+
+      // Find the "Best" item to show in the ticker animation
+      const rarityOrder = { 'LEGENDARY': 3, 'EPIC': 2, 'RARE': 1, 'COMMON': 0 };
+      const bestItem = [...results].sort((a,b) => rarityOrder[b.rarity] - rarityOrder[a.rarity])[0];
+
+      // Build Ticker Strip
+      const items: Rarity[] = [];
+      for (let i = 0; i < TOTAL_DUMMY_ITEMS; i++) {
+          if (i === WINNING_INDEX) {
+              items.push(bestItem.rarity); // Force winner rarity at stopping point
+          } else {
+              items.push(getRandomRarity());
+          }
+      }
+      setTickerItems(items);
+      
+      // Reset Positions
+      setTransitionDuration(0);
+      setScrollX(0);
+      
+      return bestItem;
+  };
+
+  const handleSpin = (count: number) => {
+      const cost = count === 1 ? 10 : 90;
+      if (userState.stars < cost) {
+          setView('QUIZ_SELECT');
+          return;
+      }
+
+      const bestItem = prepareSpin(count);
+      if (!bestItem) return;
+
+      // Deduct Cost
+      onUpdateState(prev => ({ ...prev, stars: prev.stars - cost }));
+      setIsSpinning(true);
+      playSFX('click');
+
+      // Start Animation after a brief render delay
+      setTimeout(() => {
+          const itemFullWidth = CARD_WIDTH + CARD_GAP;
+          const targetX = (WINNING_INDEX * itemFullWidth) - (window.innerWidth < 640 ? window.innerWidth/2 : 200) + (CARD_WIDTH / 2);
+          const jitter = (Math.random() * 40) - 20; 
+
+          setTransitionDuration(5000); // 5 seconds spin
+          setScrollX(targetX + jitter);
+      }, 100);
+
+      // End Spin
+      setTimeout(() => {
+          setIsSpinning(false);
+          // Auto transition to reveal
+          setTimeout(() => {
+              setRevealProgress(0);
+              setIsRevealed(false);
+              setView('REVEAL');
+              if (bestItem.rarity === 'LEGENDARY') playSFX('cheer');
+              else playSFX('success');
+          }, 1000);
+      }, 5500); 
+  };
+
+  const handleRevealInteraction = () => {
+      if (isRevealed) {
+          // If bulk, go to summary, else close
+          onUpdateState(prev => ({
+              ...prev,
+              gachaCollection: Array.from(new Set([...(prev.gachaCollection || []), ...pendingRewards.map(r => r.id)]))
+          }));
+
+          if (pendingRewards.length > 1) {
+              setView('BULK_SUMMARY');
+          } else {
+              setView('MACHINE');
+              setPendingRewards([]);
+          }
+          return;
+      }
+
+      // Increment progress
+      const step = 20; // 5 taps
+      const next = revealProgress + step;
+      
+      playSFX('crack');
+
+      if (next >= 100) {
+          setRevealProgress(100);
+          setIsRevealed(true);
+          playSFX('powerup');
+          playSFX('cheer');
+      } else {
+          setRevealProgress(next);
+      }
+  };
+
+  const handleQuizSuccess = () => {
+      if (!activeQuiz) return;
+      let reward = 0;
+      if (activeQuiz === 'EASY') reward = 5;
+      if (activeQuiz === 'MEDIUM') reward = 15;
+      if (activeQuiz === 'HARD') reward = 30;
+
+      playSFX('success');
+      onUpdateState(prev => ({ ...prev, stars: prev.stars + reward }));
+      setActiveQuiz(null);
+      setView('MACHINE'); 
+  };
+
+  const handleEquip = (item: GachaItem) => {
+      onUpdateState(prev => ({ ...prev, currentGachaAvatarId: item.imageId, currentAvatarId: 'gacha_custom' }));
+      setConfirmEquip(null);
+      playSFX('click');
+  };
+
+  // --- RENDERERS ---
+
+  const renderTicker = () => (
+      <div className="flex flex-col items-center justify-center h-full relative w-full overflow-hidden">
+           {/* Top Bar */}
+           <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-lg border-2 border-yellow-300 flex items-center gap-2 z-20">
+               <Star className="text-yellow-400 fill-yellow-400 animate-pulse" size={24}/>
+               <span className="text-xl font-black text-yellow-600">{userState.stars}</span>
+               <button onClick={() => setView('QUIZ_SELECT')} className="bg-yellow-400 text-white rounded-full p-1 hover:bg-yellow-500 active:scale-90 transition-transform"><Plus size={16}/></button>
+           </div>
+
+           {/* CS:GO Ticker Machine */}
+           <div className="w-full max-w-2xl bg-slate-800 p-1 py-8 relative shadow-2xl border-y-8 border-slate-900 overflow-hidden mb-10">
+               {/* Center Marker */}
+               <div className="absolute left-1/2 top-0 bottom-0 w-1 bg-yellow-400 z-20 shadow-[0_0_10px_rgba(250,204,21,0.8)]"></div>
+               <div className="absolute left-1/2 top-0 -translate-x-1/2 -mt-2 text-yellow-400 z-20">▼</div>
+               <div className="absolute left-1/2 bottom-0 -translate-x-1/2 -mb-2 text-yellow-400 z-20">▲</div>
+
+               {/* Scrolling Strip */}
+               <div 
+                  className="flex items-center will-change-transform"
+                  style={{
+                      transform: `translateX(-${scrollX}px)`,
+                      transition: `transform ${transitionDuration}ms cubic-bezier(0.1, 0.9, 0.2, 1)`
+                  }}
+               >
+                   {tickerItems.map((rarity, idx) => {
+                       const style = getRarityStyle(rarity);
+                       return (
+                           <div 
+                                key={idx} 
+                                className={`flex-shrink-0 mx-[6px] rounded-xl border-4 ${style.border} ${style.bg} flex items-center justify-center relative shadow-inner`}
+                                style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
+                           >
+                               <div className="absolute inset-0 bg-white/10 opacity-50 rounded-lg"></div>
+                               <Egg size={60} className={style.text} fill="currentColor" fillOpacity={0.2} />
+                               <span className="absolute bottom-2 text-[10px] font-black uppercase opacity-60 text-slate-900 tracking-wider">
+                                   {rarity === 'LEGENDARY' ? '???' : '?'}
+                               </span>
+                           </div>
+                       )
+                   })}
+               </div>
+               
+               {/* Overlay Gradients for Depth */}
+               <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-900 to-transparent z-10 pointer-events-none"></div>
+               <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-900 to-transparent z-10 pointer-events-none"></div>
+           </div>
+
+           {/* Spin Buttons */}
+           <div className="px-4 w-full max-w-sm flex flex-col gap-3">
+               <button 
+                  onClick={() => handleSpin(1)} 
+                  disabled={isSpinning}
+                  className="w-full py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl font-black text-xl shadow-[0_6px_0_#312e81] active:shadow-none active:translate-y-1.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+               >
+                   <RefreshCw size={24} className={isSpinning ? "animate-spin" : ""}/> 
+                   {isSpinning ? "Đang quay..." : "QUAY 1 (10 Sao)"}
+               </button>
+
+               <button 
+                  onClick={() => handleSpin(10)} 
+                  disabled={isSpinning}
+                  className="w-full py-4 bg-gradient-to-r from-pink-500 to-rose-600 text-white rounded-2xl font-black text-xl shadow-[0_6px_0_#9f1239] active:shadow-none active:translate-y-1.5 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden"
+               >
+                   <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded-bl-lg">HOT</div>
+                   <Sparkles size={24} className={isSpinning ? "animate-pulse" : ""}/> 
+                   {isSpinning ? "Đang quay..." : "QUAY 10 (90 Sao)"}
+               </button>
+           </div>
+           
+           <p className="text-center text-slate-400 font-bold mt-4 text-xs uppercase tracking-widest">
+               Cơ hội nhận vật phẩm Thần Thoại!
+           </p>
+      </div>
+  );
+
+  const renderReveal = () => {
+      if (pendingRewards.length === 0) return null;
+      
+      // For bulk reveal, we prioritize showing the "Best" item first
+      const rarityOrder = { 'LEGENDARY': 3, 'EPIC': 2, 'RARE': 1, 'COMMON': 0 };
+      const bestItem = [...pendingRewards].sort((a,b) => rarityOrder[b.rarity] - rarityOrder[a.rarity])[0];
+      
+      const style = getRarityStyle(bestItem.rarity);
+      const shakeClass = revealProgress > 0 && !isRevealed ? "animate-wiggle" : "";
+
+      return (
+          <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 animate-fadeIn">
+              {!isRevealed ? (
+                  <>
+                      <div className="text-white text-2xl font-black mb-8 animate-bounce uppercase tracking-widest text-center">
+                          {pendingRewards.length > 1 ? "Trứng Vàng!" : "Nặn trứng nào!"} <br/>
+                          <span className="text-sm font-normal opacity-70 normal-case">(Nhấp liên tục vào trứng)</span>
+                      </div>
+                      
+                      {/* The Mystery Egg */}
+                      <div 
+                          className={`w-64 h-80 rounded-[3rem] border-8 ${style.border} ${style.bg} shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform ${shakeClass}`}
+                          onClick={handleRevealInteraction}
+                      >
+                           <Egg size={150} className={`${style.text} drop-shadow-2xl`} fill="currentColor" fillOpacity={0.3 + (revealProgress/200)} />
+                           
+                           {/* Cracks Overlay based on progress */}
+                           {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/20 rotate-45 rounded-full"></div>}
+                           {revealProgress > 60 && <div className="absolute bottom-1/3 right-1/3 w-16 h-1 bg-black/20 -rotate-12 rounded-full"></div>}
+                           {revealProgress > 80 && <div className="absolute inset-0 bg-white/20 animate-pulse rounded-[2.5rem]"></div>}
+                           
+                           <div className="absolute bottom-6 font-black text-2xl text-slate-900/20 uppercase tracking-widest">
+                               ???
+                           </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="w-64 h-4 bg-slate-700 rounded-full mt-8 overflow-hidden border-2 border-slate-600">
+                          <div className="h-full bg-yellow-400 transition-all duration-200" style={{ width: `${revealProgress}%` }}></div>
+                      </div>
+                  </>
+              ) : (
+                  <>
+                      {/* The Revealed Item */}
+                      <div className="relative animate-scaleIn">
+                          <div className="absolute inset-0 bg-white/50 blur-3xl animate-pulse"></div>
+                          <div className={`relative w-72 aspect-square bg-white rounded-[2.5rem] border-8 ${style.border} p-6 shadow-2xl flex flex-col items-center justify-center`}>
+                              {/* Rays background for high rarity */}
+                              {['LEGENDARY', 'EPIC'].includes(bestItem.rarity) && (
+                                   <div className="absolute inset-0 overflow-hidden rounded-[2rem]">
+                                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200%] h-[200%] bg-gradient-to-r from-transparent via-yellow-200/30 to-transparent animate-spin-slow"></div>
+                                   </div>
+                              )}
+                              
+                              <div className="w-48 h-48 relative z-10 mb-4">
+                                  <Avatar imageId={bestItem.imageId} size="xl" className="w-full h-full shadow-lg" />
+                              </div>
+                              
+                              <div className={`px-4 py-1 rounded-full text-xs font-black text-white uppercase tracking-widest mb-2 z-10 ${style.border.replace('border', 'bg').replace('400', '500')}`}>
+                                  {getRarityLabel(bestItem.rarity)}
+                              </div>
+                              <h2 className={`text-2xl font-black text-center z-10 ${style.text.replace('100', '600')}`}>
+                                  {bestItem.name}
+                              </h2>
+                          </div>
+                      </div>
+
+                      <button 
+                          onClick={handleRevealInteraction} // Goes to summary or close
+                          className="mt-10 px-12 py-4 bg-white text-slate-900 rounded-full font-black text-xl shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                      >
+                          {pendingRewards.length > 1 ? `XEM TẤT CẢ (${pendingRewards.length})` : <><Check size={24} className="text-green-500" /> NHẬN</>}
+                      </button>
+                  </>
+              )}
+          </div>
+      )
+  };
+
+  const renderBulkSummary = () => (
+      <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 animate-fadeIn">
+          <h2 className="text-3xl font-black text-white mb-6 uppercase tracking-widest text-center animate-bounce">
+              Thu hoạch lớn!
+          </h2>
+          <div className="bg-white/10 rounded-[2rem] p-4 w-full max-w-2xl border-4 border-white/20 grid grid-cols-2 sm:grid-cols-5 gap-3 max-h-[70vh] overflow-y-auto no-scrollbar">
+              {pendingRewards.map((item, idx) => {
+                  const style = getRarityStyle(item.rarity);
+                  return (
+                      <div key={idx} className={`bg-white rounded-xl p-2 flex flex-col items-center border-b-4 ${style.border} animate-scaleIn`} style={{animationDelay: `${idx*50}ms`}}>
+                          <div className="w-16 h-16 mb-2">
+                              <Avatar imageId={item.imageId} size="sm" className="w-full h-full rounded-lg" />
+                          </div>
+                          <div className={`text-[8px] font-black text-white px-2 py-0.5 rounded-full mb-1 ${style.border.replace('border','bg').replace('400','500')}`}>
+                              {getRarityLabel(item.rarity)}
+                          </div>
+                          <div className="text-[10px] font-bold text-center text-slate-800 leading-tight truncate w-full">{item.name}</div>
+                      </div>
+                  )
+              })}
+          </div>
+          <button 
+              onClick={() => { setView('MACHINE'); setPendingRewards([]); }}
+              className="mt-8 px-12 py-4 bg-yellow-400 text-yellow-900 rounded-full font-black text-xl shadow-lg hover:scale-105 active:scale-95 transition-all"
+          >
+              TUYỆT VỜI
+          </button>
+      </div>
+  );
+
+  const renderCollection = () => (
+      <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+          <div className="flex justify-between items-center mb-4 px-2">
+               <div>
+                   <h3 className="text-xl font-black text-slate-800">Bộ Sưu Tập</h3>
+                   <p className="text-xs text-slate-400 font-bold">Đã sở hữu: {ownedItems.length}/{GACHA_ITEMS.length}</p>
+               </div>
+               <div className="text-right">
+                   <div className="text-2xl font-black text-yellow-500">{legendaryCount}</div>
+                   <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Thần Thoại</div>
+               </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 pb-20">
+              {ownedItems.sort((a,b) => {
+                  const rarityOrder = { 'LEGENDARY': 0, 'EPIC': 1, 'RARE': 2, 'COMMON': 3 };
+                  return rarityOrder[a.rarity] - rarityOrder[b.rarity];
+              }).map(item => {
+                  const style = getRarityStyle(item.rarity);
+                  return (
+                    <button 
+                        key={item.id} 
+                        onClick={() => setConfirmEquip(item)}
+                        className={`
+                            relative aspect-square rounded-2xl overflow-hidden border-4 shadow-sm hover:scale-105 transition-transform active:scale-95
+                            ${item.id === confirmEquip?.id ? 'ring-4 ring-green-400 z-10' : ''} 
+                            ${style.border} bg-white
+                        `}
+                    >
+                        {/* Image - Full Size */}
+                        <div className="absolute inset-0 p-2">
+                            <Avatar imageId={item.imageId} size="md" className="w-full h-full rounded-none shadow-none border-none bg-transparent" />
+                        </div>
+                        
+                        {/* Name Badge - Bottom */}
+                        <div className="absolute bottom-0 left-0 w-full bg-black/60 backdrop-blur-[2px] py-1 px-1">
+                            <div className={`text-[8px] font-black text-center text-white truncate uppercase tracking-tight`}>
+                                {item.name}
+                            </div>
+                        </div>
+
+                        {/* Rarity Dot - Top Right */}
+                        <div className={`absolute top-1 right-1 w-3 h-3 rounded-full border border-white ${style.border.replace('border', 'bg').replace('400', '500')}`}></div>
+                    </button>
+                  )
+              })}
+              
+              {/* Placeholders */}
+              {[...Array(Math.max(0, 9 - ownedItems.length))].map((_, i) => (
+                  <div key={i} className="aspect-square rounded-2xl border-4 border-dashed border-slate-200 flex items-center justify-center text-slate-200 bg-slate-50">
+                      <HelpCircle size={24}/>
+                  </div>
+              ))}
+          </div>
+
+          {confirmEquip && (
+              <div className="fixed bottom-0 left-0 w-full bg-white p-6 shadow-[0_-5px_30px_rgba(0,0,0,0.15)] z-30 rounded-t-[2.5rem] flex flex-col items-center animate-slideUp">
+                  <div className="flex items-center gap-6 mb-6">
+                      <div className={`p-1 rounded-2xl border-4 ${getRarityStyle(confirmEquip.rarity).border}`}>
+                          <Avatar imageId={confirmEquip.imageId} size="lg" className="rounded-xl" />
+                      </div>
+                      <div>
+                          <div className={`text-[10px] font-black uppercase mb-1 inline-block px-2 py-0.5 rounded-md text-white ${getRarityStyle(confirmEquip.rarity).border.replace('border', 'bg').replace('400', '500')}`}>
+                              {getRarityLabel(confirmEquip.rarity)}
+                          </div>
+                          <h3 className="text-2xl font-black text-slate-800 leading-tight">{confirmEquip.name}</h3>
+                          <p className="text-xs text-slate-500 font-bold mt-1">Dùng làm Avatar đại diện?</p>
+                      </div>
+                  </div>
+                  <div className="flex gap-4 w-full">
+                      <button onClick={() => setConfirmEquip(null)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-bold hover:bg-slate-200 transition-colors">Thôi</button>
+                      <button onClick={() => handleEquip(confirmEquip)} className="flex-1 py-4 bg-green-500 text-white rounded-2xl font-bold shadow-lg shadow-green-200 hover:bg-green-600 transition-colors">Dùng Ngay</button>
+                  </div>
+              </div>
+          )}
+      </div>
+  );
+
+  const renderQuizSelect = () => (
+      <div className="flex flex-col h-full bg-slate-900 text-white p-6 relative overflow-hidden">
+          <button onClick={() => setView('MACHINE')} className="absolute top-4 left-4 p-2 bg-white/10 rounded-full hover:bg-white/20"><ArrowRight className="rotate-180"/></button>
+          
+          <div className="text-center mt-8 mb-8 z-10">
+              <div className="text-6xl mb-4 animate-bounce">🎓</div>
+              <h2 className="text-3xl font-black uppercase text-yellow-400 mb-2">Kiếm Sao</h2>
+              <p className="text-slate-300 font-bold">Trả lời câu hỏi để nhận thêm Sao quay Gacha!</p>
+          </div>
+
+          <div className="space-y-4 z-10 max-w-sm mx-auto w-full">
+              <button 
+                  onClick={() => setActiveQuiz('EASY')}
+                  className="w-full p-4 bg-green-500 hover:bg-green-600 rounded-2xl flex items-center justify-between shadow-lg group active:scale-95 transition-all"
+              >
+                  <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-full"><Shield size={24}/></div>
+                      <div className="text-left">
+                          <div className="font-black text-lg uppercase">Dễ</div>
+                          <div className="text-xs opacity-80 font-bold">5 câu hỏi cơ bản</div>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-1 font-black bg-black/20 px-3 py-1 rounded-lg">
+                      +5 <Star size={14} fill="currentColor"/>
+                  </div>
+              </button>
+
+              <button 
+                  onClick={() => setActiveQuiz('MEDIUM')}
+                  className="w-full p-4 bg-blue-500 hover:bg-blue-600 rounded-2xl flex items-center justify-between shadow-lg group active:scale-95 transition-all"
+              >
+                  <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-full"><Zap size={24}/></div>
+                      <div className="text-left">
+                          <div className="font-black text-lg uppercase">Vừa</div>
+                          <div className="text-xs opacity-80 font-bold">10 câu Nghe & Dịch</div>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-1 font-black bg-black/20 px-3 py-1 rounded-lg">
+                      +15 <Star size={14} fill="currentColor"/>
+                  </div>
+              </button>
+
+              <button 
+                  onClick={() => setActiveQuiz('HARD')}
+                  className="w-full p-4 bg-purple-600 hover:bg-purple-700 rounded-2xl flex items-center justify-between shadow-lg group active:scale-95 transition-all border-2 border-purple-400"
+              >
+                  <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-full"><Trophy size={24}/></div>
+                      <div className="text-left">
+                          <div className="font-black text-lg uppercase">Khó</div>
+                          <div className="text-xs opacity-80 font-bold">15 câu Tổng hợp</div>
+                      </div>
+                  </div>
+                  <div className="flex items-center gap-1 font-black bg-black/20 px-3 py-1 rounded-lg">
+                      +30 <Star size={14} fill="currentColor"/>
+                  </div>
+              </button>
+          </div>
+
+          {/* BG Decoration */}
+          <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+               {[...Array(20)].map((_, i) => (
+                   <Star key={i} className="absolute animate-pulse" style={{ left: `${Math.random()*100}%`, top: `${Math.random()*100}%`, animationDelay: `${Math.random()}s` }} size={Math.random()*20 + 10} />
+               ))}
+          </div>
+      </div>
+  );
+
+  // Pick random words for quiz from ALL levels to ensure variety
+  const allWords = LEVELS.flatMap(l => l.words);
+  
+  return (
+    <div className="flex flex-col h-full bg-slate-50 animate-fadeIn relative overflow-hidden">
+        {/* Top Nav (Only visible in Machine/Collection view) */}
+        {view !== 'QUIZ_SELECT' && view !== 'REVEAL' && view !== 'BULK_SUMMARY' && (
+            <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between shadow-md z-30 text-white">
+                <div className="flex items-center gap-4">
+                    <button onClick={onExit} className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"><Home size={20}/></button>
+                    <h2 className="font-black text-lg uppercase tracking-wider">Vòng Quay May Mắn</h2>
+                </div>
+                <div className="flex bg-indigo-800 rounded-xl p-1 gap-1">
+                    <button 
+                        onClick={() => setView('MACHINE')} 
+                        className={`px-4 py-1.5 rounded-lg font-bold text-xs uppercase transition-all ${view === 'MACHINE' ? 'bg-white text-indigo-700 shadow-sm' : 'text-indigo-300 hover:text-white'}`}
+                    >
+                        Quay
+                    </button>
+                    <button 
+                        onClick={() => setView('COLLECTION')} 
+                        className={`px-4 py-1.5 rounded-lg font-bold text-xs uppercase transition-all ${view === 'COLLECTION' ? 'bg-white text-indigo-700 shadow-sm' : 'text-indigo-300 hover:text-white'}`}
+                    >
+                        Túi Đồ
+                    </button>
+                </div>
+            </div>
+        )}
+
+        {/* Main Content Area */}
+        <div className={`flex-1 relative overflow-hidden ${view === 'MACHINE' ? "bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" : ''}`}>
+             {view === 'MACHINE' && renderTicker()}
+             {view === 'REVEAL' && renderReveal()}
+             {view === 'BULK_SUMMARY' && renderBulkSummary()}
+             {view === 'COLLECTION' && renderCollection()}
+             {view === 'QUIZ_SELECT' && renderQuizSelect()}
+        </div>
+
+        {activeQuiz && (
+            <LearningQuizModal 
+                words={allWords} // Pass huge pool
+                type={activeQuiz === 'EASY' ? 'WATER' : activeQuiz === 'MEDIUM' ? 'PEST' : 'NEW_ORDER'} // Reuse types for visual styles roughly
+                questionCount={activeQuiz === 'EASY' ? 5 : activeQuiz === 'MEDIUM' ? 10 : 15} // Modified component to accept count (see below change)
+                onSuccess={handleQuizSuccess}
+                onClose={() => setActiveQuiz(null)}
+                onShowAlert={(msg) => alert(msg)}
+            />
+        )}
+    </div>
+  );
+};
