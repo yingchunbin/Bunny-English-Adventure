@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
-import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban, Plus } from 'lucide-react';
+import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban, Plus, Zap, Coins, Clock, Shield } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { resolveImage } from '../../utils/imageUtils';
 
@@ -47,34 +47,79 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       return inventory[id] || 0;
   };
 
-  // Helper to determine rarity glow based on cost (Stars) - APPLIED ONLY TO IMAGE
-  const getRarityImageStyle = (cost: number) => {
-      if(cost >= 500) return 'drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] filter brightness-110 contrast-125'; 
-      if(cost >= 250) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; 
-      if(cost >= 100) return 'drop-shadow-[0_0_12px_rgba(168,85,247,0.7)]'; 
-      if(cost >= 50) return 'drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]'; 
-      if(cost >= 20) return 'drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]'; 
-      return 'drop-shadow-sm grayscale-[0.2]'; 
+  // Duplicate Rarity Helper (consistent with Shop)
+  const getRarityInfo = (cost: number) => {
+      if (cost >= 500) return { 
+          label: "THẦN THOẠI", 
+          color: "text-red-600", 
+          bg: "bg-red-50", 
+          border: "border-red-500", 
+          glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]",
+          anim: "animate-pulse"
+      };
+      if (cost >= 250) return { 
+          label: "HUYỀN THOẠI", 
+          color: "text-yellow-600", 
+          bg: "bg-yellow-50", 
+          border: "border-yellow-500", 
+          glow: "drop-shadow-[0_0_12px_rgba(234,179,8,0.8)]",
+          anim: "animate-pulse"
+      };
+      if (cost >= 100) return { 
+          label: "SỬ THI", 
+          color: "text-purple-600", 
+          bg: "bg-purple-50", 
+          border: "border-purple-500", 
+          glow: "drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]",
+          anim: ""
+      };
+      if (cost >= 50) return { 
+          label: "QUÝ HIẾM", 
+          color: "text-blue-600", 
+          bg: "bg-blue-50", 
+          border: "border-blue-500", 
+          glow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]",
+          anim: ""
+      };
+      if (cost >= 20) return { 
+          label: "HIẾM", 
+          color: "text-green-600", 
+          bg: "bg-green-50", 
+          border: "border-green-500", 
+          glow: "drop-shadow-sm",
+          anim: ""
+      };
+      return { 
+          label: "THƯỜNG", 
+          color: "text-slate-500", 
+          bg: "bg-slate-50", 
+          border: "border-slate-300", 
+          glow: "",
+          anim: ""
+      };
   };
 
-  const getRarityBadgeStyle = (cost: number) => {
-      if(cost >= 500) return 'bg-red-100 text-red-800 border-red-300 ring-1 ring-red-400';
-      if(cost >= 250) return 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-1 ring-yellow-400';
-      if(cost >= 100) return 'bg-purple-100 text-purple-800 border-purple-200';
-      if(cost >= 50) return 'bg-blue-100 text-blue-800 border-blue-200';
-      if(cost >= 20) return 'bg-green-100 text-green-800 border-green-200';
-      return 'bg-slate-100 text-slate-500 border-slate-200';
+  const getBuffIcon = (type: string) => {
+      switch(type) {
+          case 'EXP': return <Zap size={8} />;
+          case 'COIN': return <Coins size={8} />;
+          case 'TIME': return <Clock size={8} />;
+          case 'PEST': return <Shield size={8} />;
+          case 'YIELD': return <Sprout size={8} />;
+          default: return <Plus size={8} />;
+      }
   };
 
   const renderItemRow = (item: FarmItem, count: number) => {
-      if (count <= 0 && activeTab !== 'DECOR') return null; // Hide if not owned
-      // For DECOR, we pass in '1' if owned via getOwnedCount logic, so it renders
+      if (count <= 0 && activeTab !== 'DECOR') return null; 
 
       let extraInfo = null;
       let decorStatus = null;
       const imgUrl = resolveImage(item.imageUrl);
       
+      let containerStyle = "border-slate-200";
       let imageStyle = "";
+      let label = "";
 
       if (activeTab === 'ANIMALS') {
           const animal = animals.find(a => a.id === item.id);
@@ -98,26 +143,24 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       if (activeTab === 'DECOR') {
           const decor = decorations.find(d => d.id === item.id);
+          const rarity = getRarityInfo(decor?.cost || 0);
           
-          imageStyle = getRarityImageStyle(decor?.cost || 0);
-          const badgeStyle = getRarityBadgeStyle(decor?.cost || 0);
+          containerStyle = rarity.border;
+          imageStyle = `${rarity.glow} ${rarity.anim}`;
+          label = rarity.label;
 
-          if (decor?.multiBuffs) {
+          const buffs = decor?.multiBuffs || (decor?.buff ? [decor.buff] : []);
+
+          if (buffs.length > 0) {
               extraInfo = (
                   <div className="flex flex-wrap gap-1 mt-1">
-                      {decor.multiBuffs.slice(0, 2).map((buff, idx) => (
-                          <div key={idx} className={`text-[8px] font-bold px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${badgeStyle}`}>
-                              <Plus size={6}/> {buff.desc}
+                      {buffs.slice(0, 2).map((buff, idx) => (
+                          <div key={idx} className={`text-[8px] font-black px-1.5 py-0.5 rounded border inline-flex items-center gap-1 ${rarity.bg} ${rarity.color} ${rarity.border}`}>
+                              {getBuffIcon(buff.type)} {buff.value}%
                           </div>
                       ))}
-                      {decor.multiBuffs.length > 2 && <span className="text-[8px] text-slate-400">...</span>}
+                      {buffs.length > 2 && <span className="text-[8px] text-slate-400">...</span>}
                   </div>
-              );
-          } else if (decor?.buff) {
-              extraInfo = (
-                <div className={`text-[9px] font-bold px-2 py-1 rounded border inline-flex items-center gap-1 mt-1 ${badgeStyle}`}>
-                    <Plus size={8}/> {decor.buff.desc}
-                </div>
               );
           }
           
@@ -140,8 +183,15 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
       }
 
       return (
-          <div key={item.id} className="bg-white border-slate-200 shadow-sm border-4 rounded-3xl p-3 flex items-center justify-between animate-fadeIn relative overflow-hidden">
-              <div className="flex items-center gap-3 z-10">
+          <div key={item.id} className={`bg-white border-4 rounded-3xl p-3 flex items-center justify-between animate-fadeIn relative overflow-hidden ${containerStyle}`}>
+              {/* Rarity Label for Decor */}
+              {activeTab === 'DECOR' && label && (
+                  <div className={`absolute top-0 left-0 px-2 py-0.5 text-[7px] font-black text-white uppercase rounded-br-lg ${containerStyle.replace('border-','bg-').replace('50','500')}`}>
+                      {label}
+                  </div>
+              )}
+
+              <div className="flex items-center gap-3 z-10 pt-2">
                   <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl border relative overflow-hidden ${activeTab === 'DECOR' ? `bg-white` : activeTab === 'SEEDS' ? 'bg-green-50 border-green-100' : activeTab === 'ANIMALS' ? 'bg-orange-50 border-orange-100' : 'bg-blue-50 border-blue-100'}`}>
                       {imgUrl ? <img src={imgUrl} alt={item.name} className={`w-full h-full object-contain ${imageStyle}`} /> : <div className={imageStyle}>{item.emoji}</div>}
                   </div>

@@ -2,7 +2,7 @@
 // ... imports
 import React, { useState } from 'react';
 import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
-import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp } from 'lucide-react';
+import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp, Shield, Zap } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { resolveImage } from '../../utils/imageUtils';
 
@@ -67,30 +67,67 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       });
   };
 
-  const getDecorAnimation = (decorId: string) => {
-      if (['fountain', 'lamp_post', 'statue', 'dragon_statue', 'phoenix_totem'].includes(decorId)) return 'animate-pulse';
-      if (['scarecrow', 'flower_pot', 'magic_beanstalk'].includes(decorId)) return 'animate-bounce';
-      if (['hay_bale', 'bench', 'windmill_decor'].includes(decorId)) return 'hover:animate-spin';
-      return 'hover:scale-110';
+  // Rarity Definitions
+  const getRarityInfo = (cost: number) => {
+      if (cost >= 500) return { 
+          label: "THẦN THOẠI", 
+          color: "text-red-600", 
+          bg: "bg-red-50", 
+          border: "border-red-500", 
+          glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]",
+          anim: "animate-pulse"
+      };
+      if (cost >= 250) return { 
+          label: "HUYỀN THOẠI", 
+          color: "text-yellow-600", 
+          bg: "bg-yellow-50", 
+          border: "border-yellow-500", 
+          glow: "drop-shadow-[0_0_12px_rgba(234,179,8,0.8)]",
+          anim: "animate-pulse"
+      };
+      if (cost >= 100) return { 
+          label: "SỬ THI", 
+          color: "text-purple-600", 
+          bg: "bg-purple-50", 
+          border: "border-purple-500", 
+          glow: "drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]",
+          anim: ""
+      };
+      if (cost >= 50) return { 
+          label: "QUÝ HIẾM", 
+          color: "text-blue-600", 
+          bg: "bg-blue-50", 
+          border: "border-blue-500", 
+          glow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]",
+          anim: ""
+      };
+      if (cost >= 20) return { 
+          label: "HIẾM", 
+          color: "text-green-600", 
+          bg: "bg-green-50", 
+          border: "border-green-500", 
+          glow: "drop-shadow-sm",
+          anim: ""
+      };
+      return { 
+          label: "THƯỜNG", 
+          color: "text-slate-500", 
+          bg: "bg-slate-50", 
+          border: "border-slate-300", 
+          glow: "",
+          anim: ""
+      };
   };
 
-  // UPDATED: Rarity tiers based on Cost (Stars)
-  const getRarityImageStyle = (cost: number) => {
-      if(cost >= 500) return 'drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] filter brightness-110 contrast-125'; // MYTHIC (RED)
-      if(cost >= 250) return 'drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] filter brightness-110'; // LEGENDARY (GOLD)
-      if(cost >= 100) return 'drop-shadow-[0_0_12px_rgba(168,85,247,0.7)]'; // EPIC (PURPLE)
-      if(cost >= 50) return 'drop-shadow-[0_0_10px_rgba(59,130,246,0.6)]'; // RARE (BLUE)
-      if(cost >= 20) return 'drop-shadow-[0_0_5px_rgba(34,197,94,0.5)]'; // UNCOMMON (GREEN)
-      return 'drop-shadow-sm grayscale-[0.2]'; // COMMON (WHITE)
-  };
-
-  const getRarityBadgeStyle = (cost: number) => {
-      if(cost >= 500) return 'bg-red-100 text-red-800 border-red-300 ring-1 ring-red-400';
-      if(cost >= 250) return 'bg-yellow-100 text-yellow-800 border-yellow-300 ring-1 ring-yellow-400';
-      if(cost >= 100) return 'bg-purple-100 text-purple-800 border-purple-200';
-      if(cost >= 50) return 'bg-blue-100 text-blue-800 border-blue-200';
-      if(cost >= 20) return 'bg-green-100 text-green-800 border-green-200';
-      return 'bg-slate-100 text-slate-500 border-slate-200';
+  const getBuffIcon = (type: string) => {
+      switch(type) {
+          case 'EXP': return <Zap size={10} />;
+          case 'COIN': return <Coins size={10} />;
+          case 'TIME': return <Clock size={10} />;
+          case 'PEST': return <Shield size={10} />;
+          case 'YIELD': return <Sprout size={10} />;
+          default: return <Plus size={10} />;
+      }
   };
 
   const sortedCrops = sortItems(crops.filter(c => !c.isMagic)) as Crop[];
@@ -139,7 +176,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
             <div className="flex-1 overflow-y-auto p-4 bg-slate-50 no-scrollbar">
                 
-                {/* SEEDS */}
+                {/* SEEDS, ANIMALS, MACHINES code remains same ... */}
                 {tab === 'SEEDS' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedCrops.map(crop => {
@@ -288,46 +325,43 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                         {sortedDecor.map(decor => {
                             const owned = userState.decorations?.includes(decor.id);
                             const currency = decor.currency || 'STAR';
-                            const anim = getDecorAnimation(decor.id);
                             const imgUrl = resolveImage(decor.imageUrl);
                             
-                            const imageGlow = getRarityImageStyle(decor.cost);
-                            const badgeStyle = getRarityBadgeStyle(decor.cost);
+                            const rarity = getRarityInfo(decor.cost);
 
                             // Handle multiple buffs presentation
                             const renderBuffs = () => {
-                                if (decor.multiBuffs) {
-                                    return (
-                                        <div className="flex flex-wrap gap-1 mt-1">
-                                            {decor.multiBuffs.map((buff, idx) => (
-                                                <div key={idx} className={`text-[9px] font-bold px-2 py-0.5 rounded-lg inline-flex items-center gap-1 border shadow-sm ${badgeStyle}`}>
-                                                    <Plus size={8}/> {buff.desc}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    );
-                                }
-                                if (decor.buff) {
-                                    return (
-                                        <div className={`text-[9px] font-bold px-2 py-1 rounded-lg inline-flex items-center gap-1 mt-1 border shadow-sm ${badgeStyle}`}>
-                                            <Plus size={8}/> {decor.buff.desc}
-                                        </div>
-                                    );
-                                }
-                                return null;
+                                const buffs = decor.multiBuffs || (decor.buff ? [decor.buff] : []);
+                                if (buffs.length === 0) return null;
+
+                                return (
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                        {buffs.map((buff, idx) => (
+                                            <div key={idx} className={`text-[9px] font-black px-2 py-0.5 rounded-lg inline-flex items-center gap-1 border ${rarity.bg} ${rarity.color} ${rarity.border}`}>
+                                                {getBuffIcon(buff.type)} 
+                                                <span>{buff.value}% {buff.desc}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
                             };
 
                             return (
                                 <div 
                                     key={decor.id} 
-                                    className="p-4 rounded-3xl border-4 bg-white border-slate-100 shadow-sm flex items-center gap-4 transition-all relative overflow-hidden group"
+                                    className={`p-4 rounded-3xl border-4 bg-white shadow-sm flex items-center gap-4 transition-all relative overflow-hidden group ${rarity.border}`}
                                 >
-                                    <div className={`w-16 h-16 flex items-center justify-center z-10 transition-all ${anim} ${imageGlow}`}>
+                                    {/* Rarity Label */}
+                                    <div className={`absolute top-0 left-0 px-3 py-0.5 rounded-br-xl text-[8px] font-black text-white uppercase tracking-widest ${rarity.bg.replace('bg-','bg-').replace('50','500')}`}>
+                                        {rarity.label}
+                                    </div>
+
+                                    <div className={`w-16 h-16 flex items-center justify-center z-10 transition-all ${rarity.anim} ${rarity.glow} mt-2`}>
                                         {imgUrl ? <img src={imgUrl} alt={decor.name} className="w-full h-full object-contain" /> : <div className="text-6xl">{decor.emoji}</div>}
                                     </div>
                                     
-                                    <div className="flex-1 z-10">
-                                        <div className="font-black text-sm text-slate-700 uppercase tracking-tight">{decor.name}</div>
+                                    <div className="flex-1 z-10 pt-2">
+                                        <div className={`font-black text-sm uppercase tracking-tight ${rarity.color}`}>{decor.name}</div>
                                         {renderBuffs()}
                                         
                                         {!owned ? (

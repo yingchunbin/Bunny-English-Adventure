@@ -13,7 +13,7 @@ import { ItemManageModal } from './farm/ItemManageModal';
 import { MachineProductionModal } from './farm/MachineProductionModal'; 
 import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, Settings, Layers, Armchair, Plus, Sparkles } from 'lucide-react';
+import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, Settings, Layers, Armchair, Plus, Sparkles, Shield, Sprout } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 import { resolveImage } from '../utils/imageUtils';
 
@@ -27,6 +27,7 @@ interface FarmProps {
 
 type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
+// ... (FlyingItem and FloatingText interfaces remain same)
 interface FlyingItem {
     id: number;
     content: React.ReactNode;
@@ -47,6 +48,7 @@ interface FloatingText {
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
   const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
   
+  // ... (State declarations same as before) ...
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
   const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER', plotId?: number, slotId?: number, entityType?: 'CROP' | 'ANIMAL' | 'MACHINE' } | null>(null);
@@ -56,23 +58,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const [manageItemConfig, setManageItemConfig] = useState<{ type: 'ANIMAL' | 'MACHINE', slotId: number, itemId: string } | null>(null);
   const [productionConfig, setProductionConfig] = useState<{ slotId: number, machineId: string } | null>(null); 
   
-  // FX States
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
   const [floatingTexts, setFloatingTexts] = useState<FloatingText[]>([]);
   const [showLevelUp, setShowLevelUp] = useState(false);
   
-  // Modal Configurations
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; message: string; onConfirm: () => void } | null>(null);
   const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'INFO' | 'DANGER' } | null>(null);
 
-  // Refs
   const prevLevelRef = useRef(userState.farmLevel || 1);
   const barnBtnRef = useRef<HTMLButtonElement>(null); 
   const coinRef = useRef<HTMLDivElement>(null);
   const starRef = useRef<HTMLDivElement>(null);
   const expRef = useRef<HTMLDivElement>(null);
 
-  // --- LEVEL UP CHECK ---
+  // ... (Effects and Helper functions mostly same) ...
+  
   useEffect(() => {
       const currentLevel = userState.farmLevel || 1;
       if (currentLevel > prevLevelRef.current) {
@@ -83,6 +83,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
 
+  // ... (handleShowAlert, triggerFlyFX, addFloatingText, handleHarvestWithFX, handleExpand, handlePlotClick, handleWellClick, onQuizSuccess, handleCollectProduct, handleFeedAnimal, handleCollectMachine, handleSell, handleSellBulk, handleDeliverOrder, handleClaimMission - Keep as is) ...
+  
+  // Re-declare these since they are inside the component scope in previous version
   const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
       playSFX('wrong');
       setAlertConfig({ isOpen: true, message: msg, type });
@@ -375,8 +378,71 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }));
   };
 
-  // --- RENDER HELPERS ---
+  // --- Rarity Helper Functions (Duplicated from Shop/Inventory for self-containment) ---
+  const getRarityInfo = (cost: number) => {
+      if (cost >= 500) return { 
+          label: "THẦN THOẠI", 
+          color: "text-red-600", 
+          bg: "bg-red-50", 
+          border: "border-red-500", 
+          glow: "drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]",
+          anim: "animate-pulse"
+      };
+      if (cost >= 250) return { 
+          label: "HUYỀN THOẠI", 
+          color: "text-yellow-600", 
+          bg: "bg-yellow-50", 
+          border: "border-yellow-500", 
+          glow: "drop-shadow-[0_0_12px_rgba(234,179,8,0.8)]",
+          anim: "animate-pulse"
+      };
+      if (cost >= 100) return { 
+          label: "SỬ THI", 
+          color: "text-purple-600", 
+          bg: "bg-purple-50", 
+          border: "border-purple-500", 
+          glow: "drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]",
+          anim: ""
+      };
+      if (cost >= 50) return { 
+          label: "QUÝ HIẾM", 
+          color: "text-blue-600", 
+          bg: "bg-blue-50", 
+          border: "border-blue-500", 
+          glow: "drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]",
+          anim: ""
+      };
+      if (cost >= 20) return { 
+          label: "HIẾM", 
+          color: "text-green-600", 
+          bg: "bg-green-50", 
+          border: "border-green-500", 
+          glow: "drop-shadow-sm",
+          anim: ""
+      };
+      return { 
+          label: "THƯỜNG", 
+          color: "text-slate-500", 
+          bg: "bg-slate-50", 
+          border: "border-slate-300", 
+          glow: "",
+          anim: ""
+      };
+  };
 
+  const getBuffIcon = (type: string) => {
+      switch(type) {
+          case 'EXP': return <Zap size={10} />;
+          case 'COIN': return <Coins size={10} />;
+          case 'TIME': return <Clock size={10} />;
+          case 'PEST': return <Shield size={10} />;
+          case 'YIELD': return <Sprout size={10} />;
+          default: return <Plus size={10} />;
+      }
+  };
+
+  // --- RENDER SECTIONS ---
+  // ... (renderSectionTabs, renderHUD, renderHarvestButton, renderEmptySlot, renderSpeedUpButton, renderCrops, renderAnimals, renderMachines SAME AS BEFORE) ...
   const renderSectionTabs = () => (
       <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1 overflow-x-auto no-scrollbar">
           {[
@@ -772,11 +838,17 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                   const decor = slot.decorId ? DECORATIONS.find(d => d.id === slot.decorId) : null;
                   const imgUrl = resolveImage(decor?.imageUrl);
                   let animClass = "";
+                  
+                  // Specific Animation Logic
                   if (decor?.id === 'fountain') animClass = "animate-bounce";
                   else if (decor?.id === 'lamp_post') animClass = "animate-pulse";
                   else if (decor?.id === 'scarecrow' || decor?.id === 'flower_pot') animClass = "animate-wiggle";
                   else if (decor?.id === 'windmill_decor') animClass = "animate-spin-slow";
                   else if (decor?.id === 'lucky_cat') animClass = "animate-bounce";
+
+                  // Enhanced Rarity Visuals
+                  const rarity = decor ? getRarityInfo(decor.cost) : null;
+                  const buffs = decor?.multiBuffs || (decor?.buff ? [decor.buff] : []);
 
                   return (
                       <button 
@@ -806,7 +878,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                 ? 'bg-slate-200 border-b-[6px] border-slate-300' 
                                 : !decor 
                                     ? 'bg-purple-50 border-b-[6px] border-purple-200 border-dashed' 
-                                    : 'bg-[#F3E5F5] border-b-[6px] border-[#E1BEE7]'}
+                                    : `bg-white border-b-[6px] ${rarity?.border}`}
                         `}
                       >
                           {!slot.isUnlocked ? (
@@ -818,8 +890,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
+                                  {/* Rarity Label (Top Left) */}
+                                  <div className={`absolute top-0 left-0 px-2 py-0.5 text-[7px] font-black text-white uppercase rounded-br-lg ${rarity?.bg.replace('bg-','bg-').replace('50','500')}`}>
+                                      {rarity?.label}
+                                  </div>
+
                                   {imgUrl ? (
-                                      <div className={`w-full h-full p-2 z-10 transition-all ${animClass}`}>
+                                      <div className={`w-full h-full p-2 z-10 transition-all ${animClass} ${rarity?.anim} ${rarity?.glow}`}>
                                           <img 
                                             src={imgUrl} 
                                             alt={decor.name} 
@@ -827,24 +904,21 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                           />
                                       </div>
                                   ) : (
-                                      <div className={`text-7xl z-10 transition-all drop-shadow-md ${animClass}`}>
+                                      <div className={`text-7xl z-10 transition-all drop-shadow-md ${animClass} ${rarity?.anim} ${rarity?.glow}`}>
                                           {decor.emoji}
                                       </div>
                                   )}
-                                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-white/90 px-2 py-1 rounded-lg backdrop-blur-sm border border-purple-100 shadow-sm flex flex-col items-center min-w-[80px] z-20">
-                                      <span className="text-[9px] font-black text-slate-700 uppercase tracking-tighter truncate max-w-[70px]">{decor.name}</span>
-                                      {decor.buff && (
-                                          <span className="text-[8px] font-bold text-purple-600 bg-purple-50 px-1 rounded flex items-center gap-0.5">
-                                              <Plus size={6}/>{decor.buff.value}% {decor.buff.type}
-                                          </span>
-                                      )}
-                                      {decor.multiBuffs && (
-                                          <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
-                                             {decor.multiBuffs.map((b,i) => (
-                                                <span key={i} className="text-[6px] font-bold text-purple-600 bg-purple-50 px-1 rounded">{b.type}</span>
-                                             ))}
-                                          </div>
-                                      )}
+                                  
+                                  {/* Detailed Buff Box */}
+                                  <div className={`absolute bottom-3 left-1/2 -translate-x-1/2 w-[90%] px-1 py-1 rounded-lg backdrop-blur-md shadow-sm flex flex-col items-center z-20 border ${rarity?.border} ${rarity?.bg} bg-opacity-90`}>
+                                      <span className={`text-[8px] font-black uppercase tracking-tighter truncate w-full text-center mb-0.5 ${rarity?.color}`}>{decor.name}</span>
+                                      <div className="flex flex-wrap justify-center gap-0.5">
+                                          {buffs.map((b,i) => (
+                                              <span key={i} className="text-[6px] font-black text-white bg-slate-800/80 px-1 rounded flex items-center gap-0.5">
+                                                  {getBuffIcon(b.type)} {b.value}%
+                                              </span>
+                                          ))}
+                                      </div>
                                   </div>
                               </>
                           )}
