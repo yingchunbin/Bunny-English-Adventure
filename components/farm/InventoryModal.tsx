@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
 import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban, Plus, Zap, Coins, Clock, Shield } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
@@ -7,30 +7,30 @@ import { resolveImage } from '../../utils/imageUtils';
 
 interface InventoryModalProps {
   initialTab?: 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
-  inventory: Record<string, number>; // Seeds
+  inventory: Record<string, number>; 
   seeds: Crop[];
   animals: AnimalItem[];
   machines: MachineItem[];
   decorations: Decor[];
-  allItems: (Crop | Product)[]; // For looking up product icons
+  allItems: (Crop | Product)[]; 
   
   ownedAnimals: LivestockSlot[];
   ownedMachines: MachineSlot[];
-  ownedDecorations: string[]; // List of IDs (owned)
-  activeDecorIds?: string[]; // List of IDs (active)
+  ownedDecorations: string[]; 
+  activeDecorIds?: string[]; 
 
   mode: 'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE' | 'SELECT_DECOR'; 
   onSelectSeed?: (seedId: string) => void;
   onSelectAnimal?: (animalId: string) => void;
   onSelectMachine?: (machineId: string) => void;
-  onToggleDecor?: (decorId: string) => void; // New callback
+  onToggleDecor?: (decorId: string) => void; 
   onGoToShop?: () => void;
   onClose: () => void;
 }
 
 type Tab = 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
-export const InventoryModal: React.FC<InventoryModalProps> = ({ 
+const InventoryModalComponent: React.FC<InventoryModalProps> = ({ 
     initialTab = 'SEEDS',
     inventory, seeds, animals, machines, decorations, allItems,
     ownedAnimals, ownedMachines, ownedDecorations, activeDecorIds = [],
@@ -39,15 +39,12 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   const getOwnedCount = (type: Tab, id: string) => {
-      // In inventory modal, we now care about "Available to place" count which is stored in inventory for all types
-      // Except for decorations which are unique ownership
       if (type === 'DECOR') {
           return ownedDecorations.includes(id) ? 1 : 0;
       }
       return inventory[id] || 0;
   };
 
-  // Duplicate Rarity Helper (consistent with Shop)
   const getRarityInfo = (cost: number) => {
       if (cost >= 500) return { 
           label: "THẦN THOẠI", 
@@ -164,7 +161,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
               );
           }
           
-          // Check if placed
           const isPlaced = activeDecorIds.includes(item.id);
 
           if (mode === 'SELECT_DECOR') {
@@ -184,7 +180,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
 
       return (
           <div key={item.id} className={`bg-white border-4 rounded-3xl p-3 flex items-center justify-between animate-fadeIn relative overflow-hidden ${containerStyle}`}>
-              {/* Rarity Label for Decor */}
               {activeTab === 'DECOR' && label && (
                   <div className={`absolute top-0 left-0 px-2 py-0.5 text-[7px] font-black text-white uppercase rounded-br-lg ${containerStyle.replace('border-','bg-').replace('50','500')}`}>
                       {label}
@@ -202,7 +197,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                   </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex flex-col gap-1 items-end z-10">
                   {mode === 'SELECT_SEED' && activeTab === 'SEEDS' && (
                       <button 
@@ -254,7 +248,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm animate-fadeIn">
         <div className="bg-white rounded-[2.5rem] w-full max-w-md h-[80vh] flex flex-col overflow-hidden border-8 border-slate-200 shadow-2xl relative">
             
-            {/* Header */}
             <div className="bg-slate-100 p-4 flex justify-between items-center border-b-2 border-slate-200">
                 <div className="flex items-center gap-2">
                     <Package size={24} className="text-slate-600"/>
@@ -270,7 +263,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 </div>
             </div>
 
-            {/* Tabs */}
             <div className="flex p-2 gap-1 bg-slate-50 overflow-x-auto no-scrollbar">
                 {[
                     { id: 'SEEDS', label: 'Hạt Giống', icon: Sprout, color: 'text-green-600', activeBg: 'bg-green-500' },
@@ -288,7 +280,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                 ))}
             </div>
 
-            {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50">
                 {currentList.map(item => renderItemRow(item, getOwnedCount(activeTab, item.id)))}
 
@@ -303,7 +294,6 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
                     </div>
                 )}
 
-                {/* Show shortcut to shop if empty */}
                 {onGoToShop && (
                     <button onClick={onGoToShop} className="w-full py-3 bg-white border-2 border-dashed border-slate-300 rounded-2xl text-slate-400 font-bold flex items-center justify-center gap-2 hover:bg-slate-50 mt-4 text-xs uppercase">
                         Đến Cửa Hàng mua thêm <ArrowRightCircle size={16}/>
@@ -314,3 +304,5 @@ export const InventoryModal: React.FC<InventoryModalProps> = ({
     </div>
   );
 };
+
+export const InventoryModal = memo(InventoryModalComponent);
