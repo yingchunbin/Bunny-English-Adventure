@@ -534,6 +534,43 @@ export const useFarmGame = (
       return { success: true };
   };
 
+  const plantAllSeeds = (seedId: string) => {
+      const currentInventory = userState.inventory || {};
+      const totalSeeds = currentInventory[seedId] || 0;
+      
+      if (totalSeeds <= 0) return { success: false, msg: "Hết hạt giống rồi!" };
+      
+      // Find empty plots
+      const emptyPlots = userState.farmPlots.filter(p => p.isUnlocked && !p.cropId);
+      
+      if (emptyPlots.length === 0) return { success: false, msg: "Không còn đất trống!" };
+      
+      const amountToPlant = Math.min(totalSeeds, emptyPlots.length);
+      const timeBonus = Math.min(50, getDecorBonus('TIME'));
+      const crop = CROPS.find(c => c.id === seedId);
+      const growthTime = crop?.growthTime || 0;
+      const reduceSeconds = (growthTime * timeBonus) / 100;
+      
+      const plantedPlotIds = emptyPlots.slice(0, amountToPlant).map(p => p.id);
+      
+      playSFX('success');
+      onUpdateState(prev => ({
+          ...prev,
+          inventory: { ...prev.inventory, [seedId]: totalSeeds - amountToPlant },
+          farmPlots: prev.farmPlots.map(p => plantedPlotIds.includes(p.id) ? {
+              ...p,
+              cropId: seedId,
+              plantedAt: Date.now() - (reduceSeconds * 1000),
+              isWatered: prev.weather === 'RAINY',
+              hasWeed: Math.random() < 0.1,
+              hasBug: false,
+              hasMysteryBox: false
+          } : p)
+      }));
+      updateMissionProgress('PLANT', amountToPlant);
+      return { success: true, count: amountToPlant };
+  };
+
   const placeAnimal = (slotId: number, animalId: string) => {
       const count = userState.inventory[animalId] || 0;
       if (count <= 0) return { success: false, msg: "Bé chưa có con vật này trong túi đồ!" };
@@ -1072,7 +1109,8 @@ export const useFarmGame = (
 
   return { 
       now, 
-      plantSeed, 
+      plantSeed,
+      plantAllSeeds, // EXPORTED HERE
       placeAnimal, 
       placeMachine,
       reclaimItem, 

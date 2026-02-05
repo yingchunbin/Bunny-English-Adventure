@@ -46,7 +46,7 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, plantAllSeeds, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
@@ -368,15 +368,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       playSFX('coins');
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       
-      // Defensively parse rewards
-      let rewardsList: any[] = [];
-      if (Array.isArray(mission.rewards)) {
-          rewardsList = mission.rewards;
-      } else if (mission.reward) {
-          rewardsList = [mission.reward];
-      }
+      const rewards = mission.rewards || (mission.reward ? [mission.reward] : []);
 
-      rewardsList.forEach((r: any) => {
+      rewards.forEach((r: any) => {
           if (!r) return;
           if(r.type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
           if(r.type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);
@@ -1256,6 +1250,17 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         const res = plantSeed(selectedId, seedId);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
                         else { handleShowAlert(res.msg); }
+                    }
+                }}
+                onPlantAllSeeds={(seedId) => {
+                    const res = plantAllSeeds(seedId);
+                    if(res.success) {
+                        playSFX('success');
+                        setActiveModal('NONE');
+                        const rect = document.getElementById('well-btn')?.getBoundingClientRect();
+                        if(rect) addFloatingText(rect.left, rect.top - 100, `Gieo ${res.count} hạt!`, "text-green-500 font-black");
+                    } else {
+                        handleShowAlert(res.msg);
                     }
                 }}
                 onSelectAnimal={(animalId) => {

@@ -226,7 +226,7 @@ export const PRODUCTS: Product[] = [
 ];
 
 export const DECORATIONS: Decor[] = [
-    // --- COMMON (WHITE) < 20 STARS ---
+    // ... (KEEP EXISTING DECORATIONS)
     {
         id: 'worm', name: 'Giun Đất', emoji: '🪱', type: 'DECOR', currency: 'STAR', cost: 2,
         imageUrl: 'https://drive.google.com/thumbnail?id=1wfo2MjPdShrLdZl-ERt76noMJu4otOGE&sz=w500',
@@ -244,71 +244,65 @@ export const DECORATIONS: Decor[] = [
     },
     {
         id: 'bucket', name: 'Xô Nước', emoji: '🪣', type: 'DECOR', currency: 'STAR', cost: 5,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1l0x2b4c6d8e0f1g3h5i7j9k0l1m2n3o&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1l0x2b4c6d8e0f1g3h5i7j9k0l1m2n3o&sz=w500', 
         buff: { type: 'TIME', value: 4, desc: 'Giảm 4% thời gian' }
     },
     {
         id: 'sign', name: 'Biển Gỗ', emoji: '🪵', type: 'DECOR', currency: 'STAR', cost: 8,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d6e&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d6e&sz=w500', 
         buff: { type: 'EXP', value: 3, desc: '+3% EXP' }
     },
-
-    // --- RARE (GREEN) 20 - 50 STARS ---
     {
         id: 'watering_can', name: 'Bình Tưới', emoji: '🚿', type: 'DECOR', currency: 'STAR', cost: 20,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1jK4g2s3d5f6h7j8k9l0m1n2o3p4q5r&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1jK4g2s3d5f6h7j8k9l0m1n2o3p4q5r&sz=w500', 
         buff: { type: 'TIME', value: 8, desc: 'Giảm 8% thời gian' }
     },
     {
         id: 'scarecrow', name: 'Bù Nhìn', emoji: '🧟', type: 'DECOR', currency: 'STAR', cost: 25,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g&sz=w500', 
         buff: { type: 'PEST', value: 10, desc: '-10% Sâu bệnh' }
     },
     {
         id: 'wheelbarrow', name: 'Xe Cút Kít', emoji: '🛒', type: 'DECOR', currency: 'STAR', cost: 30,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v&sz=w500', 
         buff: { type: 'EXP', value: 5, desc: '+5% EXP' }
     },
     {
         id: 'birdhouse', name: 'Tổ Chim', emoji: '🏠', type: 'DECOR', currency: 'STAR', cost: 35,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1w2x3y4z5a6b7c8d9e0f1g2h3i4j5k&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1w2x3y4z5a6b7c8d9e0f1g2h3i4j5k&sz=w500', 
         buff: { type: 'PEST', value: 15, desc: '-15% Sâu bệnh' }
     },
     {
         id: 'flower_pot', name: 'Chậu Hoa', emoji: '🪴', type: 'DECOR', currency: 'STAR', cost: 40,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z&sz=w500', 
         buff: { type: 'YIELD', value: 5, desc: '5% Tỷ lệ x2 Nông sản' }
     },
-
-    // --- QUY HIEM (BLUE) 50 - 100 STARS ---
     {
         id: 'fountain', name: 'Đài Phun Nước', emoji: '⛲', type: 'DECOR', currency: 'STAR', cost: 50,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o&sz=w500', 
         buff: { type: 'TIME', value: 12, desc: 'Giảm 12% thời gian' }
     },
     {
         id: 'lamp_post', name: 'Đèn Đường', emoji: '💡', type: 'DECOR', currency: 'STAR', cost: 60,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d&sz=w500', 
         buff: { type: 'EXP', value: 8, desc: '+8% EXP' }
     },
     {
         id: 'windmill_decor', name: 'Cối Xay Gió Nhỏ', emoji: '🌬️', type: 'DECOR', currency: 'STAR', cost: 80,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1e2f3g4h5i6j7k8l9m0n1o2p3q4r5s&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1e2f3g4h5i6j7k8l9m0n1o2p3q4r5s&sz=w500', 
         buff: { type: 'COIN', value: 5, desc: '+5% Giá bán' }
     },
     {
         id: 'tractor_decor', name: 'Máy Cày Cổ', emoji: '🚜', type: 'DECOR', currency: 'STAR', cost: 90,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1t2u3v4w5x6y7z8a9b0c1d2e3f4g5h&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1t2u3v4w5x6y7z8a9b0c1d2e3f4g5h&sz=w500', 
         multiBuffs: [
             { type: 'TIME', value: 10, desc: '-10% Thời gian' },
             { type: 'EXP', value: 5, desc: '+5% EXP' }
         ]
     },
-
-    // --- SU THI (PURPLE) 100 - 250 STARS ---
     {
         id: 'greenhouse', name: 'Nhà Kính', emoji: '🏚️', type: 'DECOR', currency: 'STAR', cost: 120,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w&sz=w500', 
         multiBuffs: [
             { type: 'TIME', value: 15, desc: '-15% Thời gian' },
             { type: 'PEST', value: 20, desc: '-20% Sâu bệnh' }
@@ -316,22 +310,20 @@ export const DECORATIONS: Decor[] = [
     },
     {
         id: 'lucky_cat', name: 'Mèo Thần Tài', emoji: '🐱', type: 'DECOR', currency: 'STAR', cost: 150,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1x2y3z4a5b6c7d8e9f0g1h2i3j4k5l&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1x2y3z4a5b6c7d8e9f0g1h2i3j4k5l&sz=w500', 
         buff: { type: 'COIN', value: 15, desc: '+15% Giá bán' }
     },
     {
         id: 'statue_gnome', name: 'Tượng Thần Lùn', emoji: '🗿', type: 'DECOR', currency: 'STAR', cost: 200,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a&sz=w500', 
         multiBuffs: [
             { type: 'YIELD', value: 10, desc: '10% Tỷ lệ x2 Nông sản' },
             { type: 'EXP', value: 10, desc: '+10% EXP' }
         ]
     },
-
-    // --- HUYEN THOAI (YELLOW) 250 - 500 STARS ---
     {
         id: 'tree_of_life', name: 'Cây Sinh Mệnh', emoji: '🌳', type: 'DECOR', currency: 'STAR', cost: 300,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p&sz=w500', 
         multiBuffs: [
             { type: 'TIME', value: 20, desc: '-20% Thời gian' },
             { type: 'PEST', value: 50, desc: '-50% Sâu bệnh' },
@@ -340,17 +332,15 @@ export const DECORATIONS: Decor[] = [
     },
     {
         id: 'golden_silo', name: 'Kho Vàng', emoji: '🏯', type: 'DECOR', currency: 'STAR', cost: 400,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e&sz=w500', 
         multiBuffs: [
             { type: 'COIN', value: 25, desc: '+25% Giá bán' },
             { type: 'YIELD', value: 15, desc: '15% Tỷ lệ x2 Nông sản' }
         ]
     },
-
-    // --- THAN THOAI (RED) 500+ STARS ---
     {
         id: 'dragon_statue', name: 'Tượng Rồng Thần', emoji: '🐲', type: 'DECOR', currency: 'STAR', cost: 600,
-        imageUrl: 'https://drive.google.com/thumbnail?id=1f2g3h4i5j6k7l8m9n0o1p2q3r4s5t&sz=w500', // Mock ID
+        imageUrl: 'https://drive.google.com/thumbnail?id=1f2g3h4i5j6k7l8m9n0o1p2q3r4s5t&sz=w500', 
         description: 'Tăng sức mạnh toàn diện cho nông trại.',
         multiBuffs: [
             { type: 'TIME', value: 25, desc: '-25% Thời gian' },
@@ -399,23 +389,36 @@ const generateMassiveAchievements = (): Mission[] => {
             if (roundedTarget > 100) roundedTarget = Math.floor(roundedTarget / 10) * 10;
             if (roundedTarget > 1000) roundedTarget = Math.floor(roundedTarget / 100) * 100;
 
-            // Calculate Reward
-            // Coins = Level * 50
-            // Stars = Level (Every 5 levels get bonus)
-            // Fertilizer = Every 10 levels
-            
-            const coins = Math.max(100, level * 50);
-            let stars = Math.ceil(level / 2);
-            if (level % 5 === 0) stars += 5; // Bonus stars every 5 levels
+            // Calculate Reward - MASSIVE BOOST
+            // Rule: 
+            // - If type is EARN (coins), reward ~10% of target in coins, ~0.1% in stars
+            // - Else, boost significantly compared to old system.
+
+            let coins = 0;
+            let stars = 0;
+
+            if (cat.id === 'EARN') {
+                // Example: Target 11600 -> Reward 1160 coins, 11 stars
+                coins = Math.floor(roundedTarget * 0.1); 
+                stars = Math.max(1, Math.floor(roundedTarget / 1000));
+            } else {
+                // For actions (e.g. Harvest 50 times)
+                // Boost: Base value high, scaler high
+                // Level 1: Harvest 10 -> Reward 200 coins, 5 stars
+                coins = Math.max(200, roundedTarget * 20); 
+                stars = Math.max(5, Math.floor(level * 2));
+            }
             
             const rewards: any[] = [
                 { type: 'COIN', amount: coins },
                 { type: 'STAR', amount: stars }
             ];
 
+            if (level % 5 === 0) {
+                rewards.push({ type: 'FERTILIZER', amount: Math.floor(level / 2) + 1 });
+            }
             if (level % 10 === 0) {
-                rewards.push({ type: 'FERTILIZER', amount: Math.floor(level / 5) });
-                rewards.push({ type: 'WATER', amount: level });
+                rewards.push({ type: 'WATER', amount: level + 5 });
             }
 
             list.push({
@@ -441,16 +444,16 @@ const generateMassiveAchievements = (): Mission[] => {
 export const FARM_ACHIEVEMENTS_DATA: Mission[] = generateMassiveAchievements();
 
 export const DAILY_MISSION_POOL: Mission[] = [
-    { id: 'd_water_5', desc: 'Tưới cây 5 lần', type: 'WATER', category: 'DAILY', target: 5, current: 0, rewards: [{ type: 'COIN', amount: 50 }], completed: false, claimed: false },
-    { id: 'd_water_10', desc: 'Tưới cây 10 lần', type: 'WATER', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'STAR', amount: 1 }], completed: false, claimed: false },
-    { id: 'd_harvest_10', desc: 'Thu hoạch 10 nông sản', type: 'HARVEST', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'COIN', amount: 100 }], completed: false, claimed: false },
-    { id: 'd_harvest_20', desc: 'Thu hoạch 20 nông sản', type: 'HARVEST', category: 'DAILY', target: 20, current: 0, rewards: [{ type: 'STAR', amount: 2 }], completed: false, claimed: false },
-    { id: 'd_quiz_3', desc: 'Trả lời đúng 3 câu đố', type: 'QUIZ', category: 'DAILY', target: 3, current: 0, rewards: [{ type: 'STAR', amount: 1 }], completed: false, claimed: false },
-    { id: 'd_quiz_5', desc: 'Trả lời đúng 5 câu đố', type: 'QUIZ', category: 'DAILY', target: 5, current: 0, rewards: [{ type: 'STAR', amount: 3 }], completed: false, claimed: false },
-    { id: 'd_feed_5', desc: 'Cho vật nuôi ăn 5 lần', type: 'FEED', category: 'DAILY', target: 5, current: 0, rewards: [{ type: 'COIN', amount: 80 }], completed: false, claimed: false },
-    { id: 'd_feed_10', desc: 'Cho vật nuôi ăn 10 lần', type: 'FEED', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'STAR', amount: 1 }], completed: false, claimed: false },
-    { id: 'd_fertilize_2', desc: 'Bón phân 2 lần', type: 'FERTILIZE', category: 'DAILY', target: 2, current: 0, rewards: [{ type: 'STAR', amount: 1 }], completed: false, claimed: false },
-    { id: 'd_earn_500', desc: 'Kiếm 500 xu từ đơn hàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, rewards: [{ type: 'FERTILIZER', amount: 2 }], completed: false, claimed: false },
-    { id: 'd_earn_1000', desc: 'Kiếm 1000 xu từ đơn hàng', type: 'EARN', category: 'DAILY', target: 1000, current: 0, rewards: [{ type: 'STAR', amount: 2 }], completed: false, claimed: false },
-    { id: 'd_plant_10', desc: 'Trồng 10 cây mới', type: 'HARVEST', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'WATER', amount: 5 }], completed: false, claimed: false },
+    { id: 'd_water_5', desc: 'Tưới cây 5 lần', type: 'WATER', category: 'DAILY', target: 5, current: 0, rewards: [{ type: 'COIN', amount: 200 }], completed: false, claimed: false },
+    { id: 'd_water_10', desc: 'Tưới cây 10 lần', type: 'WATER', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'STAR', amount: 5 }], completed: false, claimed: false },
+    { id: 'd_harvest_10', desc: 'Thu hoạch 10 nông sản', type: 'HARVEST', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'COIN', amount: 300 }], completed: false, claimed: false },
+    { id: 'd_harvest_20', desc: 'Thu hoạch 20 nông sản', type: 'HARVEST', category: 'DAILY', target: 20, current: 0, rewards: [{ type: 'STAR', amount: 10 }], completed: false, claimed: false },
+    { id: 'd_quiz_3', desc: 'Trả lời đúng 3 câu đố', type: 'QUIZ', category: 'DAILY', target: 3, current: 0, rewards: [{ type: 'STAR', amount: 5 }], completed: false, claimed: false },
+    { id: 'd_quiz_5', desc: 'Trả lời đúng 5 câu đố', type: 'QUIZ', category: 'DAILY', target: 5, current: 0, rewards: [{ type: 'STAR', amount: 10 }], completed: false, claimed: false },
+    { id: 'd_feed_5', desc: 'Cho vật nuôi ăn 5 lần', type: 'FEED', category: 'DAILY', target: 5, current: 0, rewards: [{ type: 'COIN', amount: 250 }], completed: false, claimed: false },
+    { id: 'd_feed_10', desc: 'Cho vật nuôi ăn 10 lần', type: 'FEED', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'STAR', amount: 8 }], completed: false, claimed: false },
+    { id: 'd_fertilize_2', desc: 'Bón phân 2 lần', type: 'FERTILIZE', category: 'DAILY', target: 2, current: 0, rewards: [{ type: 'STAR', amount: 5 }], completed: false, claimed: false },
+    { id: 'd_earn_500', desc: 'Kiếm 500 xu từ đơn hàng', type: 'EARN', category: 'DAILY', target: 500, current: 0, rewards: [{ type: 'FERTILIZER', amount: 5 }], completed: false, claimed: false },
+    { id: 'd_earn_1000', desc: 'Kiếm 1000 xu từ đơn hàng', type: 'EARN', category: 'DAILY', target: 1000, current: 0, rewards: [{ type: 'STAR', amount: 10 }], completed: false, claimed: false },
+    { id: 'd_plant_10', desc: 'Trồng 10 cây mới', type: 'HARVEST', category: 'DAILY', target: 10, current: 0, rewards: [{ type: 'WATER', amount: 10 }], completed: false, claimed: false },
 ];
