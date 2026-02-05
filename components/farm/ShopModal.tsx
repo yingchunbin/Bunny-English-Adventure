@@ -36,17 +36,12 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
     playSFX('click');
   };
 
-  const handleSeedInput = (id: string, value: string) => {
-      let val = parseInt(value);
-      if (isNaN(val) || val < 1) val = 1;
-      if (val > 999) val = 999; // Cap at 999 for safety
-      setSeedAmounts({ ...seedAmounts, [id]: val });
-  };
-
   const handleBuySeed = (crop: Crop) => {
     const amount = seedAmounts[crop.id] || 1;
-    onBuySeed(crop, amount);
-    setSeedAmounts({ ...seedAmounts, [crop.id]: 1 });
+    if (amount > 0) {
+        onBuySeed(crop, amount);
+        setSeedAmounts({ ...seedAmounts, [crop.id]: 1 }); // Reset after buy
+    }
   };
 
   const renderBuyButton = (cost: number, currency: 'COIN' | 'STAR', onClick: () => void, isLocked: boolean) => {
@@ -208,17 +203,27 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                                         
                                         {!isLocked ? (
                                             <div className="flex items-center gap-2 mt-2">
-                                                <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                                                    <button onClick={() => adjustSeedAmount(crop.id, -1)} className="p-1 hover:bg-slate-200 rounded"><Minus size={12}/></button>
+                                                <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                                    <button onClick={() => adjustSeedAmount(crop.id, -1)} className="p-1 hover:bg-white rounded transition-colors"><Minus size={12}/></button>
+                                                    
+                                                    {/* INPUT FIELD FOR QUANTITY */}
                                                     <input 
                                                         type="number" 
-                                                        value={amount}
-                                                        onChange={(e) => handleSeedInput(crop.id, e.target.value)}
-                                                        className="w-10 text-center font-bold text-sm bg-transparent outline-none appearance-none"
                                                         min="1"
                                                         max="999"
+                                                        value={amount}
+                                                        onChange={(e) => {
+                                                            const val = parseInt(e.target.value);
+                                                            if (!isNaN(val) && val >= 0) {
+                                                                setSeedAmounts({ ...seedAmounts, [crop.id]: val });
+                                                            } else if (e.target.value === '') {
+                                                                setSeedAmounts({ ...seedAmounts, [crop.id]: 0 });
+                                                            }
+                                                        }}
+                                                        className="w-10 text-center font-bold text-sm bg-transparent outline-none p-0 appearance-none mx-1 text-slate-700"
                                                     />
-                                                    <button onClick={() => adjustSeedAmount(crop.id, 1)} className="p-1 hover:bg-slate-200 rounded"><Plus size={12}/></button>
+                                                    
+                                                    <button onClick={() => adjustSeedAmount(crop.id, 1)} className="p-1 hover:bg-white rounded transition-colors"><Plus size={12}/></button>
                                                 </div>
                                                 <div className="flex-1">
                                                     {renderBuyButton(totalCost, currency, () => handleBuySeed(crop), false)}
@@ -232,7 +237,6 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
-                {/* Other tabs remain largely the same, logic condensed for brevity as per instructions */}
                 {tab === 'ANIMALS' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedAnimals.map(animal => {

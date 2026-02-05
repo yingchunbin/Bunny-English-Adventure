@@ -296,6 +296,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (res && !res.success) {
           handleShowAlert(res.msg);
       } else if (res && res.success) {
+          playSFX('eat'); // Added SFX
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           addFloatingText(rect.left, rect.top, 
             <div className="flex items-center gap-1">

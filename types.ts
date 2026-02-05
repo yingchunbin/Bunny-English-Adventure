@@ -240,7 +240,8 @@ export interface UserState {
   activeOrders?: FarmOrder[]; 
   
   // Gacha Collection
-  gachaCollection?: string[]; // Array of Gacha IDs owned
+  gachaCollection?: string[]; // Legacy: Array of Gacha IDs owned (Deprecating in favor of inventory)
+  gachaInventory?: Record<string, number>; // New: ID -> Quantity
 
   settings: UserSettings; 
 }

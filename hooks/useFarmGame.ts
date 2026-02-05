@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot, Decor } from '../types';
 import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL, DECORATIONS } from '../data/farmData';
@@ -444,7 +445,10 @@ export const useFarmGame = (
                   return { ...m, current: nextCurrent, completed: nextCurrent >= m.target };
               }
               if (m.type === type && !m.completed && m.category === 'ACHIEVEMENT') {
-                   return m; 
+                   // Also update achievements based on cumulative tracking if available, 
+                   // but for simple implementation we assume 'current' in achievements tracks total if updated
+                   const nextCurrent = m.current + amount;
+                   return { ...m, current: nextCurrent, completed: nextCurrent >= m.target };
               }
               return m;
           })
@@ -463,7 +467,18 @@ export const useFarmGame = (
           if (currency === 'COIN') next.coins -= totalCost;
           else next.stars -= totalCost;
           
+          // Update Inventory Count
           next.inventory = { ...next.inventory, [item.id]: (next.inventory[item.id] || 0) + amount };
+          
+          // CRITICAL FIX: If item is a DECOR, ensure it's added to the 'decorations' ownership list
+          // This list is used by InventoryModal to check ownership status.
+          if (item.type === 'DECOR') {
+             const currentDecors = next.decorations || [];
+             if (!currentDecors.includes(item.id)) {
+                 next.decorations = [...currentDecors, item.id];
+             }
+          }
+
           return next;
       });
       return { success: true };
@@ -471,8 +486,9 @@ export const useFarmGame = (
 
   const placeDecor = (slotId: number, decorId: string) => {
       const count = userState.inventory[decorId] || 0;
-      if (count <= 0 && !userState.decorations?.includes(decorId)) {
-           return { success: false, msg: "Bạn chưa sở hữu!" };
+      // We check inventory count for placing multiple copies of same decor
+      if (count <= 0) {
+           return { success: false, msg: "Bạn chưa sở hữu thêm cái này!" };
       }
       
       onUpdateState(prev => ({
@@ -552,8 +568,10 @@ export const useFarmGame = (
   };
 
   const harvestPlot = (plotId: number, crop: Crop) => {
+      // Logic: Base 1. Chance for +1 based on bonus.
       const yieldBonus = getDecorBonus('YIELD');
       let amount = 1;
+      // Yield bonus adds chance for double harvest. e.g. 50% bonus means 50% chance to get +1
       if (Math.random() * 100 < yieldBonus) amount = 2;
 
       onUpdateState(prev => ({
@@ -616,7 +634,10 @@ export const useFarmGame = (
       const amount = animal.feedAmount;
       const has = userState.harvestedCrops?.[feedId] || 0;
 
-      if (has < amount) return { success: false, msg: `Thiếu ${amount} ${feedId}` };
+      // Fix: Get localized name
+      const feedItemName = [...CROPS, ...PRODUCTS].find(i => i.id === feedId)?.name || feedId;
+
+      if (has < amount) return { success: false, msg: `Thiếu ${amount} ${feedItemName}` };
 
       onUpdateState(prev => ({
           ...prev,
