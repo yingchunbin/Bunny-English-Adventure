@@ -6,11 +6,10 @@ import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
 import { Farm } from './components/Farm';
 import { Settings } from './components/Settings';
-import { AdminPanel } from './components/AdminPanel'; // Import AdminPanel
 import { StoryAdventure } from './components/StoryAdventure'; 
 import { TimeAttackGame } from './components/TimeAttackGame';
 import { GeneralAchievements } from './components/GeneralAchievements';
-import { GachaScreen } from './components/GachaScreen'; 
+import { GachaScreen } from './components/GachaScreen'; // Import new component
 import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
@@ -20,7 +19,7 @@ import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift } from 'lucide-react'; 
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
-import { Avatar } from './components/Avatar'; 
+import { Avatar } from './components/Avatar'; // Import Avatar
 
 const ALL_STORAGE_KEYS = [
   'turtle_english_state',
@@ -43,7 +42,7 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v17',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v18'; 
+const CURRENT_VERSION_KEY = 'turtle_english_state_v18'; // Increment version
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -89,7 +88,7 @@ const DEFAULT_USER_STATE: UserState = {
   activeOrders: [], 
   wellUsageCount: 0,
   lastWellDate: '',
-  gachaCollection: [], 
+  gachaCollection: [], // Initialize
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
@@ -228,7 +227,6 @@ export default function App() {
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
   const [showSettings, setShowSettings] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false); // NEW: Admin state
   const [showAchievements, setShowAchievements] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
@@ -497,16 +495,7 @@ export default function App() {
                       window.location.reload();
                   }}
                   onImportData={handleImportData}
-                  onOpenAdmin={() => { setShowSettings(false); setShowAdmin(true); }} // Allow closing settings to open Admin
                   onClose={() => setShowSettings(false)} 
-              />
-          )}
-
-          {showAdmin && (
-              <AdminPanel 
-                  userState={userState}
-                  onUpdateState={handleUpdateState}
-                  onClose={() => setShowAdmin(false)}
               />
           )}
 
