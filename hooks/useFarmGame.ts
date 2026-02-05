@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot, Decor } from '../types';
 import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL, DECORATIONS } from '../data/farmData';
 import { playSFX } from '../utils/sound';
@@ -8,6 +9,7 @@ export const useFarmGame = (
   onUpdateState: (newState: UserState | ((prev: UserState) => UserState)) => void
 ) => {
   const [now, setNow] = useState(Date.now());
+  const lastTickRef = useRef(Date.now());
   
   // Helper: Calculate total buff for a type from active slots (Supports Multi-buffs)
   const getDecorBonus = (type: 'EXP' | 'COIN' | 'TIME' | 'PEST' | 'YIELD'): number => {
@@ -175,6 +177,7 @@ export const useFarmGame = (
       return ownedMachineIds.includes(recipe.machineId);
   };
 
+  // Initialization Effect
   useEffect(() => {
       const todayStr = new Date().toDateString();
       onUpdateState(prev => {
@@ -227,47 +230,54 @@ export const useFarmGame = (
       });
   }, []); 
 
+  // Game Loop - Optimized
   useEffect(() => {
     const interval = setInterval(() => {
         const currentTime = Date.now();
-        setNow(currentTime);
+        setNow(currentTime); // Keeps the UI timer updating
+
+        // Performance Optimization: Throttle heavy updates
+        // Only run logic checks every 1s, but render updates might happen less if no change
+        if (currentTime - lastTickRef.current < 900) return;
+        lastTickRef.current = currentTime;
 
         onUpdateState(prev => {
             let newState = { ...prev };
             let hasChanges = false;
 
-            // 1. Weather
+            // 1. Weather (Rare chance)
+            // Optimization: Only try changing weather if we are not in desired state
             if (Math.random() < 0.002) { 
                 const newWeather = prev.weather === 'SUNNY' ? 'RAINY' : 'SUNNY';
                 newState.weather = newWeather;
                 hasChanges = true;
                 if (newWeather === 'RAINY') {
-                    newState.farmPlots = prev.farmPlots.map(p => 
-                        p.cropId && !p.isWatered ? { ...p, isWatered: true } : p
-                    );
+                    // Batch update watered state
+                    const needsWater = prev.farmPlots.some(p => p.cropId && !p.isWatered);
+                    if (needsWater) {
+                        newState.farmPlots = prev.farmPlots.map(p => 
+                            p.cropId && !p.isWatered ? { ...p, isWatered: true } : p
+                        );
+                    }
                 }
             }
 
-            // 2. Bugs & Weeds (With PEST reduction buff)
-            let bugChance = 0.01;
-            // Apply Decor Bonus: Reduce pest chance
-            const activeSlots = prev.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
-            let pestReduction = 0;
-            activeSlots.forEach(slot => {
-                const decor = DECORATIONS.find(d => d.id === slot.decorId);
-                // Legacy
-                if (decor?.buff?.type === 'PEST') pestReduction += decor.buff.value;
-                // Multi
-                if (decor?.multiBuffs) {
-                    decor.multiBuffs.forEach(b => { if(b.type === 'PEST') pestReduction += b.value; });
-                }
-            });
-            // Cap reduction at 90%
-            bugChance = bugChance * (1 - Math.min(0.9, pestReduction / 100));
+            // 2. Bugs & Weeds
+            // Optimization: Only run if there are clean plots to infect
+            const cleanPlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
+            if (cleanPlots.length > 0) {
+                let bugChance = 0.01;
+                // Apply Decor Bonus
+                const activeSlots = prev.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
+                let pestReduction = 0;
+                activeSlots.forEach(slot => {
+                    const decor = DECORATIONS.find(d => d.id === slot.decorId);
+                    if (decor?.buff?.type === 'PEST') pestReduction += decor.buff.value;
+                    if (decor?.multiBuffs) decor.multiBuffs.forEach(b => { if(b.type === 'PEST') pestReduction += b.value; });
+                });
+                bugChance = bugChance * (1 - Math.min(0.9, pestReduction / 100));
 
-            if (Math.random() < bugChance) {
-                const cleanPlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
-                if (cleanPlots.length > 0) {
+                if (Math.random() < bugChance) {
                     const target = cleanPlots[Math.floor(Math.random() * cleanPlots.length)];
                     const isBug = Math.random() > 0.5;
                     newState.farmPlots = prev.farmPlots.map(p => 
@@ -277,7 +287,7 @@ export const useFarmGame = (
                 }
             }
 
-            // 3. Machine Auto-Process Queue Logic
+            // 3. Machine Auto-Process Queue
             if (prev.machineSlots) {
                 const updatedSlots = prev.machineSlots.map(slot => {
                     if (slot.activeRecipeId && slot.startedAt) {
@@ -309,6 +319,7 @@ export const useFarmGame = (
                     }
                     return slot;
                 });
+                // Only replace array if actual object references changed (handled by map)
                 if (hasChanges) newState.machineSlots = updatedSlots;
             }
 
@@ -375,6 +386,7 @@ export const useFarmGame = (
                 newState.activeOrders = currentOrders;
             }
 
+            // CRITICAL OPTIMIZATION: Only update state if something actually changed
             return hasChanges ? newState : prev;
         });
 
@@ -389,7 +401,7 @@ export const useFarmGame = (
           const newMissions = prev.missions.map(m => {
               if (m.type === type && !m.completed) {
                   const newCurrent = m.current + amount;
-                  if (newCurrent !== m.current) {
+                  if (newCurrent !== m.current) { // Prevent redundant updates if no progress
                       changed = true;
                       return { ...m, current: newCurrent, completed: newCurrent >= m.target };
                   }
@@ -400,12 +412,13 @@ export const useFarmGame = (
       });
   }, [onUpdateState]);
 
+  // ... (Rest of the actions: canAfford, checkWellUsage, useWell, buyItem, etc. remain the same)
+  // They are triggered by user interaction so no need to change logic, just ensure they are efficient.
+
   const canAfford = (amount: number, currency: 'COIN' | 'STAR' = 'COIN') => {
       if (currency === 'STAR') return (userState.stars || 0) >= amount;
       return userState.coins >= amount;
   };
-
-  // --- ACTIONS ---
 
   const checkWellUsage = () => {
       if ((userState.wellUsageCount || 0) >= 5) {
@@ -477,7 +490,6 @@ export const useFarmGame = (
       
       if (count <= 0) return { success: false, msg: "Hết hạt giống rồi bé ơi! Hãy vào Cửa Hàng mua thêm." };
       
-      // Calculate reduction based on TIME buff, capped at 50%
       const timeBonus = Math.min(50, getDecorBonus('TIME'));
       const crop = CROPS.find(c => c.id === seedId);
       const growthTime = crop?.growthTime || 0;
@@ -490,7 +502,6 @@ export const useFarmGame = (
           farmPlots: prev.farmPlots.map(p => p.id === plotId ? { 
               ...p, 
               cropId: seedId, 
-              // Apply reduction by shifting plantedAt back in time
               plantedAt: Date.now() - (reduceSeconds * 1000), 
               isWatered: prev.weather === 'RAINY',
               hasWeed: Math.random() < 0.1, 
@@ -599,12 +610,10 @@ export const useFarmGame = (
   const harvestPlot = (plotId: number, crop: Crop) => {
       playSFX('harvest');
       
-      // Calculate Buffs
       const expBonus = getDecorBonus('EXP');
       const bonusExp = Math.floor(crop.exp * (expBonus / 100));
       const finalExp = crop.exp + bonusExp;
 
-      // Yield Buff
       const yieldBonus = getDecorBonus('YIELD');
       const isDouble = Math.random() * 100 < yieldBonus;
       const amount = isDouble ? 2 : 1;
@@ -981,13 +990,10 @@ export const useFarmGame = (
       return { success: true, amount: animal.feedAmount, feedEmoji: feedItem?.emoji };
   };
 
-  // --- SELLING ---
-  // Centralized function to handle selling items directly from Inventory/Barn
   const sellItem = (itemId: string, amount: number) => {
       const item = [...CROPS, ...PRODUCTS].find(i => i.id === itemId);
       if (!item) return { success: false };
 
-      // Calculate Price with Buffs
       const coinBonusPercent = getDecorBonus('COIN');
       const basePrice = item.sellPrice;
       const bonusPrice = Math.floor(basePrice * (coinBonusPercent / 100));
@@ -1008,7 +1014,7 @@ export const useFarmGame = (
           };
       });
 
-      updateMissionProgress('EARN', totalEarned); // Track achievement progress
+      updateMissionProgress('EARN', totalEarned);
       
       return { success: true, earned: totalEarned };
   };

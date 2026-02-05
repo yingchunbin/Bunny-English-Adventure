@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UserState, FarmPlot, Decor, FarmOrder } from '../types';
 import { CROPS, ANIMALS, MACHINES, DECORATIONS, RECIPES, PRODUCTS } from '../data/farmData';
 import { PlotModal } from './farm/PlotModal';
@@ -27,7 +27,6 @@ interface FarmProps {
 
 type FarmSection = 'CROPS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 
-// ... (FlyingItem and FloatingText interfaces remain same)
 interface FlyingItem {
     id: number;
     content: React.ReactNode;
@@ -35,6 +34,7 @@ interface FlyingItem {
     y: number;
     targetX: number;
     targetY: number;
+    delay: number; // Use delay for CSS animation
 }
 
 interface FloatingText {
@@ -48,7 +48,6 @@ interface FloatingText {
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
   const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
   
-  // ... (State declarations same as before) ...
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
   const [quizContext, setQuizContext] = useState<{ type: 'WATER' | 'PEST' | 'SPEED_UP' | 'NEW_ORDER', plotId?: number, slotId?: number, entityType?: 'CROP' | 'ANIMAL' | 'MACHINE' } | null>(null);
@@ -71,8 +70,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   const starRef = useRef<HTMLDivElement>(null);
   const expRef = useRef<HTMLDivElement>(null);
 
-  // ... (Effects and Helper functions mostly same) ...
-  
   useEffect(() => {
       const currentLevel = userState.farmLevel || 1;
       if (currentLevel > prevLevelRef.current) {
@@ -83,14 +80,12 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
 
-  // ... (handleShowAlert, triggerFlyFX, addFloatingText, handleHarvestWithFX, handleExpand, handlePlotClick, handleWellClick, onQuizSuccess, handleCollectProduct, handleFeedAnimal, handleCollectMachine, handleSell, handleSellBulk, handleDeliverOrder, handleClaimMission - Keep as is) ...
-  
-  // Re-declare these since they are inside the component scope in previous version
   const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
       playSFX('wrong');
       setAlertConfig({ isOpen: true, message: msg, type });
   };
 
+  // OPTIMIZED FLY FX: Batch update state instead of looping setTimeout
   const triggerFlyFX = (startRect: DOMRect, type: 'COIN' | 'STAR' | 'EXP' | 'PRODUCT', content: React.ReactNode, amount: number) => {
       let targetX = window.innerWidth / 2;
       let targetY = 0;
@@ -114,21 +109,28 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
 
       const particleCount = Math.min(amount, 8); 
-      
+      const newItems: FlyingItem[] = [];
+      const baseId = Date.now();
+
       for(let i=0; i<particleCount; i++) {
-          setTimeout(() => {
-              const newItem: FlyingItem = {
-                  id: Date.now() + Math.random(),
-                  content,
-                  x: startRect.left + startRect.width / 2 + (Math.random() * 40 - 20),
-                  y: startRect.top + startRect.height / 2 + (Math.random() * 40 - 20),
-                  targetX,
-                  targetY
-              };
-              setFlyingItems(prev => [...prev, newItem]);
-              setTimeout(() => setFlyingItems(prev => prev.filter(item => item.id !== newItem.id)), 800);
-          }, i * 80);
+          newItems.push({
+              id: baseId + i + Math.random(),
+              content,
+              x: startRect.left + startRect.width / 2 + (Math.random() * 40 - 20),
+              y: startRect.top + startRect.height / 2 + (Math.random() * 40 - 20),
+              targetX,
+              targetY,
+              delay: i * 0.08 // CSS animation delay in seconds
+          });
       }
+      
+      setFlyingItems(prev => [...prev, ...newItems]);
+      
+      // Cleanup happens via onAnimationEnd in render
+  };
+
+  const removeFlyingItem = (id: number) => {
+      setFlyingItems(prev => prev.filter(item => item.id !== id));
   };
 
   const addFloatingText = (x: number, y: number, text: React.ReactNode, color: string = 'text-yellow-500') => {
@@ -441,8 +443,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
-  // --- RENDER SECTIONS ---
-  // ... (renderSectionTabs, renderHUD, renderHarvestButton, renderEmptySlot, renderSpeedUpButton, renderCrops, renderAnimals, renderMachines SAME AS BEFORE) ...
+  // --- RENDER SECTIONS (MEMOIZED) ---
   const renderSectionTabs = () => (
       <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1 overflow-x-auto no-scrollbar">
           {[
@@ -523,7 +524,8 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       </button>
   );
 
-  const renderCrops = () => (
+  // MEMOIZED GRID RENDERERS
+  const cropsGrid = useMemo(() => (
       <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
           {userState.farmPlots.map(plot => {
               const crop = plot.cropId ? CROPS.find(c => c.id === plot.cropId) : null;
@@ -595,9 +597,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           })}
           {renderEmptySlot("Mở Đất Mới", () => handleExpand('PLOT'))}
       </div>
-  );
+  ), [userState.farmPlots, userState.weather, now]); // Only re-render when plots or time updates
 
-  const renderAnimals = () => {
+  const animalsGrid = useMemo(() => {
       const slots = userState.livestockSlots || [];
       return (
           <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
@@ -705,9 +707,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {renderEmptySlot("Xây Chuồng", () => handleExpand('PEN'))}
           </div>
       );
-  };
+  }, [userState.livestockSlots, userState.harvestedCrops, now]);
 
-  const renderMachines = () => {
+  const machinesGrid = useMemo(() => {
       const slots = userState.machineSlots || [];
       return (
           <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
@@ -828,9 +830,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {renderEmptySlot("Thêm Máy", () => handleExpand('MACHINE'))}
           </div>
       );
-  };
+  }, [userState.machineSlots, now]);
 
-  const renderDecors = () => {
+  const decorsGrid = useMemo(() => {
       const slots = userState.decorSlots || [];
       return (
           <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
@@ -890,7 +892,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                               </>
                           ) : (
                               <>
-                                  {/* Rarity Label (Centered Top) - Fixed clipping */}
                                   <div className={`absolute top-2 left-1/2 -translate-x-1/2 px-3 py-1 text-[10px] font-black text-white uppercase rounded-full shadow-md z-20 border border-white/20 ${rarity?.bg.replace('bg-','bg-').replace('50','500')} whitespace-nowrap`}>
                                       {rarity?.label}
                                   </div>
@@ -909,7 +910,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                                       </div>
                                   )}
                                   
-                                  {/* Detailed Buff Box - Larger */}
                                   <div className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-[96%] px-2 py-1.5 rounded-xl backdrop-blur-md shadow-lg flex flex-col items-center z-20 border-2 ${rarity?.border} ${rarity?.bg} bg-opacity-95`}>
                                       <span className={`text-[10px] font-black uppercase tracking-tight truncate w-full text-center mb-1 ${rarity?.color}`}>{decor.name}</span>
                                       <div className="flex flex-wrap justify-center gap-1.5">
@@ -928,7 +928,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               {renderEmptySlot("Mở Ô Mới", () => handleExpand('DECOR'))}
           </div>
       );
-  };
+  }, [userState.decorSlots]);
 
   const getReadyCount = () => {
       let count = 0;
@@ -973,10 +973,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
         {/* MAIN SCROLLABLE AREA */}
         <div className="flex-1 relative z-10 pb-4">
-            {activeSection === 'CROPS' && renderCrops()}
-            {activeSection === 'ANIMALS' && renderAnimals()}
-            {activeSection === 'MACHINES' && renderMachines()}
-            {activeSection === 'DECOR' && renderDecors()}
+            {activeSection === 'CROPS' && cropsGrid}
+            {activeSection === 'ANIMALS' && animalsGrid}
+            {activeSection === 'MACHINES' && machinesGrid}
+            {activeSection === 'DECOR' && decorsGrid}
         </div>
 
         {/* BOTTOM TABS */}
@@ -1026,8 +1026,10 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 style={{
                     left: item.x,
                     top: item.y,
-                    animation: `flyToBarn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards`
+                    animation: `flyToBarn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+                    animationDelay: `${item.delay}s`
                 }}
+                onAnimationEnd={() => setFlyingItems(prev => prev.filter(i => i.id !== item.id))}
             >
                 <style>{`
                     @keyframes flyToBarn {

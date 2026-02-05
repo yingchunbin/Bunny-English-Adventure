@@ -8,6 +8,23 @@ interface AchievementsProps {
   onClose: () => void;
 }
 
+// --- SAFE DATA HELPERS ---
+// Ngăn chặn crash do dữ liệu cũ bị null, undefined hoặc sai kiểu
+const getSafeTotalHarvest = (state: UserState): number => {
+    if (!state.harvestedCrops || typeof state.harvestedCrops !== 'object') return 0;
+    return Object.values(state.harvestedCrops).reduce((acc: number, val: any) => {
+        const num = Number(val);
+        return acc + (isNaN(num) ? 0 : num);
+    }, 0);
+};
+
+const getSafeItemCount = (state: UserState, itemId: string): number => {
+    if (!state.harvestedCrops || typeof state.harvestedCrops !== 'object') return 0;
+    const val = state.harvestedCrops[itemId];
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+};
+
 export const ACHIEVEMENTS_LIST: Achievement[] = [
   // --- LEARNING ---
   {
@@ -15,7 +32,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Bước Chân Đầu Tiên',
     description: 'Hoàn thành bài học đầu tiên.',
     icon: '🚀',
-    condition: (state) => state.completedLevels.length >= 1,
+    condition: (state) => (state.completedLevels?.length || 0) >= 1,
     isUnlocked: false
   },
   {
@@ -23,7 +40,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Mọt Sách Chính Hiệu',
     description: 'Hoàn thành 10 bài học.',
     icon: '📚',
-    condition: (state) => state.completedLevels.length >= 10,
+    condition: (state) => (state.completedLevels?.length || 0) >= 10,
     isUnlocked: false
   },
   {
@@ -31,7 +48,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Giáo Sư Biết Tuốt',
     description: 'Hoàn thành 50 bài học.',
     icon: '🎓',
-    condition: (state) => state.completedLevels.length >= 50,
+    condition: (state) => (state.completedLevels?.length || 0) >= 50,
     isUnlocked: false
   },
   {
@@ -39,7 +56,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Chăm Chỉ Như Ong',
     description: 'Học 3 ngày liên tiếp không nghỉ.',
     icon: '🐝',
-    condition: (state) => state.streak >= 3,
+    condition: (state) => (state.streak || 0) >= 3,
     isUnlocked: false
   },
   {
@@ -47,7 +64,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Chiến Thần Điểm Danh',
     description: 'Học 7 ngày liên tiếp. Quá đỉnh!',
     icon: '🔥',
-    condition: (state) => state.streak >= 7,
+    condition: (state) => (state.streak || 0) >= 7,
     isUnlocked: false
   },
 
@@ -57,7 +74,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Đại Gia Mới Nổi',
     description: 'Tích lũy 1,000 xu trong túi.',
     icon: '💰',
-    condition: (state) => state.coins >= 1000,
+    condition: (state) => (state.coins || 0) >= 1000,
     isUnlocked: false
   },
   {
@@ -65,14 +82,13 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Tỷ Phú Thời Gian',
     description: 'Sở hữu khối tài sản 10,000 xu.',
     icon: '💎',
-    condition: (state) => state.coins >= 10000,
+    condition: (state) => (state.coins || 0) >= 10000,
     isUnlocked: false
   },
   {
     id: 'shopaholic',
     title: 'Tín Đồ Mua Sắm',
-    description: 'Mua sắm hết mình (Tổng chi tiêu > 5000 xu - Chưa tính năng này nhưng để đó).', 
-    // Logic check tạm thời dựa trên số đồ trang trí sở hữu
+    description: 'Sở hữu 5 món đồ trang trí.',
     icon: '🛍️',
     condition: (state) => (state.decorations?.length || 0) >= 5,
     isUnlocked: false
@@ -82,7 +98,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Siêu Mẫu Nhí',
     description: 'Sở hữu bộ trang phục Rồng Thần.',
     icon: '🐲',
-    condition: (state) => state.currentAvatarId === 'dragon', // Requires checking ownership ideally, currently checks active
+    condition: (state) => state.currentAvatarId === 'dragon',
     isUnlocked: false
   },
 
@@ -92,7 +108,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Nông Dân Tập Sự',
     description: 'Thu hoạch 20 nông sản đầu tay.',
     icon: '🥕',
-    condition: (state) => Object.values(state.harvestedCrops || {}).reduce((a:any,b:any)=>a+b, 0) >= 20,
+    condition: (state) => getSafeTotalHarvest(state) >= 20,
     isUnlocked: false
   },
   {
@@ -100,7 +116,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Lão Nông Chi Điền',
     description: 'Tay chai sạn vì thu hoạch 500 nông sản.',
     icon: '🚜',
-    condition: (state) => Object.values(state.harvestedCrops || {}).reduce((a:any,b:any)=>a+b, 0) >= 500,
+    condition: (state) => getSafeTotalHarvest(state) >= 500,
     isUnlocked: false
   },
   {
@@ -108,7 +124,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Chúa Tể Đất Đai',
     description: 'Mở khóa toàn bộ 6 ô đất trồng trọt.',
     icon: '🏝️',
-    condition: (state) => state.farmPlots.every(p => p.isUnlocked),
+    condition: (state) => (state.farmPlots || []).every(p => p.isUnlocked),
     isUnlocked: false
   },
   {
@@ -134,7 +150,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Người Gọi Gà',
     description: 'Thu hoạch 50 quả Trứng.',
     icon: '🥚',
-    condition: (state) => (state.harvestedCrops?.['egg'] || 0) >= 50,
+    condition: (state) => getSafeItemCount(state, 'egg') >= 50,
     isUnlocked: false
   },
   {
@@ -142,7 +158,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Thợ Vắt Sữa',
     description: 'Thu hoạch 50 bình Sữa Bò.',
     icon: '🥛',
-    condition: (state) => (state.harvestedCrops?.['milk'] || 0) >= 50,
+    condition: (state) => getSafeItemCount(state, 'milk') >= 50,
     isUnlocked: false
   },
   {
@@ -158,7 +174,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Giám Đốc Sở Thú',
     description: 'Mở rộng tối đa 5 chuồng trại.',
     icon: '🎫',
-    condition: (state) => state.livestockSlots?.every(s => s.isUnlocked) || false,
+    condition: (state) => (state.livestockSlots?.filter(s => s.isUnlocked).length || 0) >= 5,
     isUnlocked: false
   },
 
@@ -166,13 +182,9 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
   {
     id: 'order_master',
     title: 'Thánh Giao Hàng',
-    description: 'Hoàn thành 10 nhiệm vụ giao hàng.',
+    description: 'Giao hàng chăm chỉ (Kiếm > 2000 xu).',
     icon: '🚚',
-    condition: (state) => {
-        // This is tricky without explicit counter, let's assume coin earnings > 2000 implies ~10 orders
-        // Or check a mission progress if available. For now, check coin threshold as proxy for active play
-        return state.coins >= 2000 && Object.keys(state.harvestedCrops || {}).length > 5; 
-    },
+    condition: (state) => (state.coins || 0) >= 2000 && getSafeTotalHarvest(state) > 10,
     isUnlocked: false
   },
   {
@@ -188,7 +200,7 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Sâu Răng',
     description: 'Sản xuất 20 Kẹo hoặc Bánh Kem.',
     icon: '🍭',
-    condition: (state) => ((state.harvestedCrops?.['candy']||0) + (state.harvestedCrops?.['cake']||0)) >= 20,
+    condition: (state) => (getSafeItemCount(state, 'candy') + getSafeItemCount(state, 'cake')) >= 20,
     isUnlocked: false
   },
   {
@@ -196,51 +208,57 @@ export const ACHIEVEMENTS_LIST: Achievement[] = [
     title: 'Chuyên Gia Mùi Hương',
     description: 'Chế tạo thành công Nước Hoa.',
     icon: '🌸',
-    condition: (state) => (state.harvestedCrops?.['rose_perfume'] || 0) > 0,
+    condition: (state) => getSafeItemCount(state, 'rose_perfume') > 0,
     isUnlocked: false
   }
 ];
 
 export const Achievements: React.FC<AchievementsProps> = ({ userState, onClose }) => {
-  // Helper to get progress (Simplified for some complex ones)
+  // Helper to get progress safely
   const getProgress = (ach: Achievement) => {
-      if (ach.id === 'first_step') return Math.min(100, (userState.completedLevels.length / 1) * 100);
-      if (ach.id === 'scholar_10') return Math.min(100, (userState.completedLevels.length / 10) * 100);
-      if (ach.id === 'scholar_50') return Math.min(100, (userState.completedLevels.length / 50) * 100);
+      // Safe defaults
+      const completedLevels = userState.completedLevels?.length || 0;
+      const streak = userState.streak || 0;
+      const coins = userState.coins || 0;
+      const decorCount = userState.decorations?.length || 0;
+      const water = userState.waterDrops || 0;
+      const fertilizer = userState.fertilizers || 0;
+      const plots = userState.farmPlots || [];
+      const livestock = userState.livestockSlots || [];
+      const farmLevel = userState.farmLevel || 1;
+
+      if (ach.id === 'first_step') return Math.min(100, (completedLevels / 1) * 100);
+      if (ach.id === 'scholar_10') return Math.min(100, (completedLevels / 10) * 100);
+      if (ach.id === 'scholar_50') return Math.min(100, (completedLevels / 50) * 100);
       
-      if (ach.id === 'streak_3') return Math.min(100, (userState.streak / 3) * 100);
-      if (ach.id === 'streak_7') return Math.min(100, (userState.streak / 7) * 100);
+      if (ach.id === 'streak_3') return Math.min(100, (streak / 3) * 100);
+      if (ach.id === 'streak_7') return Math.min(100, (streak / 7) * 100);
       
-      if (ach.id === 'rich_kid_1k') return Math.min(100, (userState.coins / 1000) * 100);
-      if (ach.id === 'rich_kid_10k') return Math.min(100, (userState.coins / 10000) * 100);
+      if (ach.id === 'rich_kid_1k') return Math.min(100, (coins / 1000) * 100);
+      if (ach.id === 'rich_kid_10k') return Math.min(100, (coins / 10000) * 100);
       
-      if (ach.id === 'shopaholic') return Math.min(100, ((userState.decorations?.length || 0) / 5) * 100);
+      if (ach.id === 'shopaholic') return Math.min(100, (decorCount / 5) * 100);
       if (ach.id === 'fashionista') return userState.currentAvatarId === 'dragon' ? 100 : 0;
 
-      if (ach.id === 'farmer_newbie') {
-          const total = Object.values(userState.harvestedCrops || {}).reduce((a:any,b:any)=>a+b, 0) as number;
-          return Math.min(100, (total / 20) * 100);
-      }
-      if (ach.id === 'farmer_pro') {
-          const total = Object.values(userState.harvestedCrops || {}).reduce((a:any,b:any)=>a+b, 0) as number;
-          return Math.min(100, (total / 500) * 100);
-      }
-      if (ach.id === 'landlord') return Math.min(100, (userState.farmPlots.filter(p => p.isUnlocked).length / 6) * 100);
-      if (ach.id === 'water_god') return Math.min(100, (userState.waterDrops / 50) * 100);
-      if (ach.id === 'fertilizer_king') return Math.min(100, (userState.fertilizers / 20) * 100);
+      if (ach.id === 'farmer_newbie') return Math.min(100, (getSafeTotalHarvest(userState) / 20) * 100);
+      if (ach.id === 'farmer_pro') return Math.min(100, (getSafeTotalHarvest(userState) / 500) * 100);
+      
+      if (ach.id === 'landlord') return Math.min(100, (plots.filter(p => p.isUnlocked).length / 6) * 100);
+      if (ach.id === 'water_god') return Math.min(100, (water / 50) * 100);
+      if (ach.id === 'fertilizer_king') return Math.min(100, (fertilizer / 20) * 100);
 
-      if (ach.id === 'chicken_whisperer') return Math.min(100, ((userState.harvestedCrops?.['egg'] || 0) / 50) * 100);
-      if (ach.id === 'milk_man') return Math.min(100, ((userState.harvestedCrops?.['milk'] || 0) / 50) * 100);
-      if (ach.id === 'lion_tamer') return userState.livestockSlots?.some(s => s.animalId === 'lion') ? 100 : 0;
-      if (ach.id === 'zoo_keeper') return Math.min(100, ((userState.livestockSlots?.filter(s => s.isUnlocked).length || 0) / 5) * 100);
+      if (ach.id === 'chicken_whisperer') return Math.min(100, (getSafeItemCount(userState, 'egg') / 50) * 100);
+      if (ach.id === 'milk_man') return Math.min(100, (getSafeItemCount(userState, 'milk') / 50) * 100);
+      if (ach.id === 'lion_tamer') return livestock.some(s => s.animalId === 'lion') ? 100 : 0;
+      if (ach.id === 'zoo_keeper') return Math.min(100, (livestock.filter(s => s.isUnlocked).length / 5) * 100);
 
-      if (ach.id === 'order_master') return 0; // Hard to track exact progress without new state
-      if (ach.id === 'pet_bestie') return Math.min(100, ((userState.farmLevel || 1) / 10) * 100);
+      if (ach.id === 'order_master') return Math.min(100, (coins / 2000) * 100); 
+      if (ach.id === 'pet_bestie') return Math.min(100, (farmLevel / 10) * 100);
       if (ach.id === 'sweet_tooth') {
-          const total = ((userState.harvestedCrops?.['candy']||0) + (userState.harvestedCrops?.['cake']||0));
+          const total = getSafeItemCount(userState, 'candy') + getSafeItemCount(userState, 'cake');
           return Math.min(100, (total / 20) * 100);
       }
-      if (ach.id === 'perfume_maker') return (userState.harvestedCrops?.['rose_perfume'] || 0) > 0 ? 100 : 0;
+      if (ach.id === 'perfume_maker') return getSafeItemCount(userState, 'rose_perfume') > 0 ? 100 : 0;
 
       return 0;
   };
@@ -259,7 +277,7 @@ export const Achievements: React.FC<AchievementsProps> = ({ userState, onClose }
         <div className="grid grid-cols-1 gap-4">
           {ACHIEVEMENTS_LIST.map((ach) => {
             const isUnlocked = userState.unlockedAchievements?.includes(ach.id) || ach.condition(userState);
-            const progress = isUnlocked ? 100 : getProgress(ach);
+            const progress = isUnlocked ? 100 : Math.max(0, getProgress(ach));
             
             return (
               <div 
