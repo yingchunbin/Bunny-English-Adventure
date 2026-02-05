@@ -25,9 +25,12 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
   const [currentQIdx, setCurrentQIdx] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false); 
   
-  // Initialize Questions Once on Mount
+  // Initialize Questions Once
   useEffect(() => {
-      // 1. Deduplicate words by ID to prevent logic errors (important when merging multiple levels)
+      // CRITICAL FIX: Only generate questions if the array is empty. 
+      // This prevents regeneration when 'words' prop changes reference due to parent re-renders.
+      if (questions.length > 0) return;
+
       const uniqueWordsMap = new Map();
       words.forEach(w => uniqueWordsMap.set(w.id, w));
       const uniqueWords = Array.from(uniqueWordsMap.values());
@@ -71,7 +74,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
               }, 500);
           }
       }
-  }, [questionCount, words]); 
+  }, [questionCount, words, questions.length]); 
 
   const playAudio = () => {
       if (!questions[currentQIdx]) return;

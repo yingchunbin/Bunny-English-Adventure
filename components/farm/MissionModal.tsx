@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Mission, MissionReward } from '../../types';
 import { X, Gift, Coins, Droplets, Zap, Star, Tractor, Heart, CloudRain, Briefcase, CheckCircle } from 'lucide-react';
 import { Avatar } from '../Avatar';
@@ -13,25 +13,34 @@ interface MissionModalProps {
 export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, onClose }) => {
   const [activeTab, setActiveTab] = useState<'DAILY' | 'ACHIEVEMENT'>('DAILY');
   
-  // Filter and sort missions defensively
-  const filteredMissions = (missions || [])
-    .filter(m => m && m.category === activeTab) // Ensure m exists
-    .sort((a, b) => {
-        // Priority 1: Claimable
-        const aClaimable = a.completed && !a.claimed;
-        const bClaimable = b.completed && !b.claimed;
-        if (aClaimable && !bClaimable) return -1;
-        if (!aClaimable && bClaimable) return 1;
+  // OPTIMIZATION: Memoize filtering and sorting to prevent excessive recalculation
+  const filteredMissions = useMemo(() => {
+    return (missions || [])
+      .filter(m => m && m.category === activeTab)
+      .sort((a, b) => {
+          // Priority 1: Claimable
+          const aClaimable = a.completed && !a.claimed;
+          const bClaimable = b.completed && !b.claimed;
+          if (aClaimable && !bClaimable) return -1;
+          if (!aClaimable && bClaimable) return 1;
 
-        // Priority 3: Claimed (Push to bottom)
-        if (a.claimed && !b.claimed) return 1;
-        if (!a.claimed && b.claimed) return -1;
+          // Priority 2: In Progress (Completed = false, Claimed = false)
+          const aInProgress = !a.completed;
+          const bInProgress = !b.completed;
+          if (aInProgress && !bInProgress) return -1;
+          if (!aInProgress && bInProgress) return 1;
 
-        // Priority 2: Progress % Descending
-        const progA = (a.current || 0) / (a.target || 1);
-        const progB = (b.current || 0) / (b.target || 1);
-        return progB - progA;
-    });
+          // Priority 3: Progress % Descending
+          const progA = (a.current || 0) / (a.target || 1);
+          const progB = (b.current || 0) / (b.target || 1);
+          if (progA !== progB) return progB - progA;
+
+          return 0;
+      })
+      // LAG FIX: Limit rendered items. Showing 500 achievements kills performance.
+      // We show: All Claimable + All In Progress + Top 10 Claimed (History)
+      .slice(0, 20); 
+  }, [missions, activeTab]);
 
   const getMissionIcon = (type: Mission['type']) => {
       switch (type) {
@@ -89,13 +98,11 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                         const isCompleted = m.completed;
                         const isClaimable = isCompleted && !m.claimed;
                         
-                        // CRITICAL FIX: Robustly check if rewards is an array.
-                        // Sometimes data migration might leave it undefined or as an object.
+                        // Robustly check if rewards is an array.
                         let safeRewards: any[] = [];
                         if (Array.isArray(m.rewards)) {
                             safeRewards = m.rewards;
                         } else if (m.reward) {
-                            // Fallback to legacy single reward object
                             safeRewards = [m.reward];
                         }
 
@@ -119,7 +126,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                         <h4 className={`font-black text-xs sm:text-sm uppercase leading-tight mb-1 ${isCompleted ? 'text-green-700' : 'text-slate-700'}`}>{m.desc}</h4>
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-bold text-slate-400">Tiến độ:</span>
-                                            <span className={`text-[10px] font-black ${isCompleted ? 'text-green-600' : 'text-indigo-500'}`}>{m.current}/{m.target}</span>
+                                            <span className={`text-[10px] font-black ${isCompleted ? 'text-green-600' : 'text-indigo-500'}`}>{Math.floor(m.current || 0)}/{m.target}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -131,12 +138,12 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                 <div className="flex justify-between items-center relative z-10">
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Quà:</span>
-                                        {rewardsList.map((r, i) => (
+                                        {rewardsList.length > 0 ? rewardsList.map((r, i) => (
                                             <div key={i} className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-200">
                                                 <span className="text-xs font-black text-yellow-700">+{r.amount}</span>
                                                 {getRewardIcon(r.type)}
                                             </div>
-                                        ))}
+                                        )) : <span className="text-[10px] italic text-slate-300">Không có quà</span>}
                                     </div>
                                     
                                     {isClaimable ? (

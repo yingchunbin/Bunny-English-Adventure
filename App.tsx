@@ -1,6 +1,6 @@
 
 // ... existing imports
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
@@ -133,9 +133,6 @@ const migrateState = (oldState: any): UserState => {
   newState.decorSlots = smartMergeArray<DecorSlot>(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId');
 
   // CRITICAL FIX: RESET MISSIONS if they are old/broken
-  // If user has fewer than 200 missions, it means they are on the old system.
-  // We completely replace the missions array with the new 500+ generated list.
-  // We preserve DAILY missions by regenerating them fresh.
   const oldMissions = Array.isArray(oldState.missions) ? oldState.missions : [];
   if (oldMissions.length < 200) {
       console.log("🔥 Detected old achievement system. Resetting missions to new massive system.");
@@ -148,7 +145,6 @@ const migrateState = (oldState: any): UserState => {
       // Combine with new static achievements
       newState.missions = [...FARM_ACHIEVEMENTS_DATA, ...dailies];
   } else {
-      // Keep existing progress if already on new system
       newState.missions = oldMissions;
   }
 
@@ -169,12 +165,10 @@ export default function App() {
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   const userStateRef = useRef(userState);
 
-  // Improved Data Loading Logic: Scans backwards for ANY valid save
+  // Improved Data Loading Logic
   useEffect(() => {
       try {
         let loadedState: any = null;
-        
-        // Scan keys from newest to oldest (including current)
         const keysToCheck = [CURRENT_VERSION_KEY, ...[...ALL_STORAGE_KEYS].reverse()];
         
         for (const key of keysToCheck) {
@@ -185,14 +179,13 @@ export default function App() {
                     if (parsed && typeof parsed === 'object') {
                         console.log(`✅ Loaded data from ${key}`);
                         loadedState = parsed;
-                        break; // Stop at first valid data found
+                        break; 
                     }
                 } catch(e) { console.warn(`Failed to parse ${key}`, e); }
             }
         }
 
         if (!loadedState) {
-            // Check backup key
             const backup = localStorage.getItem(BACKUP_KEY);
             if (backup) {
                 try { loadedState = JSON.parse(backup); console.log("✅ Loaded from backup"); } catch(e) {}
@@ -208,8 +201,6 @@ export default function App() {
             const migrated = migrateState(loadedState);
             setUserState(migrated);
             userStateRef.current = migrated;
-            
-            // Save immediately to current version key to ensure migration persists
             localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
         } 
       } catch (e) {
@@ -226,7 +217,6 @@ export default function App() {
           const newState = typeof update === 'function' ? (update as any)(prev) : update;
           try {
               localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
-              // Also save backup occasionally (simple implementation: always save backup on important state changes)
               if (Math.random() < 0.1) localStorage.setItem(BACKUP_KEY, JSON.stringify(newState));
               userStateRef.current = newState; 
           } catch (e) { console.error(e); }
@@ -261,6 +251,10 @@ export default function App() {
       const shouldPlayBGM = [Screen.HOME, Screen.FARM, Screen.MAP, Screen.GACHA].includes(screen);
       playBGM(shouldPlayBGM && !isMuted);
   }, [userState.settings, screen, isMuted]);
+
+  // CRITICAL FIX: Memoize allWords to prevent reference change on every render (especially from Farm ticker)
+  // This prevents LearningQuizModal from resetting questions mid-game.
+  const allWords = useMemo(() => LEVELS.flatMap(l => l.words), []);
 
   // ... (Handlers - same)
   const handleOnboardingComplete = (grade: number, textbookId: string) => {
@@ -339,8 +333,6 @@ export default function App() {
 
 
   const currentBookName = TEXTBOOKS.find(b => b.id === userState.textbook)?.name || "Chưa chọn sách";
-
-  // Resolve current avatar
   const avatarItem = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
   const isGachaAvatar = userState.currentAvatarId === 'gacha_custom' && userState.currentGachaAvatarId;
 
@@ -419,7 +411,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateState={handleUpdateState} 
                   onExit={() => setScreen(Screen.HOME)} 
-                  allWords={LEVELS.flatMap(l => l.words)}
+                  allWords={allWords} // Passed memoized words
                   levels={getLevels(userState.grade, userState.textbook)}
               />
           )}
@@ -453,7 +445,7 @@ export default function App() {
 
           {screen === Screen.TIME_ATTACK && (
               <TimeAttackGame 
-                  words={LEVELS.flatMap(l => l.words)}
+                  words={allWords}
                   onComplete={(score) => {
                       const earnedCoins = Math.floor(score / 10);
                       handleUpdateState(prev => ({ ...prev, coins: prev.coins + earnedCoins }));
