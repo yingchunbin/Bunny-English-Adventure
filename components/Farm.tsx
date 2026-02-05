@@ -1,4 +1,5 @@
 
+// ... imports (giữ nguyên)
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { UserState, FarmPlot, Decor, FarmOrder } from '../types';
 import { CROPS, ANIMALS, MACHINES, DECORATIONS, RECIPES, PRODUCTS } from '../data/farmData';
@@ -80,12 +81,13 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       prevLevelRef.current = currentLevel;
   }, [userState.farmLevel]);
 
+  // ... (giữ nguyên các helper functions: handleShowAlert, triggerFlyFX, removeFlyingItem, addFloatingText, handleHarvestWithFX, handleExpand, handlePlotClick, handleWellClick, onQuizSuccess, handleCollectProduct, handleFeedAnimal, handleCollectMachine, handleSell, handleSellBulk, handleDeliverOrder)
+  
   const handleShowAlert = (msg: string, type: 'INFO' | 'DANGER' = 'DANGER') => {
       playSFX('wrong');
       setAlertConfig({ isOpen: true, message: msg, type });
   };
 
-  // OPTIMIZED FLY FX: Batch update state instead of looping setTimeout
   const triggerFlyFX = (startRect: DOMRect, type: 'COIN' | 'STAR' | 'EXP' | 'PRODUCT', content: React.ReactNode, amount: number) => {
       let targetX = window.innerWidth / 2;
       let targetY = 0;
@@ -120,17 +122,11 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               y: startRect.top + startRect.height / 2 + (Math.random() * 40 - 20),
               targetX,
               targetY,
-              delay: i * 0.08 // CSS animation delay in seconds
+              delay: i * 0.08
           });
       }
       
       setFlyingItems(prev => [...prev, ...newItems]);
-      
-      // Cleanup happens via onAnimationEnd in render
-  };
-
-  const removeFlyingItem = (id: number) => {
-      setFlyingItems(prev => prev.filter(item => item.id !== id));
   };
 
   const addFloatingText = (x: number, y: number, text: React.ReactNode, color: string = 'text-yellow-500') => {
@@ -296,7 +292,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       if (res && !res.success) {
           handleShowAlert(res.msg);
       } else if (res && res.success) {
-          playSFX('eat'); // Added SFX
+          playSFX('eat'); 
           const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
           addFloatingText(rect.left, rect.top, 
             <div className="flex items-center gap-1">
@@ -365,23 +361,33 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
+  // CRITICAL FIX: Safe access to mission.reward
   const handleClaimMission = (mission: any, e: React.MouseEvent) => {
+      if (!mission.reward) {
+          handleShowAlert("Nhiệm vụ lỗi, không thể nhận thưởng!", "DANGER");
+          return;
+      }
+
       playSFX('coins');
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       
-      if(mission.reward.type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
-      if(mission.reward.type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);
-      if(mission.reward.type === 'WATER') triggerFlyFX(rect, 'PRODUCT', <Droplets size={24} className="text-blue-400 fill-blue-400"/>, 2);
-      if(mission.reward.type === 'FERTILIZER') triggerFlyFX(rect, 'PRODUCT', <Zap size={24} className="text-green-400 fill-green-400"/>, 1);
+      const type = mission.reward.type;
+      const amount = mission.reward.amount || 0;
+
+      if(type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
+      if(type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);
+      if(type === 'WATER') triggerFlyFX(rect, 'PRODUCT', <Droplets size={24} className="text-blue-400 fill-blue-400"/>, 2);
+      if(type === 'FERTILIZER') triggerFlyFX(rect, 'PRODUCT', <Zap size={24} className="text-green-400 fill-green-400"/>, 1);
       
-      addReward(mission.reward.type, mission.reward.amount);
+      addReward(type, amount);
       onUpdateState(prev => ({
           ...prev,
           missions: prev.missions?.map(miss => miss.id === mission.id ? { ...miss, claimed: true } : miss)
       }));
   };
 
-  // --- Rarity Helper Functions (Duplicated from Shop/Inventory for self-containment) ---
+  // ... (giữ nguyên getRarityInfo, getBuffIcon)
+
   const getRarityInfo = (cost: number) => {
       if (cost >= 500) return { 
           label: "THẦN THOẠI", 
@@ -444,7 +450,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
-  // --- RENDER SECTIONS (MEMOIZED) ---
+  // ... (giữ nguyên phần render còn lại)
+  
+  // RENDER SECTIONS (MEMOIZED)
   const renderSectionTabs = () => (
       <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1 overflow-x-auto no-scrollbar">
           {[
@@ -833,6 +841,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       );
   }, [userState.machineSlots, now]);
 
+  // ... (giữ nguyên decorsGrid)
   const decorsGrid = useMemo(() => {
       const slots = userState.decorSlots || [];
       return (

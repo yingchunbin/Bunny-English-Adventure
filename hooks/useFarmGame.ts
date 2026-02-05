@@ -183,7 +183,7 @@ export const useFarmGame = (
       return ownedMachineIds.includes(recipe.machineId);
   };
 
-  // Initialization Effect - CRITICAL FIX FOR ACHIEVEMENTS
+  // Initialization Effect - CRITICAL FIX FOR ACHIEVEMENTS & DATA REPAIR
   useEffect(() => {
       const todayStr = new Date().toDateString();
       
@@ -191,23 +191,25 @@ export const useFarmGame = (
           let newState = { ...prev };
           let changed = false;
 
-          // 1. SYNC AND REPAIR EXISTING ACHIEVEMENTS
+          // 1. SYNC AND REPAIR EXISTING ACHIEVEMENTS (SAFE MODE)
           // Map of correct/latest static data
           const staticMissionMap = new Map(FARM_ACHIEVEMENTS_DATA.map(m => [m.id, m]));
           
-          if (prev.missions) {
+          if (prev.missions && Array.isArray(prev.missions)) {
               const repairedMissions = prev.missions.map(userMission => {
                   if (userMission.category === 'ACHIEVEMENT') {
                       const staticData = staticMissionMap.get(userMission.id);
                       if (staticData) {
-                          // Repair logic: If reward is 0 or mission description is outdated, update from static data
-                          // We preserve 'current', 'completed', 'claimed' status
-                          if (userMission.reward.amount === 0 || userMission.desc !== staticData.desc || userMission.target !== staticData.target) {
+                          // SAFETY CHECK: Ensure userMission.reward exists before checking amount
+                          const userRewardAmount = userMission.reward?.amount ?? 0;
+                          
+                          // Repair logic: If reward missing, or amount is 0, or description outdated
+                          if (!userMission.reward || userRewardAmount === 0 || userMission.desc !== staticData.desc || userMission.target !== staticData.target) {
                               changed = true;
                               return {
                                   ...userMission,
                                   target: staticData.target,
-                                  reward: staticData.reward, // Fix the 0 reward bug
+                                  reward: staticData.reward, // Fix the 0/undefined reward bug
                                   desc: staticData.desc
                               };
                           }
@@ -220,22 +222,23 @@ export const useFarmGame = (
                   newState.missions = repairedMissions;
               }
           } else {
-              newState.missions = []; // Initialize if missing
+              newState.missions = []; // Initialize if missing or invalid
+              changed = true;
           }
 
           // 2. ADD MISSING ACHIEVEMENTS
-          const currentMissionIds = new Set(newState.missions.map(m => m.id));
+          const currentMissionIds = new Set((newState.missions || []).map(m => m.id));
           const missingAchievements = FARM_ACHIEVEMENTS_DATA.filter(ach => !currentMissionIds.has(ach.id));
 
           if (missingAchievements.length > 0) {
-              newState.missions = [...newState.missions, ...missingAchievements];
+              newState.missions = [...(newState.missions || []), ...missingAchievements];
               changed = true;
           }
 
           // 3. DAILY MISSIONS UPDATE
           if (prev.lastMissionUpdate !== todayStr) {
               // Filter out old daily missions
-              const currentAchievements = newState.missions.filter(m => m.category === 'ACHIEVEMENT');
+              const currentAchievements = (newState.missions || []).filter(m => m.category === 'ACHIEVEMENT');
               
               // Pick new daily missions
               const dailies = [...DAILY_MISSION_POOL]
@@ -397,9 +400,6 @@ export const useFarmGame = (
                                     } else {
                                         // Storage full: Wait until collected. 
                                         // We pause production by NOT clearing fedAt or resetting queue.
-                                        // Basically the animal stands there with product ready but can't drop it yet.
-                                        // Or we can just let it finish and sit idle.
-                                        // Simplest: Don't add to storage, don't consume queue, just wait.
                                     }
                                 }
                             }
