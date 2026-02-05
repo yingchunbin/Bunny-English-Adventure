@@ -71,7 +71,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
               }, 500);
           }
       }
-  }, [questionCount, words]); 
+  }, []); // Empty dependency array ensures this only runs ONCE when the modal opens
 
   const playAudio = () => {
       if (!questions[currentQIdx]) return;

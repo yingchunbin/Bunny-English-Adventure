@@ -1,13 +1,14 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GachaItem, UserState, Rarity, Word } from '../types';
 import { GACHA_ITEMS } from '../data/gachaData';
 import { Avatar } from './Avatar';
 import { Star, Home, RefreshCw, Trophy, HelpCircle, ArrowRight, Check, X, Shield, Zap, Plus, Sparkles, Lock } from 'lucide-react';
-import { playSFX } from '../utils/sound';
+import { playSFX, initAudio } from '../utils/sound'; // Imported initAudio
 import { LearningQuizModal } from './farm/LearningQuizModal';
 import { LEVELS } from '../constants';
 import { resolveImage } from '../utils/imageUtils';
+import { ConfirmModal } from './ui/ConfirmModal';
 
 interface GachaScreenProps {
   userState: UserState;
@@ -29,7 +30,7 @@ const DinoEgg = ({ size = 100, className = "" }: { size?: number, className?: st
     viewBox="0 0 100 120"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    className={`drop-shadow-xl ${className}`}
+    className={`${className}`}
     style={{ overflow: 'visible' }}
   >
     <defs>
@@ -81,6 +82,9 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   
   // Ticker State
   const [isSpinning, setIsSpinning] = useState(false);
+  // Ref to track spinning state in the sound loop callback to avoid stale closures
+  const isSpinningRef = useRef(false);
+
   const [tickerItems, setTickerItems] = useState<Rarity[]>([]); 
   const [scrollX, setScrollX] = useState(0);
   const [transitionDuration, setTransitionDuration] = useState(0);
@@ -94,6 +98,12 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   const [confirmEquip, setConfirmEquip] = useState<GachaItem | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<'EASY' | 'MEDIUM' | 'HARD' | null>(null);
 
+  // In-Game Alert
+  const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'INFO' | 'DANGER' } | null>(null);
+
+  // Use Memo for words to prevent re-renders in child modals
+  const allWords = useMemo(() => LEVELS.flatMap(l => l.words), []);
+
   // -- HELPERS --
   const ownedIds = userState.gachaCollection || [];
   const ownedItems = GACHA_ITEMS.filter(item => ownedIds.includes(item.id));
@@ -106,28 +116,32 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
               text: 'text-yellow-700', 
               shadow: 'shadow-yellow-200',
               // Image specific glow - applied directly to img tag for contour glow
-              imageGlow: 'drop-shadow-[0_0_20px_rgba(250,204,21,1)] filter brightness-110 animate-pulse' 
+              imageGlow: 'drop-shadow-[0_0_20px_rgba(250,204,21,1)] filter brightness-110 animate-pulse',
+              eggGlow: 'drop-shadow-[0_0_30px_rgba(234,179,8,0.9)]'
           };
           case 'EPIC': return { 
               border: 'border-purple-400', 
               bg: 'bg-purple-100', 
               text: 'text-purple-700', 
               shadow: 'shadow-purple-200',
-              imageGlow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] filter contrast-125'
+              imageGlow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.9)] filter contrast-125',
+              eggGlow: 'drop-shadow-[0_0_25px_rgba(168,85,247,0.8)]'
           };
           case 'RARE': return { 
               border: 'border-blue-400', 
               bg: 'bg-blue-100', 
               text: 'text-blue-700', 
               shadow: 'shadow-blue-200',
-              imageGlow: 'drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]'
+              imageGlow: 'drop-shadow-[0_0_8px_rgba(96,165,250,0.8)]',
+              eggGlow: 'drop-shadow-[0_0_20px_rgba(96,165,250,0.7)]'
           };
           default: return { 
               border: 'border-slate-300', 
               bg: 'bg-slate-100', 
               text: 'text-slate-600', 
               shadow: 'shadow-slate-200',
-              imageGlow: '' 
+              imageGlow: '',
+              eggGlow: 'drop-shadow-lg'
           };
       }
   };
@@ -152,25 +166,32 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
 
   // --- SOUND TICKER EFFECT ---
   useEffect(() => {
+      isSpinningRef.current = isSpinning;
+      
       if (!isSpinning) return;
       
-      let speed = 50;
+      let speed = 50; // Starting speed (fast)
       let time = 0;
+      let timerId: number;
+
       const tickLoop = () => {
-          if (!isSpinning) return;
+          if (!isSpinningRef.current) return;
+          
           playSFX('tick');
           
+          // Slow down curve
           time += speed;
-          if (time > 3000) speed += 10;
-          if (time > 4000) speed += 30;
+          if (time > 3000) speed += 15;
+          if (time > 4000) speed += 40;
           
-          if (time < 5000) {
-              setTimeout(tickLoop, speed);
+          // Stop sound shortly before visual stop (5500ms)
+          if (time < 5200) {
+              timerId = window.setTimeout(tickLoop, speed);
           }
       };
       
       tickLoop();
-      return () => {};
+      return () => clearTimeout(timerId);
   }, [isSpinning]);
 
   // --- ACTIONS ---
@@ -215,12 +236,15 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           return;
       }
 
+      // Initialize Audio Context on user interaction to enable auto-play
+      initAudio();
+
       const bestItem = prepareSpin(count);
       if (!bestItem) return;
 
       onUpdateState(prev => ({ ...prev, stars: prev.stars - cost }));
       setIsSpinning(true);
-      playSFX('click');
+      // Removed playSFX('click') here to let the tick loop start cleanly
 
       setTimeout(() => {
           const itemFullWidth = CARD_WIDTH + CARD_GAP;
@@ -318,10 +342,16 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                >
                    {tickerItems.map((rarity, idx) => {
                        const style = getRarityStyle(rarity);
+                       // Add a glow style based on rarity to the box
+                       const boxGlow = rarity === 'LEGENDARY' ? 'shadow-[0_0_20px_rgba(234,179,8,0.8)] border-yellow-300' 
+                                     : rarity === 'EPIC' ? 'shadow-[0_0_15px_rgba(168,85,247,0.8)] border-purple-400' 
+                                     : rarity === 'RARE' ? 'shadow-[0_0_10px_rgba(59,130,246,0.5)] border-blue-400' 
+                                     : '';
+
                        return (
                            <div 
                                 key={idx} 
-                                className={`flex-shrink-0 mx-[6px] rounded-xl border-4 ${style.border} ${style.bg} flex items-center justify-center relative shadow-inner`}
+                                className={`flex-shrink-0 mx-[6px] rounded-xl border-4 ${style.border} ${style.bg} flex items-center justify-center relative shadow-inner ${boxGlow}`}
                                 style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
                            >
                                <div className="absolute inset-0 bg-white/10 opacity-50 rounded-lg"></div>
@@ -375,32 +405,39 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       const shakeClass = revealProgress > 0 && !isRevealed ? "animate-wiggle" : "";
 
       return (
-          <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4 animate-fadeIn">
+          <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-fadeIn">
               {!isRevealed ? (
                   <>
-                      <div className="text-white text-2xl font-black mb-8 animate-bounce uppercase tracking-widest text-center">
+                      <div className="text-white text-2xl font-black mb-12 animate-bounce uppercase tracking-widest text-center">
                           {pendingRewards.length > 1 ? "Trứng Vàng!" : "Nặn trứng nào!"} <br/>
                           <span className="text-sm font-normal opacity-70 normal-case">(Nhấp liên tục vào trứng)</span>
                       </div>
                       
+                      {/* EGG CONTAINER: No box, just egg + glow */}
                       <div 
-                          className={`w-64 h-80 rounded-[3rem] border-8 ${style.border} ${style.bg} shadow-[0_0_50px_rgba(255,255,255,0.2)] flex items-center justify-center relative cursor-pointer active:scale-95 transition-transform ${shakeClass}`}
+                          className={`relative w-64 h-64 flex items-center justify-center cursor-pointer active:scale-95 transition-transform ${shakeClass}`}
                           onClick={handleRevealInteraction}
                       >
-                           <div className="transition-transform duration-100" style={{ transform: `scale(${1 + (revealProgress / 500)})` }}>
-                               <DinoEgg size={180} />
+                           <div className="transition-transform duration-100 z-10" style={{ transform: `scale(${1 + (revealProgress / 500)})` }}>
+                               <DinoEgg size={220} className={style.eggGlow} />
                            </div>
                            
-                           {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/40 rotate-45 rounded-full filter blur-[1px]"></div>}
-                           {revealProgress > 60 && <div className="absolute bottom-1/3 right-1/3 w-16 h-1 bg-black/40 -rotate-12 rounded-full filter blur-[1px]"></div>}
-                           {revealProgress > 80 && <div className="absolute inset-0 bg-white/30 animate-pulse rounded-[2.5rem]"></div>}
+                           {/* Cracks visuals */}
+                           {revealProgress > 30 && <div className="absolute top-1/4 left-1/4 w-12 h-1 bg-black/40 rotate-45 rounded-full filter blur-[1px] z-20"></div>}
+                           {revealProgress > 60 && <div className="absolute bottom-1/3 right-1/3 w-16 h-1 bg-black/40 -rotate-12 rounded-full filter blur-[1px] z-20"></div>}
+                           {revealProgress > 80 && <div className="absolute inset-0 bg-white/30 animate-pulse rounded-full z-20 mix-blend-overlay"></div>}
                            
-                           <div className="absolute bottom-6 font-black text-2xl text-slate-900/20 uppercase tracking-widest">
+                           {/* Glow behind egg based on rarity */}
+                           {['LEGENDARY', 'EPIC'].includes(bestItem.rarity) && (
+                               <div className={`absolute inset-0 blur-3xl opacity-50 rounded-full animate-pulse -z-10 ${bestItem.rarity === 'LEGENDARY' ? 'bg-yellow-500' : 'bg-purple-500'}`}></div>
+                           )}
+
+                           <div className="absolute -bottom-16 font-black text-2xl text-white/50 uppercase tracking-widest animate-pulse">
                                ???
                            </div>
                       </div>
 
-                      <div className="w-64 h-4 bg-slate-700 rounded-full mt-8 overflow-hidden border-2 border-slate-600">
+                      <div className="w-64 h-4 bg-slate-700/50 rounded-full mt-16 overflow-hidden border-2 border-white/20">
                           <div className="h-full bg-yellow-400 transition-all duration-200" style={{ width: `${revealProgress}%` }}></div>
                       </div>
                   </>
@@ -662,8 +699,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           </div>
       </div>
   );
-
-  const allWords = LEVELS.flatMap(l => l.words);
   
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-fadeIn relative overflow-hidden">
@@ -707,9 +742,17 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                 questionCount={activeQuiz === 'EASY' ? 5 : activeQuiz === 'MEDIUM' ? 10 : 15}
                 onSuccess={handleQuizSuccess}
                 onClose={() => setActiveQuiz(null)}
-                onShowAlert={(msg) => alert(msg)}
+                onShowAlert={(msg, type) => setAlertConfig({ isOpen: true, message: msg, type })}
             />
         )}
+
+        <ConfirmModal 
+            isOpen={!!alertConfig}
+            message={alertConfig?.message || ''}
+            onConfirm={() => setAlertConfig(null)}
+            type={alertConfig?.type || 'INFO'}
+            singleButton={true}
+        />
     </div>
   );
 };

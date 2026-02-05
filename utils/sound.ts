@@ -136,7 +136,7 @@ const playTone = (freq: number, type: OscillatorType, duration: number, startTim
   const volume = sfxVol * 0.3 * volScale;
   
   gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
-  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + startTime + 0.05);
+  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + startTime + 0.01); // Faster attack
   gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + startTime + duration);
 
   osc.connect(gain);
@@ -164,8 +164,10 @@ export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip'
       case 'flip':
         playTone(400, 'triangle', 0.1, 0, 0.3);
         break;
-      case 'tick': // Ticker sound
-        playTone(800, 'square', 0.03, 0, 0.2);
+      case 'tick': // Ticker sound - adjusted to be clickier
+        // Using 'triangle' wave for a softer click than 'square' but distinct
+        // Short duration 0.05s
+        playTone(600, 'triangle', 0.05, 0, 0.4); 
         break;
       case 'crack': // Egg crack
         playTone(150, 'sawtooth', 0.1, 0, 0.8);

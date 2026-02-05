@@ -16,17 +16,14 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
   const filteredMissions = missions
     .filter(m => m.category === activeTab)
     .sort((a, b) => {
-        // Priority 1: Claimable
         const aClaimable = a.completed && !a.claimed;
         const bClaimable = b.completed && !b.claimed;
         if (aClaimable && !bClaimable) return -1;
         if (!aClaimable && bClaimable) return 1;
 
-        // Priority 3: Claimed (Push to bottom)
         if (a.claimed && !b.claimed) return 1;
         if (!a.claimed && b.claimed) return -1;
 
-        // Priority 2: Progress % Descending
         const progA = a.current / a.target;
         const progB = b.current / b.target;
         return progB - progA;
@@ -97,7 +94,9 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                         <h4 className={`font-black text-xs sm:text-sm uppercase leading-tight mb-1 ${isCompleted ? 'text-green-700' : 'text-slate-700'}`}>{m.desc}</h4>
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-bold text-slate-400">Tiến độ:</span>
-                                            <span className={`text-[10px] font-black ${isCompleted ? 'text-green-600' : 'text-indigo-500'}`}>{m.current}/{m.target}</span>
+                                            <span className={`text-[10px] font-black ${isCompleted ? 'text-green-600' : 'text-indigo-500'}`}>
+                                                {m.current.toLocaleString()}/{m.target.toLocaleString()}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -107,24 +106,48 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                 </div>
 
                                 <div className="flex justify-between items-center relative z-10">
-                                    <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
-                                        <span className="text-[10px] text-yellow-600 font-bold uppercase mr-1">Quà:</span>
-                                        <span className="text-xs font-black text-yellow-700">+{m.reward.amount}</span>
-                                        {m.reward.type === 'COIN' ? <Coins size={14} className="text-yellow-500" fill="currentColor"/> : 
-                                         m.reward.type === 'WATER' ? <Droplets size={14} className="text-blue-500" fill="currentColor"/> :
-                                         m.reward.type === 'STAR' ? <Star size={14} className="text-purple-500" fill="currentColor"/> :
-                                         m.reward.type === 'FERTILIZER' ? <Zap size={14} className="text-amber-500" fill="currentColor"/> :
-                                         <Gift size={14} className="text-pink-500"/>}
+                                    {/* Rewards Display Section */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {m.rewards?.coins && m.rewards.coins > 0 && (
+                                            <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-200">
+                                                <Coins size={12} className="text-yellow-500" fill="currentColor"/>
+                                                <span className="text-xs font-black text-yellow-700">+{m.rewards.coins}</span>
+                                            </div>
+                                        )}
+                                        {m.rewards?.stars && m.rewards.stars > 0 && (
+                                            <div className="flex items-center gap-1 bg-purple-50 px-2 py-1 rounded-full border border-purple-200">
+                                                <Star size={12} className="text-purple-500" fill="currentColor"/>
+                                                <span className="text-xs font-black text-purple-700">+{m.rewards.stars}</span>
+                                            </div>
+                                        )}
+                                        {m.rewards?.water && m.rewards.water > 0 && (
+                                            <div className="flex items-center gap-1 bg-blue-50 px-2 py-1 rounded-full border border-blue-200">
+                                                <Droplets size={12} className="text-blue-500" fill="currentColor"/>
+                                                <span className="text-xs font-black text-blue-700">+{m.rewards.water}</span>
+                                            </div>
+                                        )}
+                                        {m.rewards?.fertilizer && m.rewards.fertilizer > 0 && (
+                                            <div className="flex items-center gap-1 bg-green-50 px-2 py-1 rounded-full border border-green-200">
+                                                <Zap size={12} className="text-green-500" fill="currentColor"/>
+                                                <span className="text-xs font-black text-green-700">+{m.rewards.fertilizer}</span>
+                                            </div>
+                                        )}
+                                        {/* Backwards compatibility if rewards object is missing but legacy reward field exists (though logic should prevent this) */}
+                                        {(!m.rewards && (m as any).reward) && (
+                                            <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-full border border-slate-200">
+                                                <span className="text-xs font-black text-slate-700">+{(m as any).reward.amount}</span>
+                                            </div>
+                                        )}
                                     </div>
                                     
                                     {isClaimable ? (
                                         <button onClick={(e) => onClaim(m, e)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce">
-                                            <Gift size={14}/> Nhận Quà
+                                            <Gift size={14}/> Nhận
                                         </button>
                                     ) : m.claimed ? (
                                         <span className="text-[10px] font-black text-slate-400 uppercase bg-slate-100 px-3 py-1 rounded-lg">Đã nhận</span>
                                     ) : (
-                                        <span className="text-[10px] font-bold text-slate-300 italic">Đang thực hiện...</span>
+                                        <span className="text-[10px] font-bold text-slate-300 italic">Đang làm...</span>
                                     )}
                                 </div>
                                 
