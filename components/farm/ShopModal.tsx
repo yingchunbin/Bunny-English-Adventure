@@ -1,5 +1,6 @@
 
-import React, { useState, memo } from 'react';
+// ... imports
+import React, { useState } from 'react';
 import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
 import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp, Shield, Zap } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
@@ -21,7 +22,7 @@ interface ShopModalProps {
   initialTab?: 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR';
 }
 
-const ShopModalComponent: React.FC<ShopModalProps> = ({ 
+export const ShopModal: React.FC<ShopModalProps> = ({ 
     crops, animals = [], machines = [], decorations, recipes = [], products = [],
     userState, onBuySeed, onBuyAnimal, onBuyMachine, onBuyDecor, onClose, initialTab = 'SEEDS' 
 }) => {
@@ -29,6 +30,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
   const [seedAmounts, setSeedAmounts] = useState<Record<string, number>>({});
   const farmLevel = userState.farmLevel || 1;
 
+  // ... (adjustSeedAmount, handleBuySeed, renderBuyButton helpers same as before) ...
   const adjustSeedAmount = (id: string, delta: number) => {
     const current = seedAmounts[id] || 1;
     const next = Math.max(1, current + delta);
@@ -174,6 +176,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
 
             <div className="flex-1 overflow-y-auto p-4 bg-slate-50 no-scrollbar">
                 
+                {/* SEEDS, ANIMALS, MACHINES code remains same ... */}
                 {tab === 'SEEDS' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedCrops.map(crop => {
@@ -218,6 +221,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
+                {/* ANIMALS */}
                 {tab === 'ANIMALS' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedAnimals.map(animal => {
@@ -266,6 +270,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
+                {/* MACHINES */}
                 {tab === 'MACHINES' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedMachines.map(machine => {
@@ -314,6 +319,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                     </div>
                 )}
 
+                {/* DECOR */}
                 {tab === 'DECOR' && (
                     <div className="grid grid-cols-1 gap-3">
                         {sortedDecor.map(decor => {
@@ -323,6 +329,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                             
                             const rarity = getRarityInfo(decor.cost);
 
+                            // Handle multiple buffs presentation
                             const renderBuffs = () => {
                                 const buffs = decor.multiBuffs || (decor.buff ? [decor.buff] : []);
                                 if (buffs.length === 0) return null;
@@ -344,6 +351,7 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                                     key={decor.id} 
                                     className={`p-4 rounded-3xl border-4 bg-white shadow-sm flex items-center gap-4 transition-all relative overflow-hidden group ${rarity.border}`}
                                 >
+                                    {/* Rarity Label */}
                                     <div className={`absolute top-0 left-0 px-3 py-0.5 rounded-br-xl text-[8px] font-black text-white uppercase tracking-widest ${rarity.bg.replace('bg-','bg-').replace('50','500')}`}>
                                         {rarity.label}
                                     </div>
@@ -377,5 +385,3 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
     </div>
   );
 };
-
-export const ShopModal = memo(ShopModalComponent);

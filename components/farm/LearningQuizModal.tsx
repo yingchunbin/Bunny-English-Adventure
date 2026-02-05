@@ -27,29 +27,21 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
   
   // Initialize Questions Once on Mount
   useEffect(() => {
-      // 1. Deduplicate words by ID to prevent logic errors (important when merging multiple levels)
-      const uniqueWordsMap = new Map();
-      words.forEach(w => uniqueWordsMap.set(w.id, w));
-      const uniqueWords = Array.from(uniqueWordsMap.values());
-
-      if (uniqueWords.length >= 4) {
+      if (words.length >= 4) {
           const newQuestions: Question[] = [];
           for (let i = 0; i < questionCount; i++) {
-              // Pick random target
-              const targetIndex = Math.floor(Math.random() * uniqueWords.length);
-              const target = uniqueWords[targetIndex];
+              const target = words[Math.floor(Math.random() * words.length)];
               
-              // Select Distractors: Filter out target, shuffle, take exactly 3
-              const distractors = uniqueWords
+              // Ensure we get exactly 3 unique distractors
+              const distractors = words
                   .filter(w => w.id !== target.id)
                   .sort(() => 0.5 - Math.random())
                   .slice(0, 3);
               
-              // Random mode
               const modes: ('EN_TO_VI' | 'VI_TO_EN' | 'LISTEN')[] = ['EN_TO_VI', 'VI_TO_EN', 'LISTEN'];
               const mode = modes[Math.floor(Math.random() * modes.length)];
               
-              // Combine and Shuffle Options (Target + 3 Distractors = 4 Options)
+              // Important: Shuffle options here and store them fixed for this question
               const options = [target, ...distractors].sort(() => 0.5 - Math.random());
 
               newQuestions.push({
@@ -63,7 +55,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
           setCurrentQIdx(0);
           
           // Auto play first audio if listen mode
-          if (newQuestions[0] && newQuestions[0].mode === 'LISTEN') {
+          if (newQuestions[0].mode === 'LISTEN') {
               setTimeout(() => {
                   const u = new SpeechSynthesisUtterance(newQuestions[0].target.english);
                   u.lang = 'en-US';
@@ -71,7 +63,7 @@ export const LearningQuizModal: React.FC<LearningQuizModalProps> = ({ words, typ
               }, 500);
           }
       }
-  }, [questionCount, words]); 
+  }, [questionCount]); // Re-run if count changes, but ideally stable on mount
 
   const playAudio = () => {
       if (!questions[currentQIdx]) return;
