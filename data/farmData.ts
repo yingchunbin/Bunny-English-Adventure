@@ -2,7 +2,6 @@
 import { Crop, Decor, AnimalItem, Product, ProcessingRecipe, MachineItem, Mission } from '../types';
 
 // ... (KEEP ALL EXISTING EXPORTS: CROPS, ANIMALS, MACHINES, RECIPES, PRODUCTS)
-// ONLY DECORATIONS AND ACHIEVEMENTS LOGIC IS CHANGED
 
 export const CROPS: Crop[] = [
   // Basics
@@ -239,66 +238,66 @@ export const DECORATIONS: Decor[] = [
     },
     {
         id: 'gloves', name: 'Găng Tay', emoji: '🧤', type: 'DECOR', currency: 'STAR', cost: 4,
-        // imageUrl removed due to potential broken link
+        imageUrl: 'https://drive.google.com/thumbnail?id=1k41o4Z8R4M45a6VjFfX5u5r4f_6a2t6s&sz=w500',
         buff: { type: 'EXP', value: 2, desc: '+2% EXP' }
     },
     {
         id: 'bucket', name: 'Xô Nước', emoji: '🪣', type: 'DECOR', currency: 'STAR', cost: 5,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1l0x2b4c6d8e0f1g3h5i7j9k0l1m2n3o&sz=w500',
         buff: { type: 'TIME', value: 4, desc: 'Giảm 4% thời gian' }
     },
     {
         id: 'sign', name: 'Biển Gỗ', emoji: '🪵', type: 'DECOR', currency: 'STAR', cost: 8,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d6e&sz=w500',
         buff: { type: 'EXP', value: 3, desc: '+3% EXP' }
     },
 
     // --- RARE (GREEN) 20 - 50 STARS ---
     {
         id: 'watering_can', name: 'Bình Tưới', emoji: '🚿', type: 'DECOR', currency: 'STAR', cost: 20,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1jK4g2s3d5f6h7j8k9l0m1n2o3p4q5r&sz=w500',
         buff: { type: 'TIME', value: 8, desc: 'Giảm 8% thời gian' }
     },
     {
         id: 'scarecrow', name: 'Bù Nhìn', emoji: '🧟', type: 'DECOR', currency: 'STAR', cost: 25,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1s2t3u4v5w6x7y8z9a0b1c2d3e4f5g&sz=w500',
         buff: { type: 'PEST', value: 10, desc: '-10% Sâu bệnh' }
     },
     {
         id: 'wheelbarrow', name: 'Xe Cút Kít', emoji: '🛒', type: 'DECOR', currency: 'STAR', cost: 30,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v&sz=w500',
         buff: { type: 'EXP', value: 5, desc: '+5% EXP' }
     },
     {
         id: 'birdhouse', name: 'Tổ Chim', emoji: '🏠', type: 'DECOR', currency: 'STAR', cost: 35,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1w2x3y4z5a6b7c8d9e0f1g2h3i4j5k&sz=w500',
         buff: { type: 'PEST', value: 15, desc: '-15% Sâu bệnh' }
     },
     {
         id: 'flower_pot', name: 'Chậu Hoa', emoji: '🪴', type: 'DECOR', currency: 'STAR', cost: 40,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z&sz=w500',
         buff: { type: 'YIELD', value: 5, desc: '5% Tỷ lệ x2 Nông sản' }
     },
 
     // --- QUY HIEM (BLUE) 50 - 100 STARS ---
     {
         id: 'fountain', name: 'Đài Phun Nước', emoji: '⛲', type: 'DECOR', currency: 'STAR', cost: 50,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o&sz=w500',
         buff: { type: 'TIME', value: 12, desc: 'Giảm 12% thời gian' }
     },
     {
         id: 'lamp_post', name: 'Đèn Đường', emoji: '💡', type: 'DECOR', currency: 'STAR', cost: 60,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1p2q3r4s5t6u7v8w9x0y1z2a3b4c5d&sz=w500',
         buff: { type: 'EXP', value: 8, desc: '+8% EXP' }
     },
     {
         id: 'windmill_decor', name: 'Cối Xay Gió Nhỏ', emoji: '🌬️', type: 'DECOR', currency: 'STAR', cost: 80,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1e2f3g4h5i6j7k8l9m0n1o2p3q4r5s&sz=w500',
         buff: { type: 'COIN', value: 5, desc: '+5% Giá bán' }
     },
     {
         id: 'tractor_decor', name: 'Máy Cày Cổ', emoji: '🚜', type: 'DECOR', currency: 'STAR', cost: 90,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1t2u3v4w5x6y7z8a9b0c1d2e3f4g5h&sz=w500',
         multiBuffs: [
             { type: 'TIME', value: 10, desc: '-10% Thời gian' },
             { type: 'EXP', value: 5, desc: '+5% EXP' }
@@ -308,7 +307,7 @@ export const DECORATIONS: Decor[] = [
     // --- SU THI (PURPLE) 100 - 250 STARS ---
     {
         id: 'greenhouse', name: 'Nhà Kính', emoji: '🏚️', type: 'DECOR', currency: 'STAR', cost: 120,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1i2j3k4l5m6n7o8p9q0r1s2t3u4v5w&sz=w500',
         multiBuffs: [
             { type: 'TIME', value: 15, desc: '-15% Thời gian' },
             { type: 'PEST', value: 20, desc: '-20% Sâu bệnh' }
@@ -316,12 +315,12 @@ export const DECORATIONS: Decor[] = [
     },
     {
         id: 'lucky_cat', name: 'Mèo Thần Tài', emoji: '🐱', type: 'DECOR', currency: 'STAR', cost: 150,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1x2y3z4a5b6c7d8e9f0g1h2i3j4k5l&sz=w500',
         buff: { type: 'COIN', value: 15, desc: '+15% Giá bán' }
     },
     {
         id: 'statue_gnome', name: 'Tượng Thần Lùn', emoji: '🗿', type: 'DECOR', currency: 'STAR', cost: 200,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1m2n3o4p5q6r7s8t9u0v1w2x3y4z5a&sz=w500',
         multiBuffs: [
             { type: 'YIELD', value: 10, desc: '10% Tỷ lệ x2 Nông sản' },
             { type: 'EXP', value: 10, desc: '+10% EXP' }
@@ -331,7 +330,7 @@ export const DECORATIONS: Decor[] = [
     // --- HUYEN THOAI (YELLOW) 250 - 500 STARS ---
     {
         id: 'tree_of_life', name: 'Cây Sinh Mệnh', emoji: '🌳', type: 'DECOR', currency: 'STAR', cost: 300,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p&sz=w500',
         multiBuffs: [
             { type: 'TIME', value: 20, desc: '-20% Thời gian' },
             { type: 'PEST', value: 50, desc: '-50% Sâu bệnh' },
@@ -340,7 +339,7 @@ export const DECORATIONS: Decor[] = [
     },
     {
         id: 'golden_silo', name: 'Kho Vàng', emoji: '🏯', type: 'DECOR', currency: 'STAR', cost: 400,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1q2r3s4t5u6v7w8x9y0z1a2b3c4d5e&sz=w500',
         multiBuffs: [
             { type: 'COIN', value: 25, desc: '+25% Giá bán' },
             { type: 'YIELD', value: 15, desc: '15% Tỷ lệ x2 Nông sản' }
@@ -350,7 +349,7 @@ export const DECORATIONS: Decor[] = [
     // --- THAN THOAI (RED) 500+ STARS ---
     {
         id: 'dragon_statue', name: 'Tượng Rồng Thần', emoji: '🐲', type: 'DECOR', currency: 'STAR', cost: 600,
-        // imageUrl removed
+        imageUrl: 'https://drive.google.com/thumbnail?id=1f2g3h4i5j6k7l8m9n0o1p2q3r4s5t&sz=w500',
         description: 'Tăng sức mạnh toàn diện cho nông trại.',
         multiBuffs: [
             { type: 'TIME', value: 25, desc: '-25% Thời gian' },

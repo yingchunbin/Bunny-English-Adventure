@@ -13,33 +13,62 @@ interface MissionModalProps {
 export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, onClose }) => {
   const [activeTab, setActiveTab] = useState<'DAILY' | 'ACHIEVEMENT'>('DAILY');
   
-  // OPTIMIZATION: Memoize filtering and sorting to prevent excessive recalculation
+  // OPTIMIZATION: Logic to show only relevant missions per category
   const filteredMissions = useMemo(() => {
-    return (missions || [])
-      .filter(m => m && m.category === activeTab)
-      .sort((a, b) => {
-          // Priority 1: Claimable
-          const aClaimable = a.completed && !a.claimed;
-          const bClaimable = b.completed && !b.claimed;
-          if (aClaimable && !bClaimable) return -1;
-          if (!aClaimable && bClaimable) return 1;
+    const rawList = missions || [];
 
-          // Priority 2: In Progress (Completed = false, Claimed = false)
-          const aInProgress = !a.completed;
-          const bInProgress = !b.completed;
-          if (aInProgress && !bInProgress) return -1;
-          if (!aInProgress && bInProgress) return 1;
+    if (activeTab === 'DAILY') {
+        // Show all daily missions (usually 5-10 items, no heavy filtering needed)
+        return rawList.filter(m => m.category === 'DAILY').sort((a,b) => {
+             // Sort by status: Claimable -> In Progress -> Completed
+             if (a.completed && !a.claimed) return -1;
+             if (b.completed && !b.claimed) return 1;
+             if (!a.completed && b.completed) return -1;
+             if (a.completed && !b.completed) return 1;
+             return 0;
+        });
+    } else {
+        // ACHIEVEMENT LOGIC: Show next 2 milestones per category type
+        const achievements = rawList.filter(m => m.category === 'ACHIEVEMENT');
+        const groups: Record<string, Mission[]> = {};
+        
+        // 1. Group by Type (HARVEST, FEED, etc.)
+        achievements.forEach(m => {
+            if (!groups[m.type]) groups[m.type] = [];
+            groups[m.type].push(m);
+        });
 
-          // Priority 3: Progress % Descending
-          const progA = (a.current || 0) / (a.target || 1);
-          const progB = (b.current || 0) / (b.target || 1);
-          if (progA !== progB) return progB - progA;
+        let result: Mission[] = [];
 
-          return 0;
-      })
-      // LAG FIX: Limit rendered items. Showing 500 achievements kills performance.
-      // We show: All Claimable + All In Progress + Top 10 Claimed (History)
-      .slice(0, 20); 
+        Object.values(groups).forEach(group => {
+            // 2. Sort by Target (Level 1, Level 2...)
+            group.sort((a, b) => a.target - b.target);
+
+            // 3. Find the first active/unclaimed mission index
+            // We look for the first one that is EITHER (Completed & Unclaimed) OR (Not Completed)
+            // If all are claimed, index will be -1 (which means we might show the last ones or nothing)
+            let firstActiveIdx = group.findIndex(m => !m.claimed);
+            
+            if (firstActiveIdx === -1) {
+                // All claimed? Maybe show the last one to show "Maxed Out" status? 
+                // Or show nothing? Let's show nothing to keep list clean, or the very last one.
+                // Let's show the last one completed.
+                if (group.length > 0) result.push(group[group.length - 1]);
+            } else {
+                // Show this one AND the next one (if exists)
+                // This gives the user a view of "Current Goal" and "Next Goal"
+                const activeMissions = group.slice(firstActiveIdx, firstActiveIdx + 2);
+                result = [...result, ...activeMissions];
+            }
+        });
+        
+        // 4. Final sort of the result list to put Claimable ones at top
+        return result.sort((a, b) => {
+             if (a.completed && !a.claimed) return -1;
+             if (b.completed && !b.claimed) return 1;
+             return 0;
+        });
+    }
   }, [missions, activeTab]);
 
   const getMissionIcon = (type: Mission['type']) => {
