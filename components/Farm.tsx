@@ -368,9 +368,15 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       playSFX('coins');
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       
-      const rewards = mission.rewards || (mission.reward ? [mission.reward] : []);
+      // Defensively parse rewards
+      let rewardsList: any[] = [];
+      if (Array.isArray(mission.rewards)) {
+          rewardsList = mission.rewards;
+      } else if (mission.reward) {
+          rewardsList = [mission.reward];
+      }
 
-      rewards.forEach((r: any) => {
+      rewardsList.forEach((r: any) => {
           if (!r) return;
           if(r.type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
           if(r.type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);

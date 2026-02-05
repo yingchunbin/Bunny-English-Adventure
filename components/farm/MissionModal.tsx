@@ -89,10 +89,18 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                         const isCompleted = m.completed;
                         const isClaimable = isCompleted && !m.claimed;
                         
-                        // Defensive Reward Handling: Filter out null/undefined rewards
-                        // Support both new 'rewards' array and legacy 'reward' object
-                        const rawRewards = m.rewards || (m.reward ? [m.reward] : []);
-                        const rewardsList = rawRewards.filter(r => r && typeof r === 'object' && typeof r.amount === 'number');
+                        // CRITICAL FIX: Robustly check if rewards is an array.
+                        // Sometimes data migration might leave it undefined or as an object.
+                        let safeRewards: any[] = [];
+                        if (Array.isArray(m.rewards)) {
+                            safeRewards = m.rewards;
+                        } else if (m.reward) {
+                            // Fallback to legacy single reward object
+                            safeRewards = [m.reward];
+                        }
+
+                        // Filter valid rewards
+                        const rewardsList = safeRewards.filter(r => r && typeof r === 'object' && typeof r.amount === 'number');
 
                         return (
                             <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isClaimable ? 'border-green-400 ring-4 ring-green-100 order-first' : 'border-white hover:border-indigo-200'}`}>
