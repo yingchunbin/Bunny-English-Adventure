@@ -173,14 +173,20 @@ export interface FarmOrder {
   expiresAt: number; 
 }
 
+export interface MissionReward {
+  type: 'WATER' | 'FERTILIZER' | 'COIN' | 'STAR';
+  amount: number;
+}
+
 export interface Mission {
   id: string;
   desc: string;
-  type: 'LEARN' | 'HARVEST' | 'EARN' | 'WATER' | 'FERTILIZE' | 'FEED' | 'QUIZ';
+  type: 'LEARN' | 'HARVEST' | 'EARN' | 'WATER' | 'FERTILIZE' | 'FEED' | 'QUIZ' | 'PLANT' | 'BUY' | 'SELL';
   category: 'DAILY' | 'ACHIEVEMENT';
   target: number;
   current: number;
-  reward: { type: 'WATER' | 'FERTILIZER' | 'COIN' | 'STAR', amount: number };
+  reward?: MissionReward; // Legacy single reward (optional now)
+  rewards?: MissionReward[]; // New multiple rewards support
   completed: boolean;
   claimed: boolean;
 }

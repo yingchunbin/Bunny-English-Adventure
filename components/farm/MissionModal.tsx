@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Mission } from '../../types';
+import { Mission, MissionReward } from '../../types';
 import { X, Gift, Coins, Droplets, Zap, Star, Tractor, Heart, CloudRain, Briefcase, CheckCircle } from 'lucide-react';
 import { Avatar } from '../Avatar';
 
@@ -27,8 +27,8 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
         if (!a.claimed && b.claimed) return -1;
 
         // Priority 2: Progress % Descending
-        const progA = a.current / a.target;
-        const progB = b.current / b.target;
+        const progA = (a.current || 0) / (a.target || 1);
+        const progB = (b.current || 0) / (b.target || 1);
         return progB - progA;
     });
 
@@ -41,6 +41,14 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
           case 'FERTILIZE': return <Zap size={24} className="text-purple-500" />;
           default: return <Star size={24} className="text-yellow-500" />;
       }
+  };
+
+  const getRewardIcon = (type: string) => {
+      if (type === 'COIN') return <Coins size={14} className="text-yellow-500" fill="currentColor"/>;
+      if (type === 'WATER') return <Droplets size={14} className="text-blue-500" fill="currentColor"/>;
+      if (type === 'STAR') return <Star size={14} className="text-purple-500" fill="currentColor"/>;
+      if (type === 'FERTILIZER') return <Zap size={14} className="text-amber-500" fill="currentColor"/>;
+      return <Gift size={14} className="text-pink-500"/>;
   };
 
   return (
@@ -76,10 +84,13 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                     </div>
                 ) : (
                     filteredMissions.map(m => {
-                        const progress = Math.min(100, (m.current / m.target) * 100);
+                        const progress = Math.min(100, ((m.current || 0) / (m.target || 1)) * 100);
                         const isCompleted = m.completed;
                         const isClaimable = isCompleted && !m.claimed;
                         
+                        // Handle rewards safely (new array or old single object)
+                        const rewardsList: MissionReward[] = m.rewards || (m.reward ? [m.reward] : []);
+
                         return (
                             <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isClaimable ? 'border-green-400 ring-4 ring-green-100 order-first' : 'border-white hover:border-indigo-200'}`}>
                                 
@@ -107,18 +118,18 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                 </div>
 
                                 <div className="flex justify-between items-center relative z-10">
-                                    <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
-                                        <span className="text-[10px] text-yellow-600 font-bold uppercase mr-1">Quà:</span>
-                                        <span className="text-xs font-black text-yellow-700">+{m.reward.amount}</span>
-                                        {m.reward.type === 'COIN' ? <Coins size={14} className="text-yellow-500" fill="currentColor"/> : 
-                                         m.reward.type === 'WATER' ? <Droplets size={14} className="text-blue-500" fill="currentColor"/> :
-                                         m.reward.type === 'STAR' ? <Star size={14} className="text-purple-500" fill="currentColor"/> :
-                                         m.reward.type === 'FERTILIZER' ? <Zap size={14} className="text-amber-500" fill="currentColor"/> :
-                                         <Gift size={14} className="text-pink-500"/>}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Quà:</span>
+                                        {rewardsList.map((r, i) => (
+                                            <div key={i} className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-200">
+                                                <span className="text-xs font-black text-yellow-700">+{r.amount}</span>
+                                                {getRewardIcon(r.type)}
+                                            </div>
+                                        ))}
                                     </div>
                                     
                                     {isClaimable ? (
-                                        <button onClick={(e) => onClaim(m, e)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce">
+                                        <button onClick={(e) => onClaim(m, e)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce ml-2">
                                             <Gift size={14}/> Nhận Quà
                                         </button>
                                     ) : m.claimed ? (
