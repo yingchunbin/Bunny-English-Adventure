@@ -13,8 +13,9 @@ interface MissionModalProps {
 export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, onClose }) => {
   const [activeTab, setActiveTab] = useState<'DAILY' | 'ACHIEVEMENT'>('DAILY');
   
-  const filteredMissions = missions
-    .filter(m => m.category === activeTab)
+  // Filter and sort missions defensively
+  const filteredMissions = (missions || [])
+    .filter(m => m && m.category === activeTab) // Ensure m exists
     .sort((a, b) => {
         // Priority 1: Claimable
         const aClaimable = a.completed && !a.claimed;
@@ -88,8 +89,10 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                         const isCompleted = m.completed;
                         const isClaimable = isCompleted && !m.claimed;
                         
-                        // Handle rewards safely (new array or old single object)
-                        const rewardsList: MissionReward[] = m.rewards || (m.reward ? [m.reward] : []);
+                        // Defensive Reward Handling: Filter out null/undefined rewards
+                        // Support both new 'rewards' array and legacy 'reward' object
+                        const rawRewards = m.rewards || (m.reward ? [m.reward] : []);
+                        const rewardsList = rawRewards.filter(r => r && typeof r === 'object' && typeof r.amount === 'number');
 
                         return (
                             <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isClaimable ? 'border-green-400 ring-4 ring-green-100 order-first' : 'border-white hover:border-indigo-200'}`}>
