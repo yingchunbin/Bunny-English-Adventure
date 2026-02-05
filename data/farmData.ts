@@ -1,8 +1,9 @@
 
 import { Crop, Decor, AnimalItem, Product, ProcessingRecipe, MachineItem, Mission } from '../types';
 
-// ... (CROPS, ANIMALS, MACHINES, RECIPES, PRODUCTS, DECORATIONS remain unchanged - assuming they are static data lists)
-// RE-DECLARING CONSTANTS TO ENSURE FILE INTEGRITY IF USER COPY-PASTES
+// ... (CROPS, ANIMALS, MACHINES, RECIPES, PRODUCTS, DECORATIONS giữ nguyên như cũ, tôi chỉ viết lại phần generateAchievements để sửa lỗi)
+
+// RE-DECLARING CONSTANTS TO ENSURE FILE INTEGRITY
 export const CROPS: Crop[] = [
   { id: 'carrot', name: 'Cà rốt', emoji: '🥕', type: 'CROP', currency: 'COIN', cost: 10, sellPrice: 35, growthTime: 10, exp: 5, unlockReq: 0 }, 
   { id: 'wheat', name: 'Lúa mì', emoji: '🌾', type: 'CROP', currency: 'COIN', cost: 15, sellPrice: 50, growthTime: 30, exp: 10, unlockReq: 1 }, 
@@ -442,28 +443,25 @@ const generateAchievements = (): Mission[] => {
     ) => {
         targets.forEach(target => {
             let finalRewardType = rewardType;
-            let finalAmount = 0;
+            let finalAmount = 5; // Default safe value
 
             // DYNAMIC REWARD LOGIC - BOOSTED STARS
+            // Ensure minimum reward is never 0
             if (idPrefix === 'earn') {
                 finalRewardType = 'STAR';
-                // 100,000 coins -> 1000 stars (Ratio: 1%)
                 finalAmount = Math.max(5, Math.floor(target / 100)); 
             }
-            else if (idPrefix === 'hv') { // Harvest
-                // 10 items -> 5 stars. 100 items -> 10 stars.
-                // 100,000 items -> 2000 stars.
+            else if (idPrefix === 'hv') { 
                 finalRewardType = 'STAR'; 
-                finalAmount = Math.max(5, Math.floor(target / 20)); // Increased from /50
+                finalAmount = Math.max(5, Math.floor(target / 20)); 
             }
             else if (idPrefix === 'water' || idPrefix === 'feed') {
-                 // Water 10 times -> 5 stars.
                  finalRewardType = 'STAR'; 
                  finalAmount = Math.max(5, Math.floor(target / 5)); 
             }
             else if (idPrefix === 'quiz') {
                 finalRewardType = 'STAR';
-                finalAmount = Math.max(5, Math.floor(target)); // 1 Star per quiz answer
+                finalAmount = Math.max(5, Math.floor(target)); 
             }
 
             achievements.push({
@@ -480,19 +478,19 @@ const generateAchievements = (): Mission[] => {
         });
     };
 
-    // 1. HARVEST (Thu hoạch) - Expanded to ~25 levels
+    // 1. HARVEST (Thu hoạch)
     const harvestTargets = [
-        ...range(10, 100, 10),      // 10 items (10-100)
-        ...range(150, 500, 50),     // 8 items (150-500)
-        ...range(600, 1000, 100),   // 5 items (600-1000)
-        ...range(1500, 5000, 500),  // 8 items (1500-5000)
-        ...range(6000, 10000, 1000),// 5 items (6000-10000)
-        ...range(15000, 50000, 5000),// 8 items
+        ...range(10, 100, 10),      
+        ...range(150, 500, 50),     
+        ...range(600, 1000, 100),   
+        ...range(1500, 5000, 500),  
+        ...range(6000, 10000, 1000),
+        ...range(15000, 50000, 5000),
         100000, 250000, 500000, 1000000
     ]; 
     addAch('hv', 'HARVEST', (t) => `Thu hoạch ${t.toLocaleString()} nông sản`, harvestTargets, 'STAR');
 
-    // 2. EARN (Kiếm xu) - Expanded to ~20 levels
+    // 2. EARN (Kiếm xu)
     const earnTargets = [
         100, 200, 300, 400, 500, 750, 1000, 
         1500, 2000, 3000, 4000, 5000, 7500, 10000,
@@ -501,7 +499,7 @@ const generateAchievements = (): Mission[] => {
     ];
     addAch('earn', 'EARN', (t) => `Kiếm ${t.toLocaleString()} Xu`, earnTargets, 'STAR');
 
-    // 3. WATER (Tưới cây) - Expanded
+    // 3. WATER (Tưới cây)
     const waterTargets = [
         ...range(10, 100, 10),
         ...range(120, 300, 20),
@@ -510,7 +508,7 @@ const generateAchievements = (): Mission[] => {
     ];
     addAch('water', 'WATER', (t) => `Tưới cây ${t} lần`, waterTargets, 'STAR');
 
-    // 4. FEED (Cho ăn) - Expanded
+    // 4. FEED (Cho ăn)
     const feedTargets = [
         ...range(5, 50, 5),
         ...range(60, 200, 10),
@@ -519,7 +517,7 @@ const generateAchievements = (): Mission[] => {
     ];
     addAch('feed', 'FEED', (t) => `Cho thú ăn ${t} lần`, feedTargets, 'STAR');
 
-    // 5. QUIZ (Giải đố) - Expanded
+    // 5. QUIZ (Giải đố)
     const quizTargets = [
         ...range(5, 50, 5),
         ...range(60, 200, 20),

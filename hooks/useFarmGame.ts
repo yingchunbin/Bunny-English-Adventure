@@ -183,23 +183,61 @@ export const useFarmGame = (
       return ownedMachineIds.includes(recipe.machineId);
   };
 
-  // Initialization Effect
+  // Initialization Effect - CRITICAL FIX FOR ACHIEVEMENTS
   useEffect(() => {
       const todayStr = new Date().toDateString();
+      
       onUpdateState(prev => {
           let newState = { ...prev };
           let changed = false;
 
-          const currentMissionIds = new Set(prev.missions?.map(m => m.id) || []);
+          // 1. SYNC AND REPAIR EXISTING ACHIEVEMENTS
+          // Map of correct/latest static data
+          const staticMissionMap = new Map(FARM_ACHIEVEMENTS_DATA.map(m => [m.id, m]));
+          
+          if (prev.missions) {
+              const repairedMissions = prev.missions.map(userMission => {
+                  if (userMission.category === 'ACHIEVEMENT') {
+                      const staticData = staticMissionMap.get(userMission.id);
+                      if (staticData) {
+                          // Repair logic: If reward is 0 or mission description is outdated, update from static data
+                          // We preserve 'current', 'completed', 'claimed' status
+                          if (userMission.reward.amount === 0 || userMission.desc !== staticData.desc || userMission.target !== staticData.target) {
+                              changed = true;
+                              return {
+                                  ...userMission,
+                                  target: staticData.target,
+                                  reward: staticData.reward, // Fix the 0 reward bug
+                                  desc: staticData.desc
+                              };
+                          }
+                      }
+                  }
+                  return userMission;
+              });
+              
+              if (changed) {
+                  newState.missions = repairedMissions;
+              }
+          } else {
+              newState.missions = []; // Initialize if missing
+          }
+
+          // 2. ADD MISSING ACHIEVEMENTS
+          const currentMissionIds = new Set(newState.missions.map(m => m.id));
           const missingAchievements = FARM_ACHIEVEMENTS_DATA.filter(ach => !currentMissionIds.has(ach.id));
 
           if (missingAchievements.length > 0) {
-              newState.missions = [...(prev.missions || []), ...missingAchievements];
+              newState.missions = [...newState.missions, ...missingAchievements];
               changed = true;
           }
 
+          // 3. DAILY MISSIONS UPDATE
           if (prev.lastMissionUpdate !== todayStr) {
-              const currentAchievements = newState.missions?.filter(m => m.category === 'ACHIEVEMENT') || [];
+              // Filter out old daily missions
+              const currentAchievements = newState.missions.filter(m => m.category === 'ACHIEVEMENT');
+              
+              // Pick new daily missions
               const dailies = [...DAILY_MISSION_POOL]
                   .sort(() => 0.5 - Math.random())
                   .slice(0, 5)
