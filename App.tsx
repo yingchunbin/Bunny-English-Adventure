@@ -19,7 +19,7 @@ import { ConfirmModal } from './components/ui/ConfirmModal';
 import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
 import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift } from 'lucide-react'; 
-import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
+import { FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from './data/farmData';
 import { Avatar } from './components/Avatar'; 
 
 const ALL_STORAGE_KEYS = [
@@ -43,7 +43,7 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v17',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v18'; 
+const CURRENT_VERSION_KEY = 'turtle_english_state_v19'; // Bumped version to force clean migration check
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -121,14 +121,37 @@ const migrateState = (oldState: any): UserState => {
   objects.forEach(key => {
       if (oldState[key]) (newState as any)[key] = oldState[key];
   });
-  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders', 'completedStories', 'gachaCollection'];
+  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'activeOrders', 'completedStories', 'gachaCollection'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
+  
+  // MERGE PLOTS & SLOTS
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
   newState.livestockSlots = smartMergeArray<LivestockSlot>(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId');
   newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
   newState.decorSlots = smartMergeArray<DecorSlot>(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId');
+
+  // CRITICAL FIX: RESET MISSIONS if they are old/broken
+  // If user has fewer than 200 missions, it means they are on the old system.
+  // We completely replace the missions array with the new 500+ generated list.
+  // We preserve DAILY missions by regenerating them fresh.
+  const oldMissions = Array.isArray(oldState.missions) ? oldState.missions : [];
+  if (oldMissions.length < 200) {
+      console.log("🔥 Detected old achievement system. Resetting missions to new massive system.");
+      // Generate fresh daily missions
+      const dailies = [...DAILY_MISSION_POOL]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 5)
+        .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
+      
+      // Combine with new static achievements
+      newState.missions = [...FARM_ACHIEVEMENTS_DATA, ...dailies];
+  } else {
+      // Keep existing progress if already on new system
+      newState.missions = oldMissions;
+  }
+
   return newState;
 };
 

@@ -391,6 +391,8 @@ export const useFarmGame = (
       onUpdateState(prev => {
           if (!prev.missions) return prev;
           let changed = false;
+          // OPTIMIZATION: Only map over active missions of this type or category to avoid 500+ iterations
+          // Since we need to return the FULL array, we must map all, but we can fast-fail inside map
           const newMissions = prev.missions.map(m => {
               if (m.type === type && !m.completed) {
                   const newCurrent = m.current + amount;
@@ -1091,7 +1093,7 @@ export const useFarmGame = (
       checkWellUsage, 
       useWell,
       speedUpItem,
-      placeDecor,
+      placeDecor, 
       removeDecor,
       sellItem,
       sellItemsBulk, 
