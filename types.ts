@@ -173,13 +173,6 @@ export interface FarmOrder {
   expiresAt: number; 
 }
 
-export interface MissionRewards {
-  coins?: number;
-  stars?: number;
-  water?: number;
-  fertilizer?: number;
-}
-
 export interface Mission {
   id: string;
   desc: string;
@@ -187,7 +180,7 @@ export interface Mission {
   category: 'DAILY' | 'ACHIEVEMENT';
   target: number;
   current: number;
-  rewards: MissionRewards; // Updated to support multiple reward types
+  reward: { type: 'WATER' | 'FERTILIZER' | 'COIN' | 'STAR', amount: number };
   completed: boolean;
   claimed: boolean;
 }

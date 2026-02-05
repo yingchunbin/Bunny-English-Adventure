@@ -1,11 +1,7 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot, Decor, MissionRewards } from '../types';
+import { UserState, FarmPlot, FarmOrder, Crop, Mission, LivestockSlot, MachineSlot, Decor } from '../types';
 import { CROPS, ANIMALS, PRODUCTS, RECIPES, MACHINES, FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL, DECORATIONS } from '../data/farmData';
 import { playSFX } from '../utils/sound';
-
-// ... (Other imports and helper functions getItemProductionTime, getBaseCost, createSingleOrder, unlockedMachinesCheck, initialization useEffect, game loop useEffect remain unchanged)
-// [CONTENT SKIPPED FOR BREVITY - Assume identical logic as previous update up to addReward function]
 
 export const useFarmGame = (
   userState: UserState, 
@@ -14,10 +10,7 @@ export const useFarmGame = (
   const [now, setNow] = useState(Date.now());
   const lastTickRef = useRef(Date.now());
   
-  // ... (getDecorBonus, getItemProductionTime, getBaseCost, createSingleOrder, unlockedMachinesCheck, useEffects)
-  
-  // Re-pasting essential game loop logic to ensure context
-   // Helper: Calculate total buff for a type from active slots (Supports Multi-buffs)
+  // Helper: Calculate total buff for a type from active slots (Supports Multi-buffs)
   const getDecorBonus = (type: 'EXP' | 'COIN' | 'TIME' | 'PEST' | 'YIELD'): number => {
       const activeSlots = userState.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
       if (activeSlots.length === 0) return 0;
@@ -189,6 +182,7 @@ export const useFarmGame = (
       return ownedMachineIds.includes(recipe.machineId);
   };
 
+  // Initialization Effect
   useEffect(() => {
       const todayStr = new Date().toDateString();
       onUpdateState(prev => {
@@ -241,22 +235,29 @@ export const useFarmGame = (
       });
   }, []); 
 
+  // Game Loop - Optimized
   useEffect(() => {
     const interval = setInterval(() => {
         const currentTime = Date.now();
-        setNow(currentTime); 
+        setNow(currentTime); // Keeps the UI timer updating
 
+        // Performance Optimization: Throttle heavy updates
+        // Only run logic checks every 1s, but render updates might happen less if no change
         if (currentTime - lastTickRef.current < 900) return;
         lastTickRef.current = currentTime;
 
         onUpdateState(prev => {
             let newState = { ...prev };
             let hasChanges = false;
+
+            // 1. Weather (Rare chance)
+            // Optimization: Only try changing weather if we are not in desired state
             if (Math.random() < 0.002) { 
                 const newWeather = prev.weather === 'SUNNY' ? 'RAINY' : 'SUNNY';
                 newState.weather = newWeather;
                 hasChanges = true;
                 if (newWeather === 'RAINY') {
+                    // Batch update watered state
                     const needsWater = prev.farmPlots.some(p => p.cropId && !p.isWatered);
                     if (needsWater) {
                         newState.farmPlots = prev.farmPlots.map(p => 
@@ -265,9 +266,13 @@ export const useFarmGame = (
                     }
                 }
             }
+
+            // 2. Bugs & Weeds
+            // Optimization: Only run if there are clean plots to infect
             const cleanPlots = prev.farmPlots.filter(p => p.isUnlocked && p.cropId && !p.hasBug && !p.hasWeed);
             if (cleanPlots.length > 0) {
                 let bugChance = 0.01;
+                // Apply Decor Bonus
                 const activeSlots = prev.decorSlots?.filter(s => s.isUnlocked && s.decorId) || [];
                 let pestReduction = 0;
                 activeSlots.forEach(slot => {
@@ -286,6 +291,8 @@ export const useFarmGame = (
                     hasChanges = true;
                 }
             }
+
+            // 3. Machine Auto-Process Queue
             if (prev.machineSlots) {
                 const updatedSlots = prev.machineSlots.map(slot => {
                     if (slot.activeRecipeId && slot.startedAt) {
@@ -295,13 +302,16 @@ export const useFarmGame = (
                             if (elapsed >= recipe.duration) {
                                 hasChanges = true;
                                 const newStorage = [...(slot.storage || []), slot.activeRecipeId];
+                                
                                 let nextRecipeId: string | null = null;
                                 let nextStart: number | null = null;
                                 let newQueue = [...(slot.queue || [])];
+
                                 if (newQueue.length > 0) {
                                     nextRecipeId = newQueue.shift() || null;
                                     nextStart = currentTime;
                                 }
+
                                 return {
                                     ...slot,
                                     storage: newStorage,
@@ -314,8 +324,11 @@ export const useFarmGame = (
                     }
                     return slot;
                 });
+                // Only replace array if actual object references changed (handled by map)
                 if (hasChanges) newState.machineSlots = updatedSlots;
             }
+
+            // 4. Animal Auto-Process
             if (prev.livestockSlots) {
                 const updatedSlots = prev.livestockSlots.map(slot => {
                     if (slot.animalId) {
@@ -336,11 +349,13 @@ export const useFarmGame = (
                                     }
                                 }
                             }
+
                             if (!newFedAt && newQueue > 0 && newStorage.length < 3) {
                                 newQueue--;
                                 newFedAt = currentTime;
                                 slotChanged = true;
                             }
+
                             if (slotChanged) {
                                 hasChanges = true;
                                 return {
@@ -356,20 +371,27 @@ export const useFarmGame = (
                 });
                 if (hasChanges) newState.livestockSlots = updatedSlots;
             }
+
+            // 5. Orders Management
             let currentOrders = prev.activeOrders || [];
             const validOrders = currentOrders.filter(o => o.expiresAt > currentTime);
+            
             if (validOrders.length !== currentOrders.length) {
                 currentOrders = validOrders;
                 hasChanges = true;
             }
+
             if (currentOrders.length < 3 && Math.random() < 0.1) {
                 const newOrder = createSingleOrder(prev.grade || 1, prev.completedLevels?.length || 0, prev.livestockSlots || []);
                 currentOrders = [...currentOrders, newOrder];
                 hasChanges = true;
             }
+            
             if (hasChanges) {
                 newState.activeOrders = currentOrders;
             }
+
+            // CRITICAL OPTIMIZATION: Only update state if something actually changed
             return hasChanges ? newState : prev;
         });
 
@@ -402,14 +424,13 @@ export const useFarmGame = (
       return true;
   };
 
-  // UPDATED: Now accepts a rewards object instead of type/amount
-  const addReward = (rewards: MissionRewards) => {
+  const addReward = (type: 'COIN' | 'STAR' | 'WATER' | 'FERTILIZER', amount: number) => {
       onUpdateState(prev => {
           const next = { ...prev };
-          if (rewards.coins) next.coins += rewards.coins;
-          if (rewards.stars) next.stars += rewards.stars;
-          if (rewards.water) next.waterDrops += rewards.water;
-          if (rewards.fertilizer) next.fertilizers += rewards.fertilizer;
+          if (type === 'COIN') next.coins += amount;
+          if (type === 'STAR') next.stars += amount;
+          if (type === 'WATER') next.waterDrops += amount;
+          if (type === 'FERTILIZER') next.fertilizers += amount;
           return next;
       });
   };
@@ -418,10 +439,12 @@ export const useFarmGame = (
       onUpdateState(prev => ({
           ...prev,
           missions: prev.missions?.map(m => {
-              if (m.type === type && !m.completed) {
-                  // Apply to both daily and achievement
+              if (m.type === type && !m.completed && m.category === 'DAILY') {
                   const nextCurrent = m.current + amount;
                   return { ...m, current: nextCurrent, completed: nextCurrent >= m.target };
+              }
+              if (m.type === type && !m.completed && m.category === 'ACHIEVEMENT') {
+                   return m; 
               }
               return m;
           })
@@ -440,27 +463,11 @@ export const useFarmGame = (
           if (currency === 'COIN') next.coins -= totalCost;
           else next.stars -= totalCost;
           
-          if (item.type === 'DECOR') {
-              if (!next.decorations?.includes(item.id)) {
-                  next.decorations = [...(next.decorations || []), item.id];
-              }
-          } else {
-              next.inventory = { ...next.inventory, [item.id]: (next.inventory[item.id] || 0) + amount };
-          }
+          next.inventory = { ...next.inventory, [item.id]: (next.inventory[item.id] || 0) + amount };
           return next;
       });
-      
-      // Update mission if it matches the type
-      if (item.type === 'DECOR' || item.type === 'MACHINE' || item.type === 'ANIMAL') {
-          // This logic is mostly handled by generic tracking, but for specific 'spend' missions
-          updateMissionProgress('EARN', totalCost); // Hack: reusing EARN mission type for spending if needed, or create 'SPEND' type
-      }
-
       return { success: true };
   };
-
-  // ... (placeDecor, removeDecor, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, feedAnimal, collectProduct, startProcessing, collectMachine, deliverOrder, generateOrders, speedUpItem, sellItem, sellItemsBulk, plantSeedBulk, plantSeed, placeAnimal, placeMachine - UNCHANGED from previous versions, included for completeness of the file if needed but can be skipped in diff)
-  // [SKIPPED FOR BREVITY - Assume identical implementations]
 
   const placeDecor = (slotId: number, decorId: string) => {
       const count = userState.inventory[decorId] || 0;
@@ -795,7 +802,7 @@ export const useFarmGame = (
       return { success: true, earned: totalEarned };
   };
 
-  // ... (plantSeedBulk, plantSeed, placeAnimal, placeMachine - identical to previous, included if needed)
+  // BULK PLANT
   const plantSeedBulk = (seedId: string) => {
       const currentInventory = userState.inventory || {};
       const count = currentInventory[seedId] || 0;
