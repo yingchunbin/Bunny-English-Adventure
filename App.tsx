@@ -40,10 +40,9 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v15',
   'turtle_english_state_v16',
   'turtle_english_state_v17',
-  'turtle_english_state_v18',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v19'; // Increment version
+const CURRENT_VERSION_KEY = 'turtle_english_state_v18'; // Increment version
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -89,13 +88,11 @@ const DEFAULT_USER_STATE: UserState = {
   activeOrders: [], 
   wellUsageCount: 0,
   lastWellDate: '',
-  gachaCollection: [], 
-  gachaInventory: {}, // Initialize empty
+  gachaCollection: [], // Initialize
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
-      lowPerformance: false,
-      userName: ''
+      lowPerformance: false
   }
 };
 
@@ -119,7 +116,7 @@ const migrateState = (oldState: any): UserState => {
   primitives.forEach(key => {
       if (oldState[key] !== undefined) (newState as any)[key] = oldState[key];
   });
-  const objects = ['levelStars', 'lessonGuides', 'inventory', 'harvestedCrops', 'settings', 'gachaInventory'];
+  const objects = ['levelStars', 'lessonGuides', 'inventory', 'harvestedCrops', 'settings'];
   objects.forEach(key => {
       if (oldState[key]) (newState as any)[key] = oldState[key];
   });
@@ -127,21 +124,10 @@ const migrateState = (oldState: any): UserState => {
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
-  
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
   newState.livestockSlots = smartMergeArray<LivestockSlot>(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId');
   newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
   newState.decorSlots = smartMergeArray<DecorSlot>(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId');
-
-  // MIGRATION: Convert Array Collection to Object Inventory if missing
-  if ((!newState.gachaInventory || Object.keys(newState.gachaInventory).length === 0) && newState.gachaCollection && newState.gachaCollection.length > 0) {
-      const newInv: Record<string, number> = {};
-      newState.gachaCollection.forEach(id => {
-          newInv[id] = (newInv[id] || 0) + 1; // Default to 1 if coming from array
-      });
-      newState.gachaInventory = newInv;
-  }
-
   return newState;
 };
 
@@ -503,7 +489,7 @@ export default function App() {
           {showSettings && (
               <Settings 
                   userState={userState} 
-                  onUpdateState={handleUpdateState} // UPDATED: Pass full state handler for Admin features
+                  onUpdateSettings={(newSettings) => handleUpdateState(prev => ({ ...prev, settings: newSettings }))}
                   onResetData={() => {
                       [...ALL_STORAGE_KEYS, BACKUP_KEY, CURRENT_VERSION_KEY].forEach(k => localStorage.removeItem(k));
                       window.location.reload();

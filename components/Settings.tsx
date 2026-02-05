@@ -1,49 +1,26 @@
 
 import React, { useState, useRef } from 'react';
 import { UserState } from '../types';
-import { Volume2, Music, Battery, BatteryCharging, Trash2, X, User, Download, Upload, Coins, Star, Droplets, Zap, Unlock, Sprout, Hammer } from 'lucide-react';
+import { Volume2, VolumeX, Battery, BatteryCharging, Trash2, X, User, Music, Download, Upload } from 'lucide-react';
 import { ConfirmModal } from './ui/ConfirmModal';
-import { playSFX } from '../utils/sound';
 
 interface SettingsProps {
   userState: UserState;
-  onUpdateState: (newState: UserState | ((prev: UserState) => UserState)) => void;
+  onUpdateSettings: (settings: any) => void;
   onResetData: () => void;
   onImportData?: (data: any) => void;
   onClose: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateState, onResetData, onImportData, onClose }) => {
+export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onImportData, onClose }) => {
   const { settings } = userState;
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check for Admin Name
-  const isAdmin = settings.userName?.trim().toUpperCase() === 'BAKUNTIN';
-
   const handleVolumeChange = (type: 'sfx' | 'bgm', val: string) => {
     const value = parseFloat(val);
-    onUpdateState(prev => ({
-        ...prev,
-        settings: {
-            ...prev.settings,
-            [type === 'sfx' ? 'sfxVolume' : 'bgmVolume']: value
-        }
-    }));
-  };
-
-  const handleNameChange = (val: string) => {
-      onUpdateState(prev => ({
-          ...prev,
-          settings: { ...prev.settings, userName: val }
-      }));
-  };
-
-  const handlePerformanceChange = () => {
-      onUpdateState(prev => ({
-          ...prev,
-          settings: { ...prev.settings, lowPerformance: !prev.settings.lowPerformance }
-      }));
+    if (type === 'sfx') onUpdateSettings({ ...settings, sfxVolume: value });
+    else onUpdateSettings({ ...settings, bgmVolume: value });
   };
 
   const handleExport = () => {
@@ -72,54 +49,18 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateState, on
       reader.readAsText(file);
   };
 
-  // --- ADMIN ACTIONS ---
-  const adminAddResource = (type: 'COIN' | 'STAR' | 'WATER' | 'FERTILIZER', amount: number) => {
-      playSFX('powerup');
-      onUpdateState(prev => ({
-          ...prev,
-          coins: type === 'COIN' ? prev.coins + amount : prev.coins,
-          stars: type === 'STAR' ? prev.stars + amount : prev.stars,
-          waterDrops: type === 'WATER' ? prev.waterDrops + amount : prev.waterDrops,
-          fertilizers: type === 'FERTILIZER' ? prev.fertilizers + amount : prev.fertilizers,
-      }));
-  };
-
-  const adminLevelUpFarm = () => {
-      playSFX('success');
-      onUpdateState(prev => ({
-          ...prev,
-          farmLevel: (prev.farmLevel || 1) + 1,
-          farmExp: 0
-      }));
-  };
-
-  const adminUnlockAllLevels = () => {
-      playSFX('success');
-      onUpdateState(prev => {
-          // Unlock vast range of levels based on current book/grade logic
-          // Simple hack: Unlock IDs 1000-6000
-          const allIds = [];
-          for(let i=1000; i<6000; i++) allIds.push(i);
-          return {
-              ...prev,
-              unlockedLevels: allIds
-          };
-      });
-      alert("Đã mở khóa toàn bộ bài học!");
-  };
-
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border-4 border-slate-100 flex flex-col max-h-[90vh]">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border-4 border-slate-100">
         
-        <div className="bg-slate-50 p-4 flex justify-between items-center border-b border-slate-200 shrink-0">
+        <div className="bg-slate-50 p-4 flex justify-between items-center border-b border-slate-200">
           <h2 className="text-xl font-bold text-slate-700 flex items-center gap-2">
             <span className="text-2xl">⚙️</span> Cài Đặt
           </h2>
           <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={24} className="text-slate-500"/></button>
         </div>
 
-        <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar">
+        <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
           
           {/* Profile Section */}
           <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
@@ -129,47 +70,12 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateState, on
                 <input 
                     type="text" 
                     value={settings?.userName || ''} 
-                    onChange={(e) => handleNameChange(e.target.value)}
+                    onChange={(e) => onUpdateSettings({ ...settings, userName: e.target.value })}
                     placeholder="Nhập tên bé..."
                     className="w-full p-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 outline-none text-slate-900 bg-white font-black text-lg placeholder-slate-300 shadow-inner transition-all"
                 />
-                <p className="text-[10px] text-blue-400 italic">Nhập "BAKUNTIN" để mở chế độ Admin.</p>
              </div>
           </div>
-
-          {/* DEVELOPER TOOLS (HIDDEN) */}
-          {isAdmin && (
-              <div className="bg-slate-800 p-4 rounded-2xl border-2 border-slate-600 shadow-xl animate-fadeIn">
-                  <div className="flex items-center gap-2 mb-4 text-yellow-400 border-b border-slate-600 pb-2">
-                      <Hammer size={20} />
-                      <h3 className="font-black uppercase tracking-widest text-sm">Developer Tools</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                      <button onClick={() => adminAddResource('COIN', 10000)} className="bg-amber-600 hover:bg-amber-500 text-white p-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                          <Coins size={14}/> +10K Xu
-                      </button>
-                      <button onClick={() => adminAddResource('STAR', 100)} className="bg-purple-600 hover:bg-purple-500 text-white p-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                          <Star size={14}/> +100 Sao
-                      </button>
-                      <button onClick={() => adminAddResource('WATER', 50)} className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                          <Droplets size={14}/> +50 Nước
-                      </button>
-                      <button onClick={() => adminAddResource('FERTILIZER', 20)} className="bg-green-600 hover:bg-green-500 text-white p-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-all">
-                          <Zap size={14}/> +20 Phân
-                      </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2">
-                      <button onClick={adminLevelUpFarm} className="bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all border border-indigo-400">
-                          <Sprout size={16}/> Lên Cấp Nông Trại (+1 LV)
-                      </button>
-                      <button onClick={adminUnlockAllLevels} className="bg-red-900 hover:bg-red-800 text-white p-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all border border-red-700">
-                          <Unlock size={16}/> Mở Khóa Tất Cả Bài Học
-                      </button>
-                  </div>
-              </div>
-          )}
 
           {/* Audio Section */}
           <div className="space-y-4">
@@ -200,7 +106,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateState, on
             </div>
           </div>
 
-          {/* Backup & Restore */}
+          {/* Backup & Restore (New Feature) */}
           <div className="space-y-4 pt-4 border-t border-slate-100">
               <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">Dữ Liệu & Sao Lưu</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -237,7 +143,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateState, on
                 <span className="text-sm font-bold text-slate-600">Chế độ tiết kiệm pin</span>
              </div>
              <button 
-                onClick={handlePerformanceChange}
+                onClick={() => onUpdateSettings({ ...settings, lowPerformance: !settings?.lowPerformance })}
                 className={`w-12 h-6 rounded-full transition-colors relative ${settings?.lowPerformance ? 'bg-green-500' : 'bg-slate-300'}`}
              >
                 <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-all shadow-sm ${settings?.lowPerformance ? 'left-7' : 'left-1'}`} />

@@ -1,7 +1,7 @@
 
 import React, { useState, memo } from 'react';
 import { Crop, Product, FarmItem, AnimalItem, MachineItem, Decor, LivestockSlot, MachineSlot } from '../../types';
-import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban, Plus, Zap, Coins, Clock, Shield, Layers } from 'lucide-react';
+import { Package, X, Sprout, Bird, Factory, Armchair, ShoppingBasket, ArrowRight, ArrowRightCircle, Check, CheckCircle2, Ban, Plus, Zap, Coins, Clock, Shield } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { resolveImage } from '../../utils/imageUtils';
 
@@ -21,7 +21,6 @@ interface InventoryModalProps {
 
   mode: 'VIEW' | 'SELECT_SEED' | 'PLACE_ANIMAL' | 'PLACE_MACHINE' | 'SELECT_DECOR'; 
   onSelectSeed?: (seedId: string) => void;
-  onSelectSeedBulk?: (seedId: string) => void; // New prop for bulk planting
   onSelectAnimal?: (animalId: string) => void;
   onSelectMachine?: (machineId: string) => void;
   onToggleDecor?: (decorId: string) => void; 
@@ -35,7 +34,7 @@ const InventoryModalComponent: React.FC<InventoryModalProps> = ({
     initialTab = 'SEEDS',
     inventory, seeds, animals, machines, decorations, allItems,
     ownedAnimals, ownedMachines, ownedDecorations, activeDecorIds = [],
-    mode, onSelectSeed, onSelectSeedBulk, onSelectAnimal, onSelectMachine, onToggleDecor, onClose, onGoToShop 
+    mode, onSelectSeed, onSelectAnimal, onSelectMachine, onToggleDecor, onClose, onGoToShop 
 }) => {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
@@ -200,22 +199,12 @@ const InventoryModalComponent: React.FC<InventoryModalProps> = ({
 
               <div className="flex flex-col gap-1 items-end z-10">
                   {mode === 'SELECT_SEED' && activeTab === 'SEEDS' && (
-                      <div className="flex flex-col gap-1">
-                          <button 
-                              onClick={() => onSelectSeed && onSelectSeed(item.id)}
-                              className="bg-green-500 text-white px-4 py-1.5 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
-                          >
-                              Gieo 1 hạt
-                          </button>
-                          {count > 1 && (
-                              <button 
-                                  onClick={() => onSelectSeedBulk && onSelectSeedBulk(item.id)}
-                                  className="bg-blue-500 text-white px-4 py-1.5 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all flex items-center justify-center gap-1"
-                              >
-                                  <Layers size={12}/> Gieo hết
-                              </button>
-                          )}
-                      </div>
+                      <button 
+                          onClick={() => onSelectSeed && onSelectSeed(item.id)}
+                          className="bg-green-500 text-white px-4 py-2 rounded-xl font-black text-xs uppercase shadow-md active:scale-95 transition-all"
+                      >
+                          Gieo hạt
+                      </button>
                   )}
 
                   {mode === 'PLACE_ANIMAL' && activeTab === 'ANIMALS' && (
