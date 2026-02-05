@@ -329,7 +329,7 @@ export const useFarmGame = (
                 if (hasChanges) newState.machineSlots = updatedSlots;
             }
 
-            // 4. Animal Auto-Process
+            // 4. Animal Auto-Process (IMPROVED QUEUE LOGIC)
             if (prev.livestockSlots) {
                 const updatedSlots = prev.livestockSlots.map(slot => {
                     if (slot.animalId) {
@@ -340,17 +340,33 @@ export const useFarmGame = (
                             let newQueue = slot.queue || 0;
                             let slotChanged = false;
 
+                            // If eating and time passed -> Produce
                             if (newFedAt) {
                                 const elapsed = (currentTime - newFedAt) / 1000;
                                 if (elapsed >= animal.produceTime) {
+                                    // Only add product if storage not full
                                     if (newStorage.length < 3) {
                                         newStorage.push(animal.produceId);
-                                        newFedAt = null; 
                                         slotChanged = true;
+                                        
+                                        // Check queue for next cycle
+                                        if (newQueue > 0) {
+                                            newQueue--;
+                                            newFedAt = currentTime; // Eat again immediately
+                                        } else {
+                                            newFedAt = null; // Stop eating
+                                        }
+                                    } else {
+                                        // Storage full: Wait until collected. 
+                                        // We pause production by NOT clearing fedAt or resetting queue.
+                                        // Basically the animal stands there with product ready but can't drop it yet.
+                                        // Or we can just let it finish and sit idle.
+                                        // Simplest: Don't add to storage, don't consume queue, just wait.
                                     }
                                 }
                             }
 
+                            // If idle but has queue (rare case, usually handled above)
                             if (!newFedAt && newQueue > 0 && newStorage.length < 3) {
                                 newQueue--;
                                 newFedAt = currentTime;
@@ -568,10 +584,8 @@ export const useFarmGame = (
   };
 
   const harvestPlot = (plotId: number, crop: Crop) => {
-      // Logic: Base 1. Chance for +1 based on bonus.
       const yieldBonus = getDecorBonus('YIELD');
       let amount = 1;
-      // Yield bonus adds chance for double harvest. e.g. 50% bonus means 50% chance to get +1
       if (Math.random() * 100 < yieldBonus) amount = 2;
 
       onUpdateState(prev => ({
@@ -630,23 +644,44 @@ export const useFarmGame = (
       const animal = ANIMALS.find(a => a.id === slot.animalId);
       if (!animal) return { success: false, msg: "Lỗi vật nuôi" };
 
+      // Queue Logic: Limit active + queued to 3 total items.
+      const currentQueue = slot.queue || 0;
+      const currentStorage = slot.storage?.length || 0;
+      const isEating = !!slot.fedAt;
+      
+      // Prevent feeding if queue is full (Max 1 eating + 2 queued = 3 products)
+      if (isEating && currentQueue >= 2) return { success: false, msg: "Bụng bé no căng rồi!" };
+      
+      // Also prevent if storage is totally full? (Optional gameplay choice. Let's allow queuing but it pauses if storage 3/3)
+      if (currentStorage >= 3) return { success: false, msg: "Thu hoạch trước đã nhé!" };
+
       const feedId = animal.feedCropId;
       const amount = animal.feedAmount;
       const has = userState.harvestedCrops?.[feedId] || 0;
-
-      // Fix: Get localized name
-      const feedItemName = [...CROPS, ...PRODUCTS].find(i => i.id === feedId)?.name || feedId;
+      
+      // Localized name check
+      const feedItem = [...CROPS, ...PRODUCTS].find(c => c.id === feedId);
+      const feedItemName = feedItem?.name || feedId;
 
       if (has < amount) return { success: false, msg: `Thiếu ${amount} ${feedItemName}` };
 
       onUpdateState(prev => ({
           ...prev,
           harvestedCrops: { ...prev.harvestedCrops, [feedId]: (prev.harvestedCrops?.[feedId] || 0) - amount },
-          livestockSlots: prev.livestockSlots?.map(s => s.id === slotId ? { ...s, fedAt: Date.now() } : s)
+          livestockSlots: prev.livestockSlots?.map(s => {
+              if (s.id === slotId) {
+                  // If eating, add to queue. If not eating, start eating.
+                  if (s.fedAt) {
+                      return { ...s, queue: (s.queue || 0) + 1 };
+                  } else {
+                      return { ...s, fedAt: Date.now() };
+                  }
+              }
+              return s;
+          })
       }));
       updateMissionProgress('FEED', 1);
       
-      const feedItem = [...CROPS, ...PRODUCTS].find(c => c.id === feedId);
       return { success: true, amount, feedEmoji: feedItem?.emoji };
   };
 
@@ -669,7 +704,10 @@ export const useFarmGame = (
           Object.entries(newHarvested).forEach(([id, amt]) => {
               next.harvestedCrops = { ...next.harvestedCrops, [id]: (next.harvestedCrops?.[id] || 0) + amt };
           });
+          
+          // Clear storage. Note: Logic for restarting production if queue exists is handled in Game Loop effect.
           next.livestockSlots = next.livestockSlots?.map(s => s.id === slotId ? { ...s, storage: [] } : s);
+          
           next.farmExp = (next.farmExp || 0) + totalExp;
           if (next.farmExp >= (next.farmLevel || 1) * 100) next.farmLevel = (next.farmLevel || 1) + 1;
           return next;

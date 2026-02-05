@@ -220,7 +220,9 @@ export const APP_ACHIEVEMENTS: Achievement[] = [
     description: 'Thu hoạch tổng cộng 50 nông sản.',
     icon: '🌾',
     condition: (state) => {
-        const total = Object.values(state.harvestedCrops || {}).reduce((a:any,b:any)=>a+b, 0) as number;
+        // Safe check for harvestedCrops being undefined
+        if (!state.harvestedCrops) return false;
+        const total = Object.values(state.harvestedCrops).reduce((a:any,b:any)=>a+b, 0) as number;
         return total >= 50;
     },
     isUnlocked: false
@@ -231,7 +233,8 @@ export const APP_ACHIEVEMENTS: Achievement[] = [
     description: 'Thu hoạch tổng cộng 500 nông sản.',
     icon: '🥕',
     condition: (state) => {
-        const total = Object.values(state.harvestedCrops || {}).reduce((a:any,b:any)=>a+b, 0) as number;
+        if (!state.harvestedCrops) return false;
+        const total = Object.values(state.harvestedCrops).reduce((a:any,b:any)=>a+b, 0) as number;
         return total >= 500;
     },
     isUnlocked: false

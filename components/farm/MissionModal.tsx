@@ -79,6 +79,9 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                         const progress = Math.min(100, (m.current / m.target) * 100);
                         const isCompleted = m.completed;
                         const isClaimable = isCompleted && !m.claimed;
+                        // Safe check for reward
+                        const amount = m.reward?.amount || 0;
+                        const type = m.reward?.type || 'COIN';
                         
                         return (
                             <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isClaimable ? 'border-green-400 ring-4 ring-green-100 order-first' : 'border-white hover:border-indigo-200'}`}>
@@ -109,11 +112,11 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                 <div className="flex justify-between items-center relative z-10">
                                     <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
                                         <span className="text-[10px] text-yellow-600 font-bold uppercase mr-1">Quà:</span>
-                                        <span className="text-xs font-black text-yellow-700">+{m.reward.amount}</span>
-                                        {m.reward.type === 'COIN' ? <Coins size={14} className="text-yellow-500" fill="currentColor"/> : 
-                                         m.reward.type === 'WATER' ? <Droplets size={14} className="text-blue-500" fill="currentColor"/> :
-                                         m.reward.type === 'STAR' ? <Star size={14} className="text-purple-500" fill="currentColor"/> :
-                                         m.reward.type === 'FERTILIZER' ? <Zap size={14} className="text-amber-500" fill="currentColor"/> :
+                                        <span className="text-xs font-black text-yellow-700">+{amount}</span>
+                                        {type === 'COIN' ? <Coins size={14} className="text-yellow-500" fill="currentColor"/> : 
+                                         type === 'WATER' ? <Droplets size={14} className="text-blue-500" fill="currentColor"/> :
+                                         type === 'STAR' ? <Star size={14} className="text-purple-500" fill="currentColor"/> :
+                                         type === 'FERTILIZER' ? <Zap size={14} className="text-amber-500" fill="currentColor"/> :
                                          <Gift size={14} className="text-pink-500"/>}
                                     </div>
                                     
