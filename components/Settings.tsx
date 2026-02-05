@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { UserState } from '../types';
-import { Volume2, VolumeX, Battery, BatteryCharging, Trash2, X, User, Music, Download, Upload, ShieldAlert } from 'lucide-react';
+import { Volume2, VolumeX, Battery, BatteryCharging, Trash2, X, User, Music, Download, Upload } from 'lucide-react';
 import { ConfirmModal } from './ui/ConfirmModal';
 
 interface SettingsProps {
@@ -9,11 +9,10 @@ interface SettingsProps {
   onUpdateSettings: (settings: any) => void;
   onResetData: () => void;
   onImportData?: (data: any) => void;
-  onOpenAdmin?: () => void; // New prop for admin panel
   onClose: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onImportData, onOpenAdmin, onClose }) => {
+export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onImportData, onClose }) => {
   const { settings } = userState;
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -50,8 +49,6 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
       reader.readAsText(file);
   };
 
-  const isAdmin = settings?.userName?.trim().toUpperCase() === 'BAKUNTIN';
-
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border-4 border-slate-100">
@@ -66,7 +63,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
           
           {/* Profile Section */}
-          <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100 relative">
+          <div className="bg-blue-50 p-4 rounded-2xl border border-blue-100">
              <h3 className="font-bold text-blue-800 mb-3 flex items-center gap-2"><User size={18}/> Hồ Sơ Bé</h3>
              <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-blue-600 uppercase tracking-wider">Tên hiển thị</label>
@@ -78,16 +75,6 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
                     className="w-full p-3 rounded-xl border-2 border-blue-200 focus:border-blue-400 outline-none text-slate-900 bg-white font-black text-lg placeholder-slate-300 shadow-inner transition-all"
                 />
              </div>
-             
-             {/* Admin Button appears if name is BAKUNTIN */}
-             {isAdmin && onOpenAdmin && (
-                 <button 
-                    onClick={onOpenAdmin}
-                    className="absolute top-4 right-4 bg-slate-800 text-white p-2 rounded-lg text-xs font-black uppercase tracking-wider shadow-lg animate-pulse flex items-center gap-1"
-                 >
-                    <ShieldAlert size={14} /> Admin
-                 </button>
-             )}
           </div>
 
           {/* Audio Section */}

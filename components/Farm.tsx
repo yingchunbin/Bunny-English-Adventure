@@ -46,7 +46,7 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, plantAllSeeds, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
@@ -368,29 +368,19 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       playSFX('coins');
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       
-      const rewards = mission.rewards || (mission.reward ? [mission.reward] : []);
-
-      rewards.forEach((r: any) => {
-          if (!r) return;
-          if(r.type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
-          if(r.type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);
-          if(r.type === 'WATER') triggerFlyFX(rect, 'PRODUCT', <Droplets size={24} className="text-blue-400 fill-blue-400"/>, 2);
-          if(r.type === 'FERTILIZER') triggerFlyFX(rect, 'PRODUCT', <Zap size={24} className="text-green-400 fill-green-400"/>, 1);
-          
-          addReward(r.type, r.amount);
-      });
+      if(mission.reward.type === 'COIN') triggerFlyFX(rect, 'COIN', <Coins size={24} className="text-yellow-400 fill-yellow-400"/>, 3);
+      if(mission.reward.type === 'STAR') triggerFlyFX(rect, 'STAR', <Star size={24} className="text-purple-400 fill-purple-400"/>, 1);
+      if(mission.reward.type === 'WATER') triggerFlyFX(rect, 'PRODUCT', <Droplets size={24} className="text-blue-400 fill-blue-400"/>, 2);
+      if(mission.reward.type === 'FERTILIZER') triggerFlyFX(rect, 'PRODUCT', <Zap size={24} className="text-green-400 fill-green-400"/>, 1);
       
+      addReward(mission.reward.type, mission.reward.amount);
       onUpdateState(prev => ({
           ...prev,
           missions: prev.missions?.map(miss => miss.id === mission.id ? { ...miss, claimed: true } : miss)
       }));
   };
 
-  // ... (Rest of the file remains the same)
-  // ... (getRarityInfo, getBuffIcon, renderSectionTabs, renderHUD, renderHarvestButton, renderEmptySlot, renderSpeedUpButton)
-  // ... (cropsGrid, animalsGrid, machinesGrid, decorsGrid, getReadyCount)
-  // ... (JSX return)
-
+  // --- Rarity Helper Functions (Duplicated from Shop/Inventory for self-containment) ---
   const getRarityInfo = (cost: number) => {
       if (cost >= 500) return { 
           label: "THẦN THOẠI", 
@@ -453,6 +443,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       }
   };
 
+  // --- RENDER SECTIONS (MEMOIZED) ---
   const renderSectionTabs = () => (
       <div className="flex bg-white/90 backdrop-blur-sm p-1.5 rounded-2xl mx-4 mb-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)] border-2 border-white sticky bottom-4 z-50 gap-1 overflow-x-auto no-scrollbar">
           {[
@@ -533,6 +524,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       </button>
   );
 
+  // MEMOIZED GRID RENDERERS
   const cropsGrid = useMemo(() => (
       <div className="grid grid-cols-2 gap-4 px-4 pt-4 pb-32 animate-fadeIn">
           {userState.farmPlots.map(plot => {
@@ -605,7 +597,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           })}
           {renderEmptySlot("Mở Đất Mới", () => handleExpand('PLOT'))}
       </div>
-  ), [userState.farmPlots, userState.weather, now]); 
+  ), [userState.farmPlots, userState.weather, now]); // Only re-render when plots or time updates
 
   const animalsGrid = useMemo(() => {
       const slots = userState.livestockSlots || [];
@@ -1250,17 +1242,6 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         const res = plantSeed(selectedId, seedId);
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
                         else { handleShowAlert(res.msg); }
-                    }
-                }}
-                onPlantAllSeeds={(seedId) => {
-                    const res = plantAllSeeds(seedId);
-                    if(res.success) {
-                        playSFX('success');
-                        setActiveModal('NONE');
-                        const rect = document.getElementById('well-btn')?.getBoundingClientRect();
-                        if(rect) addFloatingText(rect.left, rect.top - 100, `Gieo ${res.count} hạt!`, "text-green-500 font-black");
-                    } else {
-                        handleShowAlert(res.msg);
                     }
                 }}
                 onSelectAnimal={(animalId) => {

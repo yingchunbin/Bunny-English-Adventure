@@ -29,16 +29,9 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
   const [seedAmounts, setSeedAmounts] = useState<Record<string, number>>({});
   const farmLevel = userState.farmLevel || 1;
 
-  const handleAmountChange = (id: string, value: string) => {
-    let num = parseInt(value);
-    if (isNaN(num) || num < 1) num = 1;
-    if (num > 999) num = 999;
-    setSeedAmounts({ ...seedAmounts, [id]: num });
-  };
-
   const adjustSeedAmount = (id: string, delta: number) => {
     const current = seedAmounts[id] || 1;
-    const next = Math.max(1, Math.min(999, current + delta));
+    const next = Math.max(1, current + delta);
     setSeedAmounts({ ...seedAmounts, [id]: next });
     playSFX('click');
   };
@@ -208,17 +201,10 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                                         
                                         {!isLocked ? (
                                             <div className="flex items-center gap-2 mt-2">
-                                                <div className="flex items-center bg-slate-100 rounded-lg p-1 border border-slate-200">
-                                                    <button onClick={() => adjustSeedAmount(crop.id, -1)} className="p-1 hover:bg-slate-200 rounded"><Minus size={12}/></button>
-                                                    <input 
-                                                        type="number"
-                                                        value={amount}
-                                                        onChange={(e) => handleAmountChange(crop.id, e.target.value)}
-                                                        className="w-10 text-center font-bold text-sm bg-transparent outline-none p-0 appearance-none"
-                                                        min="1"
-                                                        max="999"
-                                                    />
-                                                    <button onClick={() => adjustSeedAmount(crop.id, 1)} className="p-1 hover:bg-slate-200 rounded"><Plus size={12}/></button>
+                                                <div className="flex items-center bg-slate-100 rounded-lg p-1">
+                                                    <button onClick={() => adjustSeedAmount(crop.id, -1)} className="p-1"><Minus size={12}/></button>
+                                                    <span className="w-6 text-center font-bold text-sm">{amount}</span>
+                                                    <button onClick={() => adjustSeedAmount(crop.id, 1)} className="p-1"><Plus size={12}/></button>
                                                 </div>
                                                 <div className="flex-1">
                                                     {renderBuyButton(totalCost, currency, () => handleBuySeed(crop), false)}

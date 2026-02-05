@@ -1,6 +1,6 @@
 
-import React, { useState, useMemo } from 'react';
-import { Mission, MissionReward } from '../../types';
+import React, { useState } from 'react';
+import { Mission } from '../../types';
 import { X, Gift, Coins, Droplets, Zap, Star, Tractor, Heart, CloudRain, Briefcase, CheckCircle } from 'lucide-react';
 import { Avatar } from '../Avatar';
 
@@ -13,63 +13,24 @@ interface MissionModalProps {
 export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, onClose }) => {
   const [activeTab, setActiveTab] = useState<'DAILY' | 'ACHIEVEMENT'>('DAILY');
   
-  // OPTIMIZATION: Logic to show only relevant missions per category
-  const filteredMissions = useMemo(() => {
-    const rawList = missions || [];
+  const filteredMissions = missions
+    .filter(m => m.category === activeTab)
+    .sort((a, b) => {
+        // Priority 1: Claimable
+        const aClaimable = a.completed && !a.claimed;
+        const bClaimable = b.completed && !b.claimed;
+        if (aClaimable && !bClaimable) return -1;
+        if (!aClaimable && bClaimable) return 1;
 
-    if (activeTab === 'DAILY') {
-        // Show all daily missions (usually 5-10 items, no heavy filtering needed)
-        return rawList.filter(m => m.category === 'DAILY').sort((a,b) => {
-             // Sort by status: Claimable -> In Progress -> Completed
-             if (a.completed && !a.claimed) return -1;
-             if (b.completed && !b.claimed) return 1;
-             if (!a.completed && b.completed) return -1;
-             if (a.completed && !b.completed) return 1;
-             return 0;
-        });
-    } else {
-        // ACHIEVEMENT LOGIC: Show next 2 milestones per category type
-        const achievements = rawList.filter(m => m.category === 'ACHIEVEMENT');
-        const groups: Record<string, Mission[]> = {};
-        
-        // 1. Group by Type (HARVEST, FEED, etc.)
-        achievements.forEach(m => {
-            if (!groups[m.type]) groups[m.type] = [];
-            groups[m.type].push(m);
-        });
+        // Priority 3: Claimed (Push to bottom)
+        if (a.claimed && !b.claimed) return 1;
+        if (!a.claimed && b.claimed) return -1;
 
-        let result: Mission[] = [];
-
-        Object.values(groups).forEach(group => {
-            // 2. Sort by Target (Level 1, Level 2...)
-            group.sort((a, b) => a.target - b.target);
-
-            // 3. Find the first active/unclaimed mission index
-            // We look for the first one that is EITHER (Completed & Unclaimed) OR (Not Completed)
-            // If all are claimed, index will be -1 (which means we might show the last ones or nothing)
-            let firstActiveIdx = group.findIndex(m => !m.claimed);
-            
-            if (firstActiveIdx === -1) {
-                // All claimed? Maybe show the last one to show "Maxed Out" status? 
-                // Or show nothing? Let's show nothing to keep list clean, or the very last one.
-                // Let's show the last one completed.
-                if (group.length > 0) result.push(group[group.length - 1]);
-            } else {
-                // Show this one AND the next one (if exists)
-                // This gives the user a view of "Current Goal" and "Next Goal"
-                const activeMissions = group.slice(firstActiveIdx, firstActiveIdx + 2);
-                result = [...result, ...activeMissions];
-            }
-        });
-        
-        // 4. Final sort of the result list to put Claimable ones at top
-        return result.sort((a, b) => {
-             if (a.completed && !a.claimed) return -1;
-             if (b.completed && !b.claimed) return 1;
-             return 0;
-        });
-    }
-  }, [missions, activeTab]);
+        // Priority 2: Progress % Descending
+        const progA = a.current / a.target;
+        const progB = b.current / b.target;
+        return progB - progA;
+    });
 
   const getMissionIcon = (type: Mission['type']) => {
       switch (type) {
@@ -80,14 +41,6 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
           case 'FERTILIZE': return <Zap size={24} className="text-purple-500" />;
           default: return <Star size={24} className="text-yellow-500" />;
       }
-  };
-
-  const getRewardIcon = (type: string) => {
-      if (type === 'COIN') return <Coins size={14} className="text-yellow-500" fill="currentColor"/>;
-      if (type === 'WATER') return <Droplets size={14} className="text-blue-500" fill="currentColor"/>;
-      if (type === 'STAR') return <Star size={14} className="text-purple-500" fill="currentColor"/>;
-      if (type === 'FERTILIZER') return <Zap size={14} className="text-amber-500" fill="currentColor"/>;
-      return <Gift size={14} className="text-pink-500"/>;
   };
 
   return (
@@ -123,21 +76,10 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                     </div>
                 ) : (
                     filteredMissions.map(m => {
-                        const progress = Math.min(100, ((m.current || 0) / (m.target || 1)) * 100);
+                        const progress = Math.min(100, (m.current / m.target) * 100);
                         const isCompleted = m.completed;
                         const isClaimable = isCompleted && !m.claimed;
                         
-                        // Robustly check if rewards is an array.
-                        let safeRewards: any[] = [];
-                        if (Array.isArray(m.rewards)) {
-                            safeRewards = m.rewards;
-                        } else if (m.reward) {
-                            safeRewards = [m.reward];
-                        }
-
-                        // Filter valid rewards
-                        const rewardsList = safeRewards.filter(r => r && typeof r === 'object' && typeof r.amount === 'number');
-
                         return (
                             <div key={m.id} className={`p-4 rounded-[2rem] border-4 bg-white shadow-sm transition-all relative overflow-hidden group ${m.claimed ? 'opacity-60 grayscale border-slate-200' : isClaimable ? 'border-green-400 ring-4 ring-green-100 order-first' : 'border-white hover:border-indigo-200'}`}>
                                 
@@ -155,7 +97,7 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                         <h4 className={`font-black text-xs sm:text-sm uppercase leading-tight mb-1 ${isCompleted ? 'text-green-700' : 'text-slate-700'}`}>{m.desc}</h4>
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-bold text-slate-400">Tiến độ:</span>
-                                            <span className={`text-[10px] font-black ${isCompleted ? 'text-green-600' : 'text-indigo-500'}`}>{Math.floor(m.current || 0)}/{m.target}</span>
+                                            <span className={`text-[10px] font-black ${isCompleted ? 'text-green-600' : 'text-indigo-500'}`}>{m.current}/{m.target}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -165,18 +107,18 @@ export const MissionModal: React.FC<MissionModalProps> = ({ missions, onClaim, o
                                 </div>
 
                                 <div className="flex justify-between items-center relative z-10">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Quà:</span>
-                                        {rewardsList.length > 0 ? rewardsList.map((r, i) => (
-                                            <div key={i} className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-200">
-                                                <span className="text-xs font-black text-yellow-700">+{r.amount}</span>
-                                                {getRewardIcon(r.type)}
-                                            </div>
-                                        )) : <span className="text-[10px] italic text-slate-300">Không có quà</span>}
+                                    <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full border border-yellow-200">
+                                        <span className="text-[10px] text-yellow-600 font-bold uppercase mr-1">Quà:</span>
+                                        <span className="text-xs font-black text-yellow-700">+{m.reward.amount}</span>
+                                        {m.reward.type === 'COIN' ? <Coins size={14} className="text-yellow-500" fill="currentColor"/> : 
+                                         m.reward.type === 'WATER' ? <Droplets size={14} className="text-blue-500" fill="currentColor"/> :
+                                         m.reward.type === 'STAR' ? <Star size={14} className="text-purple-500" fill="currentColor"/> :
+                                         m.reward.type === 'FERTILIZER' ? <Zap size={14} className="text-amber-500" fill="currentColor"/> :
+                                         <Gift size={14} className="text-pink-500"/>}
                                     </div>
                                     
                                     {isClaimable ? (
-                                        <button onClick={(e) => onClaim(m, e)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce ml-2">
+                                        <button onClick={(e) => onClaim(m, e)} className="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg shadow-green-200 flex items-center gap-1 animate-bounce">
                                             <Gift size={14}/> Nhận Quà
                                         </button>
                                     ) : m.claimed ? (

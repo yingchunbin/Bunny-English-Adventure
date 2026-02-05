@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { GachaItem, UserState, Rarity, Word } from '../types';
 import { GACHA_ITEMS } from '../data/gachaData';
 import { Avatar } from './Avatar';
@@ -8,6 +8,7 @@ import { playSFX } from '../utils/sound';
 import { LearningQuizModal } from './farm/LearningQuizModal';
 import { LEVELS } from '../constants';
 import { resolveImage } from '../utils/imageUtils';
+import { ConfirmModal } from './ui/ConfirmModal';
 
 interface GachaScreenProps {
   userState: UserState;
@@ -94,6 +95,12 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   const [confirmEquip, setConfirmEquip] = useState<GachaItem | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<'EASY' | 'MEDIUM' | 'HARD' | null>(null);
 
+  // In-Game Alert
+  const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'INFO' | 'DANGER' } | null>(null);
+
+  // Use Memo for words to prevent re-renders in child modals
+  const allWords = useMemo(() => LEVELS.flatMap(l => l.words), []);
+
   // -- HELPERS --
   const ownedIds = userState.gachaCollection || [];
   const ownedItems = GACHA_ITEMS.filter(item => ownedIds.includes(item.id));
@@ -156,8 +163,10 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       
       let speed = 50;
       let time = 0;
+      let isRunning = true;
+
       const tickLoop = () => {
-          if (!isSpinning) return;
+          if (!isRunning) return;
           playSFX('tick');
           
           time += speed;
@@ -170,7 +179,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       };
       
       tickLoop();
-      return () => {};
+      return () => { isRunning = false; };
   }, [isSpinning]);
 
   // --- ACTIONS ---
@@ -318,10 +327,16 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                >
                    {tickerItems.map((rarity, idx) => {
                        const style = getRarityStyle(rarity);
+                       // Add a glow style based on rarity to the box
+                       const boxGlow = rarity === 'LEGENDARY' ? 'shadow-[0_0_20px_rgba(234,179,8,0.8)] border-yellow-300' 
+                                     : rarity === 'EPIC' ? 'shadow-[0_0_15px_rgba(168,85,247,0.8)] border-purple-400' 
+                                     : rarity === 'RARE' ? 'shadow-[0_0_10px_rgba(59,130,246,0.5)] border-blue-400' 
+                                     : '';
+
                        return (
                            <div 
                                 key={idx} 
-                                className={`flex-shrink-0 mx-[6px] rounded-xl border-4 ${style.border} ${style.bg} flex items-center justify-center relative shadow-inner`}
+                                className={`flex-shrink-0 mx-[6px] rounded-xl border-4 ${style.border} ${style.bg} flex items-center justify-center relative shadow-inner ${boxGlow}`}
                                 style={{ width: `${CARD_WIDTH}px`, height: `${CARD_WIDTH}px` }}
                            >
                                <div className="absolute inset-0 bg-white/10 opacity-50 rounded-lg"></div>
@@ -662,8 +677,6 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
           </div>
       </div>
   );
-
-  const allWords = LEVELS.flatMap(l => l.words);
   
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-fadeIn relative overflow-hidden">
@@ -707,9 +720,17 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                 questionCount={activeQuiz === 'EASY' ? 5 : activeQuiz === 'MEDIUM' ? 10 : 15}
                 onSuccess={handleQuizSuccess}
                 onClose={() => setActiveQuiz(null)}
-                onShowAlert={(msg) => alert(msg)}
+                onShowAlert={(msg, type) => setAlertConfig({ isOpen: true, message: msg, type })}
             />
         )}
+
+        <ConfirmModal 
+            isOpen={!!alertConfig}
+            message={alertConfig?.message || ''}
+            onConfirm={() => setAlertConfig(null)}
+            type={alertConfig?.type || 'INFO'}
+            singleButton={true}
+        />
     </div>
   );
 };
