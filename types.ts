@@ -239,8 +239,9 @@ export interface UserState {
   lastMissionUpdate?: string; 
   activeOrders?: FarmOrder[]; 
   
-  // Gacha Collection
-  gachaCollection?: string[]; // Array of Gacha IDs owned
+  // Gacha Inventory (Updated from array to record)
+  // Maps ItemID -> Quantity
+  gachaInventory?: Record<string, number>; 
 
   settings: UserSettings; 
 }

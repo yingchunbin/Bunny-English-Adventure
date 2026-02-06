@@ -136,14 +136,14 @@ const playTone = (freq: number, type: OscillatorType, duration: number, startTim
   const volume = sfxVol * 0.3 * volScale;
   
   gain.gain.setValueAtTime(0, ctx.currentTime + startTime);
-  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + startTime + 0.05);
+  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + startTime + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + startTime + duration);
 
   osc.connect(gain);
   gain.connect(ctx.destination);
 
   osc.start(ctx.currentTime + startTime);
-  osc.stop(ctx.currentTime + startTime + duration);
+  osc.stop(ctx.currentTime + startTime + duration + 0.1);
 };
 
 export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip' | 'harvest' | 'water' | 'cheer' | 'eat' | 'powerup' | 'coins' | 'tick' | 'crack') => {
@@ -164,8 +164,9 @@ export const playSFX = (type: 'correct' | 'wrong' | 'click' | 'success' | 'flip'
       case 'flip':
         playTone(400, 'triangle', 0.1, 0, 0.3);
         break;
-      case 'tick': // Ticker sound
-        playTone(800, 'square', 0.03, 0, 0.2);
+      case 'tick': // NEW TICKER SOUND - Sharp, Mechanical
+        playTone(1200, 'square', 0.05, 0, 0.4);
+        playTone(800, 'square', 0.05, 0.01, 0.2);
         break;
       case 'crack': // Egg crack
         playTone(150, 'sawtooth', 0.1, 0, 0.8);

@@ -17,6 +17,7 @@ import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
 import { Map as MapIcon, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift, Bug } from 'lucide-react'; 
 import { FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from './data/farmData';
+import { GACHA_ITEMS } from './data/gachaData'; // IMPORT GACHA DATA
 import { Avatar } from './components/Avatar'; 
 import { AdminPanel } from './components/AdminPanel'; 
 
@@ -41,9 +42,10 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v17',
   'turtle_english_state_v18',
   'turtle_english_state_v19',
+  'turtle_english_state_v20',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v20'; // BUMP VERSION TO FORCE MIGRATION
+const CURRENT_VERSION_KEY = 'turtle_english_state_v21'; // BUMP VERSION TO FORCE MIGRATION
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -89,7 +91,7 @@ const DEFAULT_USER_STATE: UserState = {
   activeOrders: [], 
   wellUsageCount: 0,
   lastWellDate: '',
-  gachaCollection: [], 
+  gachaInventory: {}, // Changed from gachaCollection
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
@@ -127,16 +129,27 @@ const migrateState = (oldState: any): UserState => {
   });
 
   // 3. Copy simple arrays
-  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'activeOrders', 'completedStories', 'gachaCollection'];
+  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'activeOrders', 'completedStories'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
+
+  // 4. MIGRATION: Convert old gachaCollection array to gachaInventory record
+  if (oldState.gachaInventory) {
+      newState.gachaInventory = oldState.gachaInventory;
+  } else if (Array.isArray(oldState.gachaCollection)) {
+      const newInv: Record<string, number> = {};
+      oldState.gachaCollection.forEach((id: string) => {
+          newInv[id] = 1; // Default to 1 if user had it
+      });
+      newState.gachaInventory = newInv;
+  }
   
-  // 4. CRITICAL: Force Reset Missions to New Structure
+  // 5. CRITICAL: Force Reset Missions to New Structure
   // This prevents crashes from old achievement data formats
   newState.missions = [...FARM_ACHIEVEMENTS_DATA]; 
   
-  // 5. Generate fresh daily missions
+  // 6. Generate fresh daily missions
   const dailies = [...DAILY_MISSION_POOL]
       .sort(() => 0.5 - Math.random())
       .slice(0, 5)
@@ -144,7 +157,7 @@ const migrateState = (oldState: any): UserState => {
   
   newState.missions = [...newState.missions, ...dailies];
 
-  // 6. Smart Merge complex arrays to keep farm progress
+  // 7. Smart Merge complex arrays to keep farm progress
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
   newState.livestockSlots = smartMergeArray<LivestockSlot>(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId');
   newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
@@ -326,6 +339,7 @@ export default function App() {
   // Resolve current avatar
   const avatarItem = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
   const isGachaAvatar = userState.currentAvatarId === 'gacha_custom' && userState.currentGachaAvatarId;
+  const gachaItem = isGachaAvatar ? GACHA_ITEMS.find(i => i.imageId === userState.currentGachaAvatarId) : null;
   const isAdminMode = userState.settings.userName === 'BAKUNTIN';
 
   if (!isLoaded) return <div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-400 font-bold">Đang tải dữ liệu...</div>;
@@ -342,7 +356,11 @@ export default function App() {
                           <div className="flex items-center gap-2">
                               {/* Display Avatar in Header */}
                               {isGachaAvatar ? (
-                                  <Avatar imageId={userState.currentGachaAvatarId} size="sm" className="border-2 border-indigo-200" />
+                                  <Avatar 
+                                    imageId={userState.currentGachaAvatarId} 
+                                    rarity={gachaItem?.rarity}
+                                    size="sm" 
+                                  />
                               ) : (
                                   <Avatar emoji={avatarItem.emoji} bgGradient={avatarItem.bgGradient} size="sm" className="border-2 border-indigo-200" />
                               )}
