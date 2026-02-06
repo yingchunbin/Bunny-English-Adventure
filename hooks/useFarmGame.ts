@@ -156,7 +156,9 @@ export const useFarmGame = (
       // Ensure minimum reward is substantial
       const finalCoins = Math.max(200, Math.ceil(baseReward / 10) * 10);
 
-      const rewardStars = Math.random() < 0.4 ? Math.floor(Math.random() * 3) + 1 : 0;
+      // UPDATED: 80% Chance for Stars, minimum 30 stars if present
+      const rewardStars = Math.random() < 0.8 ? Math.floor(Math.random() * 20) + 30 : 0; // 30 to 50 Stars
+      
       const rewardFertilizer = Math.random() < 0.4 ? Math.floor(Math.random() * 3) + 1 : 0; 
 
       return {

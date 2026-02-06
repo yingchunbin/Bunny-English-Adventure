@@ -1,7 +1,7 @@
 
 import React, { useState, memo } from 'react';
 import { Crop, Decor, AnimalItem, MachineItem, ProcessingRecipe, Product } from '../../types';
-import { ShoppingBasket, X, Lock, Star, Coins, Plus, Minus, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp, Shield, Zap } from 'lucide-react';
+import { ShoppingBasket, X, Lock, Star, Coins, Sprout, Bird, Factory, Armchair, ArrowRight, Clock, TrendingUp, Shield, Zap, Plus, Minus } from 'lucide-react';
 import { playSFX } from '../../utils/sound';
 import { resolveImage } from '../../utils/imageUtils';
 
@@ -29,17 +29,17 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
   const [seedAmounts, setSeedAmounts] = useState<Record<string, number>>({});
   const farmLevel = userState.farmLevel || 1;
 
-  const adjustSeedAmount = (id: string, delta: number) => {
-    const current = seedAmounts[id] || 1;
-    const next = Math.max(1, current + delta);
-    setSeedAmounts({ ...seedAmounts, [id]: next });
-    playSFX('click');
+  const handleAmountChange = (id: string, value: string) => {
+      let val = parseInt(value);
+      if (isNaN(val) || val < 1) val = 1;
+      if (val > 999) val = 999;
+      setSeedAmounts({ ...seedAmounts, [id]: val });
   };
 
   const handleBuySeed = (crop: Crop) => {
     const amount = seedAmounts[crop.id] || 1;
     onBuySeed(crop, amount);
-    setSeedAmounts({ ...seedAmounts, [crop.id]: 1 });
+    // Do not reset amount immediately, let user buy more if they want
   };
 
   const renderBuyButton = (cost: number, currency: 'COIN' | 'STAR', onClick: () => void, isLocked: boolean) => {
@@ -201,10 +201,15 @@ const ShopModalComponent: React.FC<ShopModalProps> = ({
                                         
                                         {!isLocked ? (
                                             <div className="flex items-center gap-2 mt-2">
-                                                <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                                                    <button onClick={() => adjustSeedAmount(crop.id, -1)} className="p-1"><Minus size={12}/></button>
-                                                    <span className="w-6 text-center font-bold text-sm">{amount}</span>
-                                                    <button onClick={() => adjustSeedAmount(crop.id, 1)} className="p-1"><Plus size={12}/></button>
+                                                <div className="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+                                                    <button onClick={() => setSeedAmounts({ ...seedAmounts, [crop.id]: Math.max(1, amount - 1) })} className="p-1 hover:bg-white rounded-lg transition-colors"><Minus size={12} className="text-slate-500"/></button>
+                                                    <input 
+                                                        type="number" 
+                                                        value={amount} 
+                                                        onChange={(e) => handleAmountChange(crop.id, e.target.value)}
+                                                        className="w-8 text-center font-bold text-sm bg-transparent outline-none text-slate-700"
+                                                    />
+                                                    <button onClick={() => setSeedAmounts({ ...seedAmounts, [crop.id]: Math.min(999, amount + 1) })} className="p-1 hover:bg-white rounded-lg transition-colors"><Plus size={12} className="text-slate-500"/></button>
                                                 </div>
                                                 <div className="flex-1">
                                                     {renderBuyButton(totalCost, currency, () => handleBuySeed(crop), false)}

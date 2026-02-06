@@ -1,6 +1,5 @@
 
-// ... existing imports
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Screen, UserState, Mission, LessonLevel, LivestockSlot, MachineSlot, DecorSlot } from './types';
 import { Onboarding } from './components/Onboarding';
 import { MapScreen } from './components/MapScreen';
@@ -8,7 +7,6 @@ import { Farm } from './components/Farm';
 import { Settings } from './components/Settings';
 import { StoryAdventure } from './components/StoryAdventure'; 
 import { TimeAttackGame } from './components/TimeAttackGame';
-// Removed GeneralAchievements import
 import { GachaScreen } from './components/GachaScreen'; 
 import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
@@ -18,7 +16,6 @@ import { ConfirmModal } from './components/ui/ConfirmModal';
 import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
 import { Map as MapIcon, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift, Bug } from 'lucide-react'; 
-// Removed Trophy icon from imports as it is no longer used in header
 import { FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from './data/farmData';
 import { Avatar } from './components/Avatar'; 
 import { AdminPanel } from './components/AdminPanel'; 
@@ -43,9 +40,10 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v16',
   'turtle_english_state_v17',
   'turtle_english_state_v18',
+  'turtle_english_state_v19',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v19'; 
+const CURRENT_VERSION_KEY = 'turtle_english_state_v20'; // BUMP VERSION TO FORCE MIGRATION
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -115,47 +113,44 @@ const smartMergeArray = <T extends { id: any }>(defaultArr: T[], oldArr: any, ke
 
 const migrateState = (oldState: any): UserState => {
   let newState: UserState = { ...DEFAULT_USER_STATE };
+  
+  // 1. Copy simple primitive values
   const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'currentGachaAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
   primitives.forEach(key => {
       if (oldState[key] !== undefined) (newState as any)[key] = oldState[key];
   });
+
+  // 2. Copy objects
   const objects = ['levelStars', 'lessonGuides', 'inventory', 'harvestedCrops', 'settings'];
   objects.forEach(key => {
       if (oldState[key]) (newState as any)[key] = oldState[key];
   });
+
+  // 3. Copy simple arrays
   const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'activeOrders', 'completedStories', 'gachaCollection'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
   
-  // CRITICAL MIGRATION: Force reset missions to new system to prevent crashes
-  // We do not copy old missions because the IDs and structure have completely changed.
-  // This resets achievement progress but keeps coins/stars/items safe.
+  // 4. CRITICAL: Force Reset Missions to New Structure
+  // This prevents crashes from old achievement data formats
   newState.missions = [...FARM_ACHIEVEMENTS_DATA]; 
   
-  // Re-add daily missions if they existed and were valid, otherwise regenerate
-  // Actually, easiest is to just regenerate fresh dailies to be safe
+  // 5. Generate fresh daily missions
   const dailies = [...DAILY_MISSION_POOL]
       .sort(() => 0.5 - Math.random())
       .slice(0, 5)
       .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
   
-  // Append Dailies to the new Achievements
   newState.missions = [...newState.missions, ...dailies];
 
+  // 6. Smart Merge complex arrays to keep farm progress
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
   newState.livestockSlots = smartMergeArray<LivestockSlot>(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId');
   newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
   newState.decorSlots = smartMergeArray<DecorSlot>(DEFAULT_USER_STATE.decorSlots || [], oldState.decorSlots, 'decorId');
+  
   return newState;
-};
-
-const calculateProgressScore = (state: UserState) => {
-    let score = 0;
-    score += (state.completedLevels?.length || 0) * 10;
-    score += (state.stars || 0) * 5;
-    score += (state.coins || 0) / 100;
-    return Math.floor(score);
 };
 
 export default function App() {
@@ -167,6 +162,7 @@ export default function App() {
       try {
         let loadedState: any = null;
         
+        // Check current version first, then look backwards
         const keysToCheck = [CURRENT_VERSION_KEY, ...[...ALL_STORAGE_KEYS].reverse()];
         
         for (const key of keysToCheck) {
@@ -190,18 +186,18 @@ export default function App() {
             }
         }
 
-        if (!loadedState) {
-            console.log("ℹ️ No previous data found, starting new.");
-            loadedState = DEFAULT_USER_STATE;
-        }
-
         if (loadedState) {
+            // Perform Migration
             const migrated = migrateState(loadedState);
             setUserState(migrated);
             userStateRef.current = migrated;
             
+            // Save immediately to the new version key
             localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
-        } 
+        } else {
+            console.log("ℹ️ No previous data found, starting new.");
+            setUserState(DEFAULT_USER_STATE);
+        }
       } catch (e) {
         console.error("Critical loading error", e);
         setUserState(DEFAULT_USER_STATE);
@@ -239,7 +235,7 @@ export default function App() {
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
   const [showSettings, setShowSettings] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false); // ADMIN STATE
+  const [showAdmin, setShowAdmin] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
@@ -323,8 +319,9 @@ export default function App() {
       }
   };
 
-
-  const currentBookName = TEXTBOOKS.find(b => b.id === userState.textbook)?.name || "Chưa chọn sách";
+  // MEMOIZE THIS to prevent it from changing reference on every render
+  // This was causing the Quiz components to unmount/remount when Game Loop updated userState
+  const allWords = useMemo(() => LEVELS.flatMap(l => l.words), []);
 
   // Resolve current avatar
   const avatarItem = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
@@ -411,7 +408,7 @@ export default function App() {
                   userState={userState} 
                   onUpdateState={handleUpdateState} 
                   onExit={() => setScreen(Screen.HOME)} 
-                  allWords={LEVELS.flatMap(l => l.words)}
+                  allWords={allWords} 
                   levels={getLevels(userState.grade, userState.textbook)}
               />
           )}
@@ -444,7 +441,7 @@ export default function App() {
 
           {screen === Screen.TIME_ATTACK && (
               <TimeAttackGame 
-                  words={LEVELS.flatMap(l => l.words)}
+                  words={allWords}
                   onComplete={(score) => {
                       const earnedCoins = Math.floor(score / 10);
                       handleUpdateState(prev => ({ ...prev, coins: prev.coins + earnedCoins }));

@@ -15,6 +15,7 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings, onResetData, onImportData, onClose }) => {
   const { settings } = userState;
   const [showConfirmReset, setShowConfirmReset] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; message: string; type: 'INFO' | 'DANGER' } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleVolumeChange = (type: 'sfx' | 'bgm', val: string) => {
@@ -43,7 +44,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
               const json = JSON.parse(event.target?.result as string);
               if (onImportData) onImportData(json);
           } catch (err) {
-              alert("File lỗi! Không thể đọc dữ liệu.");
+              setAlertConfig({ isOpen: true, message: "File lỗi! Không thể đọc dữ liệu.", type: 'DANGER' });
           }
       };
       reader.readAsText(file);
@@ -106,7 +107,7 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
             </div>
           </div>
 
-          {/* Backup & Restore (New Feature) */}
+          {/* Backup & Restore */}
           <div className="space-y-4 pt-4 border-t border-slate-100">
               <h3 className="font-bold text-slate-700 uppercase text-xs tracking-widest">Dữ Liệu & Sao Lưu</h3>
               <div className="grid grid-cols-2 gap-3">
@@ -170,6 +171,14 @@ export const Settings: React.FC<SettingsProps> = ({ userState, onUpdateSettings,
         onCancel={() => setShowConfirmReset(false)}
         type="DANGER"
         confirmText="Xóa luôn"
+      />
+
+      <ConfirmModal 
+        isOpen={!!alertConfig}
+        message={alertConfig?.message || ''}
+        onConfirm={() => setAlertConfig(null)}
+        type={alertConfig?.type || 'INFO'}
+        singleButton={true}
       />
     </div>
   );

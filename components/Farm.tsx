@@ -85,6 +85,14 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
       setAlertConfig({ isOpen: true, message: msg, type });
   };
 
+  // Helper to determine shop tab from active section
+  const getSmartShopTab = (): 'SEEDS' | 'ANIMALS' | 'MACHINES' | 'DECOR' => {
+      if (activeSection === 'ANIMALS') return 'ANIMALS';
+      if (activeSection === 'MACHINES') return 'MACHINES';
+      if (activeSection === 'DECOR') return 'DECOR';
+      return 'SEEDS'; // Default for CROPS
+  };
+
   // OPTIMIZED FLY FX: Batch update state instead of looping setTimeout
   const triggerFlyFX = (startRect: DOMRect, type: 'COIN' | 'STAR' | 'EXP' | 'PRODUCT', content: React.ReactNode, amount: number) => {
       let targetX = window.innerWidth / 2;
@@ -154,6 +162,60 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
               addFloatingText(rect.left, rect.top - 50, "Bội thu!", "text-green-500 font-black");
           }
       }
+  };
+
+  const handlePlantAll = (seedId: string) => {
+      const currentInventory = userState.inventory || {};
+      const seedCount = currentInventory[seedId] || 0;
+      
+      if (seedCount <= 0) {
+          handleShowAlert("Bé hết hạt giống này rồi!");
+          return;
+      }
+
+      const emptyPlots = userState.farmPlots.filter(p => p.isUnlocked && !p.cropId);
+      if (emptyPlots.length === 0) {
+          handleShowAlert("Không còn ô đất trống nào!");
+          return;
+      }
+
+      const amountToPlant = Math.min(seedCount, emptyPlots.length);
+      const crop = CROPS.find(c => c.id === seedId);
+      const timeBonus = Math.min(50, getDecorBonus('TIME'));
+      const growthTime = crop?.growthTime || 0;
+      const reduceSeconds = (growthTime * timeBonus) / 100;
+      
+      playSFX('success');
+      
+      onUpdateState(prev => {
+          let updatedPlots = [...prev.farmPlots];
+          let planted = 0;
+          
+          updatedPlots = updatedPlots.map(p => {
+              if (p.isUnlocked && !p.cropId && planted < amountToPlant) {
+                  planted++;
+                  return { 
+                      ...p, 
+                      cropId: seedId, 
+                      plantedAt: Date.now() - (reduceSeconds * 1000), 
+                      isWatered: prev.weather === 'RAINY',
+                      hasWeed: Math.random() < 0.1, 
+                      hasBug: false, 
+                      hasMysteryBox: false 
+                  };
+              }
+              return p;
+          });
+
+          return {
+              ...prev,
+              inventory: { ...prev.inventory, [seedId]: seedCount - amountToPlant },
+              farmPlots: updatedPlots
+          };
+      });
+      
+      updateMissionProgress('HARVEST', 1); // Progress achievement (simplified)
+      setActiveModal('NONE');
   };
 
   const handleExpand = (type: 'PLOT' | 'PEN' | 'MACHINE' | 'DECOR') => {
@@ -1179,6 +1241,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                 recipes={RECIPES}
                 products={PRODUCTS}
                 userState={userState} 
+                initialTab={getSmartShopTab()} 
                 onBuySeed={(crop, amount) => {
                     const res = buyItem(crop, amount);
                     if (!res.success) handleShowAlert(res.msg);
@@ -1243,6 +1306,9 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                         if(res.success) { playSFX('success'); setActiveModal('NONE'); }
                         else { handleShowAlert(res.msg); }
                     }
+                }}
+                onPlantAll={(seedId) => {
+                    handlePlantAll(seedId);
                 }}
                 onSelectAnimal={(animalId) => {
                     if (selectedId) {

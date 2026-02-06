@@ -4,6 +4,7 @@ import { UserState } from '../types';
 import { X, Save, Unlock, Zap, Trash2, Sprout } from 'lucide-react';
 import { LEVELS } from '../constants';
 import { CROPS, ANIMALS, MACHINES, DECORATIONS } from '../data/farmData';
+import { ConfirmModal } from './ui/ConfirmModal';
 
 interface AdminPanelProps {
   userState: UserState;
@@ -12,12 +13,14 @@ interface AdminPanelProps {
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ userState, onUpdateState, onClose }) => {
-  // Local state for inputs
   const [coins, setCoins] = useState(userState.coins);
   const [stars, setStars] = useState(userState.stars);
   const [water, setWater] = useState(userState.waterDrops);
   const [fert, setFert] = useState(userState.fertilizers);
   const [farmLevel, setFarmLevel] = useState(userState.farmLevel || 1);
+  
+  const [alertMsg, setAlertMsg] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const handleSaveResources = () => {
     onUpdateState(prev => ({
@@ -28,7 +31,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ userState, onUpdateState
       fertilizers: Number(fert),
       farmLevel: Number(farmLevel)
     }));
-    alert("Đã cập nhật tài nguyên!");
+    setAlertMsg("Đã cập nhật tài nguyên!");
   };
 
   const handleUnlockAllLevels = () => {
@@ -37,7 +40,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ userState, onUpdateState
       ...prev,
       unlockedLevels: allLevelIds
     }));
-    alert("Đã mở khóa tất cả bài học!");
+    setAlertMsg("Đã mở khóa tất cả bài học!");
   };
 
   const handleUnlockFarm = () => {
@@ -48,7 +51,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ userState, onUpdateState
       machineSlots: [1,2,3,4,5,6].map(id => ({ id, isUnlocked: true, machineId: null, activeRecipeId: null, startedAt: null, queue: [], storage: [] })),
       decorSlots: [1,2,3,4,5,6].map(id => ({ id, isUnlocked: true, decorId: null })),
     }));
-    alert("Đã mở rộng toàn bộ nông trại!");
+    setAlertMsg("Đã mở rộng toàn bộ nông trại!");
   };
 
   const handleMaxInventory = () => {
@@ -60,14 +63,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ userState, onUpdateState
         ...prev,
         inventory: allItems
     }));
-    alert("Đã thêm 99 mỗi loại vật phẩm vào kho!");
+    setAlertMsg("Đã thêm 99 mỗi loại vật phẩm vào kho!");
   };
 
   const handleReset = () => {
-      if(confirm("Admin Reset: Xóa sạch dữ liệu?")) {
-          localStorage.clear();
-          window.location.reload();
-      }
+      localStorage.clear();
+      window.location.reload();
   }
 
   return (
@@ -134,12 +135,27 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ userState, onUpdateState
 
           <div className="h-px bg-slate-700 my-2"></div>
 
-          <button onClick={handleReset} className="w-full py-3 bg-red-900/50 hover:bg-red-900 border border-red-800 text-red-400 rounded-xl font-bold flex items-center justify-center gap-2">
+          <button onClick={() => setShowResetConfirm(true)} className="w-full py-3 bg-red-900/50 hover:bg-red-900 border border-red-800 text-red-400 rounded-xl font-bold flex items-center justify-center gap-2">
               <Trash2 size={18} /> Wipe Save Data
           </button>
 
         </div>
       </div>
+
+      <ConfirmModal 
+        isOpen={!!alertMsg}
+        message={alertMsg || ''}
+        onConfirm={() => setAlertMsg(null)}
+        singleButton
+      />
+
+      <ConfirmModal 
+        isOpen={showResetConfirm}
+        message="Admin Reset: Xóa sạch dữ liệu?"
+        onConfirm={handleReset}
+        onCancel={() => setShowResetConfirm(false)}
+        type="DANGER"
+      />
     </div>
   );
 };
