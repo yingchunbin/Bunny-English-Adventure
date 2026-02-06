@@ -17,9 +17,10 @@ import { SpeakingGame } from './components/SpeakingGame';
 import { ConfirmModal } from './components/ui/ConfirmModal'; 
 import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
-import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift } from 'lucide-react'; 
+import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift, Bug } from 'lucide-react'; 
 import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
 import { Avatar } from './components/Avatar'; // Import Avatar
+import { AdminPanel } from './components/AdminPanel'; // Import AdminPanel
 
 const ALL_STORAGE_KEYS = [
   'turtle_english_state',
@@ -228,6 +229,7 @@ export default function App() {
   
   const [showSettings, setShowSettings] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false); // ADMIN STATE
   const [isMuted, setIsMuted] = useState(false);
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
 
@@ -318,6 +320,7 @@ export default function App() {
   // Resolve current avatar
   const avatarItem = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
   const isGachaAvatar = userState.currentAvatarId === 'gacha_custom' && userState.currentGachaAvatarId;
+  const isAdminMode = userState.settings.userName === 'BAKUNTIN';
 
   if (!isLoaded) return <div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-400 font-bold">Đang tải dữ liệu...</div>;
 
@@ -349,6 +352,11 @@ export default function App() {
                       </div>
                       
                       <div className="flex gap-2">
+                          {isAdminMode && (
+                              <button onClick={() => setShowAdmin(true)} className="p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg animate-pulse" title="Admin Panel">
+                                  <Bug size={18} />
+                              </button>
+                          )}
                           <button onClick={handleToggleMute} className={`p-2 rounded-full transition-colors border ${isMuted ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
                               {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                           </button>
@@ -503,6 +511,14 @@ export default function App() {
               <div className="fixed inset-0 z-50">
                   <GeneralAchievements userState={userState} onClose={() => setShowAchievements(false)} />
               </div>
+          )}
+
+          {showAdmin && (
+              <AdminPanel 
+                  userState={userState}
+                  onUpdateState={handleUpdateState}
+                  onClose={() => setShowAdmin(false)}
+              />
           )}
 
           <ConfirmModal 
