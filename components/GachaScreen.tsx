@@ -137,7 +137,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       return board.sort(() => Math.random() - 0.5);
   };
 
-  // --- ENGINE: RANDOM FLASH ANIMATION (EXTENDED TO ~10s) ---
+  // --- ENGINE: RANDOM FLASH ANIMATION (Adjusted to ~7s) ---
   const flashLoop = (targetIndex: number, currentStep: number, totalSteps: number, currentDelay: number) => {
       // 1. Pick a RANDOM index to light up
       let nextIndex = Math.floor(Math.random() * TOTAL_SLOTS);
@@ -151,20 +151,16 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       let nextDelay = currentDelay;
       const remainingSteps = totalSteps - currentStep;
 
-      // Custom Timing Logic for ~10s Duration
-      // Phase 1: Fast spin (first 70% of steps)
-      // Phase 2: Slow down (last 30% of steps)
+      // Custom Timing Logic for ~7s Duration
+      // Phase 1: Fast spin (first ~4s)
+      // Phase 2: Slow down (last ~3s)
       
       if (remainingSteps < 20) {
           // Linear slowdown for the end
-          // Start increasing delay significantly
-          nextDelay += 30; 
-      } else if (remainingSteps < 10) {
-          nextDelay += 80;
-      } else if (remainingSteps < 5) {
-          nextDelay += 150;
+          // Increase delay by 20ms each step
+          nextDelay += 20; 
       } else {
-          // Maintain speed or slight variation
+          // Maintain fast speed
           nextDelay = 50; 
       }
 
@@ -230,8 +226,8 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       // 5. Start Animation
       setIsSpinning(true);
       
-      // Increased steps to 80 for longer duration (~10s with slowdown)
-      const totalSteps = 80; 
+      // Reduced steps to 60 for shorter duration (~7s with updated slowdown)
+      const totalSteps = 60; 
       flashLoop(targetIdx, 0, totalSteps, 50); // Start fast at 50ms
   };
 
