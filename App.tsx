@@ -44,9 +44,10 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v19',
   'turtle_english_state_v20',
   'turtle_english_state_v21',
+  'turtle_english_state_v22',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v22'; // BUMP VERSION TO APPLY FIX
+const CURRENT_VERSION_KEY = 'turtle_english_state_v23'; // BUMP VERSION TO APPLY FIX
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -92,6 +93,7 @@ const DEFAULT_USER_STATE: UserState = {
   activeOrders: [], 
   wellUsageCount: 0,
   lastWellDate: '',
+  lastMissionUpdate: '', // Initialize
   gachaInventory: {}, // Changed from gachaCollection
   settings: {
       bgmVolume: 0.3,
@@ -118,7 +120,8 @@ const migrateState = (oldState: any): UserState => {
   let newState: UserState = { ...DEFAULT_USER_STATE };
   
   // 1. Copy simple primitive values
-  const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'currentGachaAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate'];
+  // ADDED: lastMissionUpdate to preserved keys
+  const primitives = ['grade', 'textbook', 'coins', 'stars', 'currentAvatarId', 'currentGachaAvatarId', 'streak', 'lastLoginDate', 'farmLevel', 'farmExp', 'waterDrops', 'fertilizers', 'wellUsageCount', 'lastWellDate', 'lastMissionUpdate'];
   primitives.forEach(key => {
       if (oldState[key] !== undefined) (newState as any)[key] = oldState[key];
   });
