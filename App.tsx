@@ -333,13 +333,13 @@ export default function App() {
   };
 
   // MEMOIZE THIS to prevent it from changing reference on every render
-  // This was causing the Quiz components to unmount/remount when Game Loop updated userState
   const allWords = useMemo(() => LEVELS.flatMap(l => l.words), []);
 
   // Resolve current avatar
   const avatarItem = AVATARS.find(a => a.id === userState.currentAvatarId) || AVATARS[0];
   const isGachaAvatar = userState.currentAvatarId === 'gacha_custom' && userState.currentGachaAvatarId;
-  const gachaItem = isGachaAvatar ? GACHA_ITEMS.find(i => i.imageId === userState.currentGachaAvatarId) : null;
+  // FIX: Find by 'id' (e.g. gacha_0), NOT imageId
+  const gachaItem = isGachaAvatar ? GACHA_ITEMS.find(i => i.id === userState.currentGachaAvatarId) : null;
   const isAdminMode = userState.settings.userName === 'BAKUNTIN';
 
   if (!isLoaded) return <div className="h-screen w-full flex items-center justify-center bg-slate-50 text-slate-400 font-bold">Đang tải dữ liệu...</div>;
@@ -357,7 +357,7 @@ export default function App() {
                               {/* Display Avatar in Header */}
                               {isGachaAvatar ? (
                                   <Avatar 
-                                    imageId={userState.currentGachaAvatarId} 
+                                    imageId={gachaItem?.imageId} 
                                     rarity={gachaItem?.rarity}
                                     size="sm" 
                                   />

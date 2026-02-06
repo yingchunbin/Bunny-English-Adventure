@@ -72,6 +72,15 @@ const getCardStyle = (rarity: Rarity) => {
     }
 };
 
+const getImageEffects = (rarity: Rarity) => {
+    switch(rarity) {
+        case 'LEGENDARY': return "drop-shadow-[0_0_15px_rgba(250,204,21,0.9)] animate-pulse brightness-110";
+        case 'EPIC': return "drop-shadow-[0_0_10px_rgba(168,85,247,0.8)]";
+        case 'RARE': return "drop-shadow-[0_0_5px_rgba(96,165,250,0.8)]";
+        default: return "drop-shadow-sm grayscale-[0.1]";
+    }
+};
+
 export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateState, onExit }) => {
   const [view, setView] = useState<'MACHINE' | 'REVEAL' | 'COLLECTION' | 'QUIZ_SELECT' | 'BULK_SUMMARY'>('MACHINE');
   
@@ -468,7 +477,11 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                       </div>
 
                       <div className="relative z-10 mb-8">
-                          <img src={resolveImage(item?.imageId)} alt={item?.name} className="w-64 h-64 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] animate-float" />
+                          <img 
+                            src={resolveImage(item?.imageId)} 
+                            alt={item?.name} 
+                            className={`w-64 h-64 object-contain animate-float ${getImageEffects(item?.rarity)}`} 
+                          />
                       </div>
                       
                       <h1 className="text-4xl font-black text-white text-center mb-10 drop-shadow-md px-4">{item?.name}</h1>
@@ -583,7 +596,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                                           <img 
                                                               src={resolveImage(item.imageId)} 
                                                               alt={item.name} 
-                                                              className="w-full h-full object-contain" 
+                                                              className={`w-full h-full object-contain ${getImageEffects(item.rarity)}`} 
                                                           />
                                                       </div>
                                                       <div className="absolute bottom-0 w-full bg-black/70 backdrop-blur-[1px] py-0.5 px-1 rounded-b-lg">
@@ -617,7 +630,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                                <img 
                                     src={resolveImage(selectedItem.imageId)} 
                                     alt={selectedItem.name} 
-                                    className="w-full h-full object-contain drop-shadow-xl" 
+                                    className={`w-full h-full object-contain ${getImageEffects(selectedItem.rarity)}`} 
                                />
                           </div>
                           

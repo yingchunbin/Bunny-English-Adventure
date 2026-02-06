@@ -21,19 +21,20 @@ export const Avatar: React.FC<AvatarProps> = ({ emoji, bgGradient = "bg-gray-200
     xl: 'w-48 h-48 text-8xl border-8',
   };
 
-  // Rarity Styles
+  // Rarity Styles - Border
   let rarityClass = "border-white shadow-lg";
-  let glowEffect = "";
+  // Rarity Styles - Image Effects (Drop Shadow)
+  let imageEffects = "";
   
   if (rarity === 'LEGENDARY') {
       rarityClass = "border-yellow-400 bg-yellow-100 ring-2 ring-yellow-200";
-      glowEffect = "drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]";
+      imageEffects = "drop-shadow-[0_0_8px_rgba(234,179,8,0.9)] brightness-110";
   } else if (rarity === 'EPIC') {
       rarityClass = "border-purple-400 bg-purple-100 ring-2 ring-purple-200";
-      glowEffect = "drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]";
+      imageEffects = "drop-shadow-[0_0_6px_rgba(168,85,247,0.8)]";
   } else if (rarity === 'RARE') {
       rarityClass = "border-blue-400 bg-blue-100 ring-2 ring-blue-200";
-      glowEffect = "drop-shadow-[0_0_5px_rgba(96,165,250,0.8)]";
+      imageEffects = "drop-shadow-[0_0_4px_rgba(59,130,246,0.8)]";
   }
 
   const imgUrl = imageId ? resolveImage(imageId) : null;
@@ -41,7 +42,7 @@ export const Avatar: React.FC<AvatarProps> = ({ emoji, bgGradient = "bg-gray-200
   return (
     <div className={`${sizeClasses[size]} ${!imageId ? bgGradient : ''} rounded-full flex items-center justify-center overflow-hidden relative ${animate || rarity === 'LEGENDARY' ? 'animate-bounce-slow' : ''} ${rarityClass} ${className}`}>
       {imgUrl ? (
-          <img src={imgUrl} alt="Avatar" className={`w-full h-full object-cover ${glowEffect}`} />
+          <img src={imgUrl} alt="Avatar" className={`w-full h-full object-cover ${imageEffects}`} />
       ) : (
           <span>{emoji}</span>
       )}
