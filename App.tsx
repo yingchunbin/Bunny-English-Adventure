@@ -8,8 +8,8 @@ import { Farm } from './components/Farm';
 import { Settings } from './components/Settings';
 import { StoryAdventure } from './components/StoryAdventure'; 
 import { TimeAttackGame } from './components/TimeAttackGame';
-import { GeneralAchievements } from './components/GeneralAchievements';
-import { GachaScreen } from './components/GachaScreen'; // Import new component
+// Removed GeneralAchievements import
+import { GachaScreen } from './components/GachaScreen'; 
 import { LessonGuide } from './components/LessonGuide';
 import { FlashcardGame } from './components/FlashcardGame';
 import { TranslationGame } from './components/TranslationGame';
@@ -17,10 +17,11 @@ import { SpeakingGame } from './components/SpeakingGame';
 import { ConfirmModal } from './components/ui/ConfirmModal'; 
 import { getLevels, LEVELS, TEXTBOOKS, AVATARS } from './constants';
 import { playSFX, initAudio, playBGM, setVolumes, toggleBgmMute, isBgmMuted } from './utils/sound';
-import { Map as MapIcon, Trophy, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift, Bug } from 'lucide-react'; 
-import { FARM_ACHIEVEMENTS_DATA } from './data/farmData';
-import { Avatar } from './components/Avatar'; // Import Avatar
-import { AdminPanel } from './components/AdminPanel'; // Import AdminPanel
+import { Map as MapIcon, Settings as SettingsIcon, Book, Gamepad2, Sprout, BookOpen, PenLine, Volume2, VolumeX, Gift, Bug } from 'lucide-react'; 
+// Removed Trophy icon from imports as it is no longer used in header
+import { FARM_ACHIEVEMENTS_DATA, DAILY_MISSION_POOL } from './data/farmData';
+import { Avatar } from './components/Avatar'; 
+import { AdminPanel } from './components/AdminPanel'; 
 
 const ALL_STORAGE_KEYS = [
   'turtle_english_state',
@@ -41,9 +42,10 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v15',
   'turtle_english_state_v16',
   'turtle_english_state_v17',
+  'turtle_english_state_v18',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v18'; // Increment version
+const CURRENT_VERSION_KEY = 'turtle_english_state_v19'; 
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -89,7 +91,7 @@ const DEFAULT_USER_STATE: UserState = {
   activeOrders: [], 
   wellUsageCount: 0,
   lastWellDate: '',
-  gachaCollection: [], // Initialize
+  gachaCollection: [], 
   settings: {
       bgmVolume: 0.3,
       sfxVolume: 0.8,
@@ -121,10 +123,26 @@ const migrateState = (oldState: any): UserState => {
   objects.forEach(key => {
       if (oldState[key]) (newState as any)[key] = oldState[key];
   });
-  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'missions', 'activeOrders', 'completedStories', 'gachaCollection'];
+  const simpleArrays = ['completedLevels', 'unlockedLevels', 'unlockedAchievements', 'decorations', 'activeOrders', 'completedStories', 'gachaCollection'];
   simpleArrays.forEach(key => {
       if (Array.isArray(oldState[key])) (newState as any)[key] = oldState[key];
   });
+  
+  // CRITICAL MIGRATION: Force reset missions to new system to prevent crashes
+  // We do not copy old missions because the IDs and structure have completely changed.
+  // This resets achievement progress but keeps coins/stars/items safe.
+  newState.missions = [...FARM_ACHIEVEMENTS_DATA]; 
+  
+  // Re-add daily missions if they existed and were valid, otherwise regenerate
+  // Actually, easiest is to just regenerate fresh dailies to be safe
+  const dailies = [...DAILY_MISSION_POOL]
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 5)
+      .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
+  
+  // Append Dailies to the new Achievements
+  newState.missions = [...newState.missions, ...dailies];
+
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
   newState.livestockSlots = smartMergeArray<LivestockSlot>(DEFAULT_USER_STATE.livestockSlots || [], oldState.livestockSlots, 'animalId');
   newState.machineSlots = smartMergeArray<MachineSlot>(DEFAULT_USER_STATE.machineSlots || [], oldState.machineSlots, 'machineId');
@@ -132,7 +150,6 @@ const migrateState = (oldState: any): UserState => {
   return newState;
 };
 
-// ... (calculateProgressScore - no changes)
 const calculateProgressScore = (state: UserState) => {
     let score = 0;
     score += (state.completedLevels?.length || 0) * 10;
@@ -146,12 +163,10 @@ export default function App() {
   const [userState, setUserState] = useState<UserState>(DEFAULT_USER_STATE);
   const userStateRef = useRef(userState);
 
-  // Improved Data Loading Logic: Scans backwards for ANY valid save
   useEffect(() => {
       try {
         let loadedState: any = null;
         
-        // Scan keys from newest to oldest (including current)
         const keysToCheck = [CURRENT_VERSION_KEY, ...[...ALL_STORAGE_KEYS].reverse()];
         
         for (const key of keysToCheck) {
@@ -162,14 +177,13 @@ export default function App() {
                     if (parsed && typeof parsed === 'object') {
                         console.log(`✅ Loaded data from ${key}`);
                         loadedState = parsed;
-                        break; // Stop at first valid data found
+                        break; 
                     }
                 } catch(e) { console.warn(`Failed to parse ${key}`, e); }
             }
         }
 
         if (!loadedState) {
-            // Check backup key
             const backup = localStorage.getItem(BACKUP_KEY);
             if (backup) {
                 try { loadedState = JSON.parse(backup); console.log("✅ Loaded from backup"); } catch(e) {}
@@ -186,7 +200,6 @@ export default function App() {
             setUserState(migrated);
             userStateRef.current = migrated;
             
-            // Save immediately to current version key to ensure migration persists
             localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(migrated));
         } 
       } catch (e) {
@@ -203,7 +216,6 @@ export default function App() {
           const newState = typeof update === 'function' ? (update as any)(prev) : update;
           try {
               localStorage.setItem(CURRENT_VERSION_KEY, JSON.stringify(newState));
-              // Also save backup occasionally (simple implementation: always save backup on important state changes)
               if (Math.random() < 0.1) localStorage.setItem(BACKUP_KEY, JSON.stringify(newState));
               userStateRef.current = newState; 
           } catch (e) { console.error(e); }
@@ -223,12 +235,10 @@ export default function App() {
       }
   }, [isLoaded, userState.grade]);
 
-  // ... (Game state variables - same)
   const [activeLevel, setActiveLevel] = useState<LessonLevel | null>(null);
   const [gameStep, setGameStep] = useState<'GUIDE' | 'FLASHCARD' | 'TRANSLATION' | 'SPEAKING'>('FLASHCARD');
   
   const [showSettings, setShowSettings] = useState(false);
-  const [showAchievements, setShowAchievements] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false); // ADMIN STATE
   const [isMuted, setIsMuted] = useState(false);
   const [showConfirmBook, setShowConfirmBook] = useState(false); 
@@ -239,7 +249,6 @@ export default function App() {
       playBGM(shouldPlayBGM && !isMuted);
   }, [userState.settings, screen, isMuted]);
 
-  // ... (Handlers - same)
   const handleOnboardingComplete = (grade: number, textbookId: string) => {
     const levels = getLevels(grade, textbookId);
     const startId = levels[0]?.id; 
@@ -407,7 +416,6 @@ export default function App() {
               />
           )}
 
-          {/* ... (Other screens: CHAT, TIME_ATTACK, GAME, Settings, Achievements, ConfirmModal - Same) */}
           {screen === Screen.CHAT && (
               <StoryAdventure 
                   userState={userState} 
@@ -505,12 +513,6 @@ export default function App() {
                   onImportData={handleImportData}
                   onClose={() => setShowSettings(false)} 
               />
-          )}
-
-          {showAchievements && (
-              <div className="fixed inset-0 z-50">
-                  <GeneralAchievements userState={userState} onClose={() => setShowAchievements(false)} />
-              </div>
           )}
 
           {showAdmin && (

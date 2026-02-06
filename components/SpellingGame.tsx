@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Word } from '../types';
 import { playSFX } from '../utils/sound';
-import { Check, RefreshCcw, Volume2, HelpCircle, ArrowRight, Undo2 } from 'lucide-react';
-import { WordImage } from './WordImage';
+import { RefreshCcw, Volume2, HelpCircle } from 'lucide-react';
 
 interface SpellingGameProps {
   words: Word[];
@@ -12,29 +11,22 @@ interface SpellingGameProps {
 
 export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete }) => {
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  
-  // Stores the fixed pool of letters for the current level
   const [letterPool, setLetterPool] = useState<{id: number, char: string}[]>([]);
-  // Stores the IDs of letters currently selected/placed in the answer
   const [selectedLetterIds, setSelectedLetterIds] = useState<number[]>([]);
-  
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [hintUsed, setHintUsed] = useState(false);
 
   const targetWord = words[currentWordIndex];
 
-  // Prepare letters
   useEffect(() => {
     if (targetWord) {
       const cleanWord = targetWord.english.toUpperCase().replace(/[^A-Z]/g, '');
       const letters = cleanWord.split('').map((char, index) => ({ id: index, char }));
-      // Shuffle once and keep positions fixed
       setLetterPool(letters.sort(() => Math.random() - 0.5));
       setSelectedLetterIds([]);
       setIsCorrect(null);
       setHintUsed(false);
       
-      // Auto play audio
       const u = new SpeechSynthesisUtterance(targetWord.english);
       u.lang = 'en-US';
       window.speechSynthesis.speak(u);
@@ -42,18 +34,16 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
   }, [targetWord, currentWordIndex]);
 
   const handleSelectLetter = (letterId: number) => {
-    if (isCorrect === true) return; // Prevent action if already won
-    if (selectedLetterIds.includes(letterId)) return; // Already selected
+    if (isCorrect === true) return; 
+    if (selectedLetterIds.includes(letterId)) return; 
 
     playSFX('click');
     const newSelected = [...selectedLetterIds, letterId];
     setSelectedLetterIds(newSelected);
 
-    // Check if full word formed
     const cleanTarget = targetWord.english.toUpperCase().replace(/[^A-Z]/g, '');
     
     if (newSelected.length === cleanTarget.length) {
-        // Construct the word from selected IDs by finding them in the pool
         const formedWord = newSelected.map(id => letterPool.find(l => l.id === id)?.char).join('');
         
         if (formedWord === cleanTarget) {
@@ -69,10 +59,8 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
         } else {
             playSFX('wrong');
             setIsCorrect(false);
-            // Optional: Auto reset after delay? 
-            // Better UX: Let user see they are wrong and undo manually or wait for auto shake end
             setTimeout(() => {
-                 setIsCorrect(null); // Reset visual state but keep letters so they can fix
+                 setIsCorrect(null); 
             }, 800);
         }
     }
@@ -82,7 +70,7 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
       if (isCorrect === true) return;
       playSFX('click');
       setSelectedLetterIds(prev => prev.filter(id => id !== letterId));
-      setIsCorrect(null); // Clear wrong state if they edit
+      setIsCorrect(null); 
   };
 
   const handleReset = () => {
@@ -96,8 +84,6 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
       setHintUsed(true);
       const cleanTarget = targetWord.english.toUpperCase().replace(/[^A-Z]/g, '');
       const firstChar = cleanTarget[0];
-      
-      // Find the first occurrence of this char in the pool that hasn't been selected (though selection is empty here)
       const found = letterPool.find(l => l.char === firstChar);
       if (found) {
           handleSelectLetter(found.id);
@@ -117,16 +103,16 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
                <h3 className="text-indigo-500 font-black uppercase text-xs bg-indigo-50 px-3 py-1 rounded-full">Ghép từ</h3>
             </div>
             
-            {/* Image & Audio */}
-            <div className="relative w-32 h-32 mb-4 transform transition-transform">
-                <WordImage word={targetWord} className="w-full h-full rounded-[1.5rem] shadow-lg border-2 border-slate-100" />
+            {/* TEXT DISPLAY REPLACING IMAGE */}
+            <div className="relative w-full py-8 mb-4 bg-indigo-50 rounded-[1.5rem] border-2 border-indigo-100 flex flex-col items-center justify-center">
+                <div className="text-6xl mb-2 filter drop-shadow-sm">{targetWord.emoji || '📝'}</div>
                 <button 
                     onClick={() => {
                         const u = new SpeechSynthesisUtterance(targetWord.english);
                         u.lang = 'en-US';
                         window.speechSynthesis.speak(u);
                     }}
-                    className="absolute -bottom-2 -right-2 bg-blue-500 text-white p-2 rounded-full shadow-lg active:scale-95 hover:bg-blue-600 transition-colors"
+                    className="absolute bottom-2 right-2 bg-blue-500 text-white p-2 rounded-full shadow-lg active:scale-95 hover:bg-blue-600 transition-colors"
                 >
                     <Volume2 size={20} />
                 </button>
@@ -134,7 +120,6 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
 
             <p className="text-slate-500 font-bold mb-6 text-xl">"{targetWord.vietnamese}"</p>
 
-            {/* Answer Slots - Click to Undo */}
             <div className="flex gap-2 mb-8 flex-wrap justify-center min-h-[64px] content-center bg-slate-50 p-2 rounded-2xl w-full">
                 {cleanTarget.split('').map((_, idx) => {
                     const letterId = selectedLetterIds[idx];
@@ -156,7 +141,6 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
                 })}
             </div>
 
-            {/* Letter Bank - Fixed Grid */}
             <div className="grid grid-cols-5 gap-3 mb-6 w-full px-2">
                 {letterPool.map((letter) => {
                     const isSelected = selectedLetterIds.includes(letter.id);
@@ -164,10 +148,10 @@ export const SpellingGame: React.FC<SpellingGameProps> = ({ words, onComplete })
                         <button
                             key={letter.id}
                             onClick={() => handleSelectLetter(letter.id)}
-                            disabled={isSelected} // Disable but keep layout
+                            disabled={isSelected} 
                             className={`aspect-square rounded-xl font-black text-xl transition-all flex items-center justify-center ${
                                 isSelected 
-                                ? 'opacity-0 pointer-events-none' // Hide visually but take up space
+                                ? 'opacity-0 pointer-events-none' 
                                 : 'bg-white border-2 border-indigo-100 border-b-[5px] text-indigo-600 hover:bg-indigo-50 active:scale-95 active:border-b-2 shadow-sm'
                             }`}
                         >
