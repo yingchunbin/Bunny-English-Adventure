@@ -43,9 +43,10 @@ const ALL_STORAGE_KEYS = [
   'turtle_english_state_v18',
   'turtle_english_state_v19',
   'turtle_english_state_v20',
+  'turtle_english_state_v21',
 ];
 
-const CURRENT_VERSION_KEY = 'turtle_english_state_v21'; // BUMP VERSION TO FORCE MIGRATION
+const CURRENT_VERSION_KEY = 'turtle_english_state_v22'; // BUMP VERSION TO APPLY FIX
 const BACKUP_KEY = 'turtle_english_state_backup';
 
 const DEFAULT_USER_STATE: UserState = {
@@ -145,17 +146,31 @@ const migrateState = (oldState: any): UserState => {
       newState.gachaInventory = newInv;
   }
   
-  // 5. CRITICAL: Force Reset Missions to New Structure
-  // This prevents crashes from old achievement data formats
-  newState.missions = [...FARM_ACHIEVEMENTS_DATA]; 
+  // 5. FIX: Smart Merge Missions (Keep progress, update definitions)
+  const oldMissions = Array.isArray(oldState.missions) ? oldState.missions : [];
   
-  // 6. Generate fresh daily missions
-  const dailies = [...DAILY_MISSION_POOL]
-      .sort(() => 0.5 - Math.random())
-      .slice(0, 5)
-      .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
+  // Merge Achievement Progress
+  const mergedAchievements = FARM_ACHIEVEMENTS_DATA.map(def => {
+      const match = oldMissions.find((m: any) => m.id === def.id);
+      if (match) {
+          // Keep the user's progress but use the new definition (for description/reward updates)
+          return { ...def, current: match.current, completed: match.completed, claimed: match.claimed };
+      }
+      return def; // New achievement added in code
+  });
+
+  // Preserve Daily Missions if they exist
+  let activeDailies = oldMissions.filter((m: any) => m.category === 'DAILY');
   
-  newState.missions = [...newState.missions, ...dailies];
+  // If no dailies (first run or migration), generate new ones
+  if (activeDailies.length === 0) {
+      activeDailies = [...DAILY_MISSION_POOL]
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 5)
+          .map(m => ({ ...m, id: m.id + '_' + Date.now(), current: 0, completed: false, claimed: false }));
+  }
+
+  newState.missions = [...mergedAchievements, ...activeDailies];
 
   // 7. Smart Merge complex arrays to keep farm progress
   newState.farmPlots = smartMergeArray(DEFAULT_USER_STATE.farmPlots, oldState.farmPlots, 'cropId');
