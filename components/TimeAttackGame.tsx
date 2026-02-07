@@ -4,6 +4,7 @@ import { Word } from '../types';
 import { Clock, Zap, Home, Skull, Sword, Snowflake, Bomb, Heart, Volume2, Check, X, Type, Star, Shield, Lock, ArrowRight, RefreshCcw, Play, Trophy, Sparkles, Coins } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 import { resolveImage } from '../utils/imageUtils';
+import { GACHA_ITEMS } from '../data/gachaData';
 
 interface TimeAttackGameProps {
   words: Word[];
@@ -15,7 +16,7 @@ type QuestionType = 'EN_TO_VI' | 'VI_TO_EN' | 'LISTEN' | 'SPELLING' | 'TRUE_FALS
 
 interface StageConfig {
     id: number;
-    globalId: number; // 1 to 50
+    globalId: number; // 1 to 600+
     name: string;
     type: QuestionType;
     target: number; 
@@ -52,27 +53,26 @@ const generateMisspelling = (word: string): string => {
     return chars.join('');
 };
 
-// Algorithmic Level Generation for 50 Levels (10 Worlds x 5 Stages)
+// Algorithmic Level Generation for 120+ Levels using Gacha Items as Bosses
 const generateLevelData = (): DoorConfig[] => {
-    const worlds = [
-        { name: "Khu Rừng Nhỏ", bg: "bg-emerald-900", boss: "🦅", bossImg: "1SHyHvU0iL6S5Frkgq0mM-KQOyUwUyp1N" }, // Harpy
-        { name: "Hang Động Đá", bg: "bg-stone-800", boss: "🐍", bossImg: "1SW-rHJQWaPEGiSQcAP-CjmRuYaObI4sF" }, // Gorgon
-        { name: "Sa Mạc Nóng", bg: "bg-amber-900", boss: "🧟", bossImg: "10hs1RSpGCIjqBOZkOkxIjs6l28Cfrhgc" }, // Mummy
-        { name: "Biển Sâu", bg: "bg-blue-950", boss: "🐟", bossImg: "1rj90094F-dJGASfb21GuU4BPGf06t_Rr" }, // Anglerfish
-        { name: "Vùng Băng Giá", bg: "bg-cyan-900", boss: "🐯", bossImg: "1LveDXwjxmWf6X5as9hc-6jZQR2OzLCzI" }, // Tiger (Snow)
-        { name: "Núi Lửa", bg: "bg-red-950", boss: "🦎", bossImg: "1N1kz76R9lR0U9ckZ-QIuslacQqh5931R" }, // Salamander
-        { name: "Lâu Đài Ma", bg: "bg-purple-950", boss: "📦", bossImg: "1tkTzHXgI8IT0bWPgVki_VaylKEresOOr" }, // Mimic
-        { name: "Thế Giới Kẹo", bg: "bg-pink-900", boss: "🧚", bossImg: "1v2tMcq1AOI80i5SvDT5oHNfgZ-dnAyQl" }, // Fairy
-        { name: "Thành Phố Máy", bg: "bg-slate-900", boss: "⚡", bossImg: "1cVnvDjVA6xb69n00hO-RML8ghORjMPzd" }, // Thunder Slime
-        { name: "Vũ Trụ", bg: "bg-indigo-950", boss: "🧞", bossImg: "1jsJUmOmSvKPOf16m2u60MLjhZRWVG-SR" }, // Djinn
+    const bgColors = [
+        "bg-emerald-900", "bg-stone-800", "bg-amber-900", "bg-blue-950", "bg-cyan-900", 
+        "bg-red-950", "bg-purple-950", "bg-pink-900", "bg-slate-900", "bg-indigo-950"
     ];
 
     let globalCounter = 1;
 
-    return worlds.map((world, wIdx) => {
+    // Map each Gacha Item to a World (Area)
+    return GACHA_ITEMS.map((item, wIdx) => {
         const stages: StageConfig[] = [];
-        const baseTarget = 5 + wIdx * 2; 
-        const timeBonus = Math.max(2, 6 - Math.ceil(wIdx / 2)); 
+        
+        // Difficulty Scaling for ~120 Levels
+        // Target: Starts at 5, increases by 1 every 4 levels. Cap at 30 words/stage.
+        const baseTarget = Math.min(30, 5 + Math.floor(wIdx / 4)); 
+        
+        // Time Bonus: Starts at 5s, decreases by 1s every 30 levels. Min 2s.
+        // This ensures later levels are harder not just by volume but by speed required.
+        const timeBonus = Math.max(2, 5 - Math.floor(wIdx / 30)); 
 
         for (let s = 1; s <= 5; s++) {
             let type: QuestionType = 'EN_TO_VI';
@@ -92,19 +92,25 @@ const generateLevelData = (): DoorConfig[] => {
                 globalId: globalCounter++,
                 name: s === 5 ? `BOSS` : name,
                 type,
-                target: s === 5 ? baseTarget * 1.5 : baseTarget,
+                target: s === 5 ? Math.ceil(baseTarget * 1.5) : baseTarget,
                 timeAdd: timeBonus,
                 desc,
                 icon
             });
         }
 
+        // Determine Boss Emoji fallback based on rarity
+        let bossEmoji = "👾";
+        if (item.rarity === 'LEGENDARY') bossEmoji = "🐉";
+        else if (item.rarity === 'EPIC') bossEmoji = "👹";
+        else if (item.rarity === 'RARE') bossEmoji = "🐺";
+
         return {
             id: wIdx + 1,
-            name: world.name,
-            bg: world.bg,
-            bossEmoji: world.boss,
-            bossImage: world.bossImg,
+            name: item.name, // World Name is the Item Name
+            bg: bgColors[wIdx % bgColors.length], // Cycle backgrounds
+            bossEmoji: bossEmoji,
+            bossImage: item.imageId,
             stages
         };
     });
@@ -308,7 +314,7 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
               playSFX(isBossStage ? 'cheer' : 'success');
               
               // Unlock next level if this was the furthest
-              if (currentStage.globalId === maxUnlockedLevel && maxUnlockedLevel < 50) {
+              if (currentStage.globalId === maxUnlockedLevel && maxUnlockedLevel < DOORS.length * 5) {
                   setMaxUnlockedLevel(prev => prev + 1);
               }
 
@@ -544,7 +550,7 @@ export const TimeAttackGame: React.FC<TimeAttackGameProps> = ({ words, onComplet
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
                   <div className="text-center mb-6">
                       <div className="text-6xl mb-2">⚔️</div>
-                      <p className="text-slate-400 text-sm">Vượt qua 50 cửa ải để trở thành Huyền thoại!</p>
+                      <p className="text-slate-400 text-sm">Vượt qua {DOORS.length * 5} cửa ải để trở thành Huyền thoại!</p>
                   </div>
 
                   {DOORS.map((door, idx) => {
