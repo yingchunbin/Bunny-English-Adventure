@@ -13,7 +13,7 @@ import { ItemManageModal } from './farm/ItemManageModal';
 import { MachineProductionModal } from './farm/MachineProductionModal'; 
 import { ConfirmModal } from './ui/ConfirmModal';
 import { useFarmGame } from '../hooks/useFarmGame';
-import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, Settings, Layers, Armchair, Plus, Sparkles, Shield, Sprout } from 'lucide-react';
+import { Lock, Droplets, Clock, Zap, Tractor, Factory, ShoppingBasket, Bird, Scroll, Truck, Hand, Hammer, Home, Coins, Star, AlertTriangle, Bug, Warehouse, Settings, Layers, Armchair, Plus, Sparkles, Shield, Sprout, CloudRain } from 'lucide-react';
 import { playSFX } from '../utils/sound';
 import { resolveImage } from '../utils/imageUtils';
 
@@ -46,7 +46,7 @@ interface FloatingText {
 }
 
 export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, allWords }) => {
-  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
+  const { now, plantSeed, placeAnimal, placeMachine, reclaimItem, waterPlot, waterAll, resolvePest, harvestPlot, harvestAll, buyItem, feedAnimal, collectProduct, startProcessing, collectMachine, canAfford, deliverOrder, addReward, generateOrders, checkWellUsage, useWell, speedUpItem, placeDecor, removeDecor, sellItem, sellItemsBulk, getDecorBonus, updateMissionProgress } = useFarmGame(userState, onUpdateState);
   
   const [activeSection, setActiveSection] = useState<FarmSection>('CROPS');
   const [activeModal, setActiveModal] = useState<'NONE' | 'PLOT' | 'SHOP' | 'MISSIONS' | 'ORDERS' | 'INVENTORY' | 'BARN' | 'QUIZ' | 'MANAGE_ITEM' | 'PRODUCTION'>('NONE');
@@ -309,11 +309,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
   };
 
   const handleWellClick = (e: React.MouseEvent) => {
-      const status = checkWellUsage();
-      if (!status.allowed) {
-          handleShowAlert(status.msg || "Giếng thần đã cạn nước hôm nay!", 'INFO');
-          return;
-      }
+      // Well check always allowed now (unlimited)
       setQuizContext({ type: 'WATER' });
       setActiveModal('QUIZ');
   };
@@ -550,9 +546,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
           </button>
           <button id="well-btn" onClick={handleWellClick} className="w-12 h-12 bg-blue-500 text-white rounded-2xl shadow-md border-2 border-white flex items-center justify-center active:scale-95 transition-all relative">
               <Droplets size={22} />
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[8px] px-1.5 rounded-full border border-white font-bold">
-                  {5 - (userState.wellUsageCount || 0)}
-              </span>
+              {/* Removed limit badge as requested */}
           </button>
       </div>
   );
@@ -994,16 +988,31 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
 
   const getReadyCount = () => {
       let count = 0;
+      // Crops
       userState.farmPlots.forEach(p => {
           if (p.cropId && p.plantedAt && !p.hasBug && !p.hasWeed) {
               const c = CROPS.find(crop => crop.id === p.cropId);
               if (c && (now - p.plantedAt)/1000 >= c.growthTime) count++;
           }
       });
+      // Animals
+      userState.livestockSlots?.forEach(s => {
+          if(s.storage && s.storage.length > 0) count += s.storage.length;
+      });
+      // Machines
+      userState.machineSlots?.forEach(s => {
+          if(s.storage && s.storage.length > 0) count += s.storage.length;
+      });
+      
       return count;
   };
 
+  const getWaterableCount = () => {
+      return userState.farmPlots.filter(p => p.cropId && !p.isWatered && userState.weather !== 'RAINY').length;
+  }
+
   const readyCount = getReadyCount();
+  const waterableCount = getWaterableCount();
   const nextLevelExp = (userState.farmLevel || 1) * 100;
 
   return (
@@ -1046,8 +1055,33 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
             {renderSectionTabs()}
         </div>
 
+        {/* Water All Button */}
+        {waterableCount > 0 && userState.waterDrops >= waterableCount && (
+            <div className="fixed bottom-44 right-4 z-[60] animate-bounce">
+                 <button 
+                    onClick={() => {
+                        const res = waterAll();
+                        if (res.success) {
+                            playSFX('water');
+                            if(document.getElementById('well-btn')) {
+                                const rect = document.getElementById('well-btn')!.getBoundingClientRect();
+                                triggerFlyFX(rect, 'PRODUCT', <Droplets className="text-blue-500" size={24} fill="currentColor"/>, res.count);
+                            }
+                        } else {
+                            handleShowAlert(res.msg || "Không đủ nước!");
+                        }
+                    }}
+                    className="bg-blue-500 text-white w-14 h-14 rounded-full shadow-2xl border-4 border-white flex flex-col items-center justify-center font-black text-[9px] uppercase hover:bg-blue-600 transition-all active:scale-90"
+                >
+                    <CloudRain size={20} />
+                    <span>Tưới Hết</span>
+                    <span className="bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center absolute -top-1 -right-1 border border-white shadow-sm text-[9px]">{waterableCount}</span>
+                </button>
+            </div>
+        )}
+
         {/* Harvest All Button */}
-        {readyCount >= 2 && (
+        {readyCount >= 1 && (
             <div className="fixed bottom-24 right-4 z-[60] animate-bounce">
                 <button 
                     onClick={() => {
@@ -1056,7 +1090,7 @@ export const Farm: React.FC<FarmProps> = ({ userState, onUpdateState, onExit, al
                             playSFX('success');
                             if(barnBtnRef.current) {
                                 const rect = barnBtnRef.current.getBoundingClientRect();
-                                triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">📦</span>, res.count);
+                                triggerFlyFX(rect, 'PRODUCT', <span className="text-3xl">📦</span>, Math.min(8, res.count));
                                 triggerFlyFX(rect, 'EXP', <Zap className="text-blue-500" size={24} fill="currentColor"/>, 2);
                             }
                         }

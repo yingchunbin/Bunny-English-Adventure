@@ -414,18 +414,13 @@ export const useFarmGame = (
       });
   }, [onUpdateState]);
 
-  // ... (Rest of the actions: canAfford, checkWellUsage, useWell, buyItem, etc. remain the same)
-  // They are triggered by user interaction so no need to change logic, just ensure they are efficient.
-
   const canAfford = (amount: number, currency: 'COIN' | 'STAR' = 'COIN') => {
       if (currency === 'STAR') return (userState.stars || 0) >= amount;
       return userState.coins >= amount;
   };
 
   const checkWellUsage = () => {
-      if ((userState.wellUsageCount || 0) >= 5) {
-          return { allowed: false, msg: "Bé đã lấy nước 5 lần hôm nay rồi. Mai quay lại nhé!" };
-      }
+      // UNLIMITED USAGE NOW
       return { allowed: true };
   };
 
@@ -591,6 +586,32 @@ export const useFarmGame = (
       return { success: true };
   };
 
+  const waterAll = () => {
+      const now = Date.now();
+      const needsWater = userState.farmPlots.filter(p => p.cropId && !p.isWatered && userState.weather !== 'RAINY');
+      const waterCost = needsWater.length;
+
+      if (waterCost === 0) return { success: false };
+      if (userState.waterDrops < waterCost) return { success: false, msg: `Cần ${waterCost} nước nhưng bé chỉ có ${userState.waterDrops}!` };
+
+      playSFX('water');
+      
+      onUpdateState(prev => ({
+          ...prev,
+          waterDrops: prev.waterDrops - waterCost,
+          farmPlots: prev.farmPlots.map(p => {
+              if (p.cropId && !p.isWatered) {
+                  const crop = CROPS.find(c => c.id === p.cropId);
+                  const reduction = (crop?.growthTime || 0) * 0.25 * 1000;
+                  return { ...p, isWatered: true, plantedAt: (p.plantedAt || now) - reduction };
+              }
+              return p;
+          })
+      }));
+      updateMissionProgress('WATER', waterCost);
+      return { success: true, count: waterCost };
+  };
+
   const resolvePest = (plotId: number) => {
       onUpdateState(prev => {
           let newExp = (prev.farmExp || 0) + 10;
@@ -646,21 +667,22 @@ export const useFarmGame = (
 
   const harvestAll = () => {
       const now = Date.now();
-      let harvestedCount = 0;
+      let totalHarvestedCount = 0;
       let expGained = 0;
       const newHarvestedCrops = { ...(userState.harvestedCrops || {}) };
-      const newFarmPlots = [...userState.farmPlots];
       
       const expBonusPercent = getDecorBonus('EXP');
       const yieldBonus = getDecorBonus('YIELD');
 
+      // 1. HARVEST CROPS
+      const newFarmPlots = [...userState.farmPlots];
       newFarmPlots.forEach((plot, index) => {
           if (plot.cropId && plot.plantedAt && !plot.hasBug && !plot.hasWeed) { 
               const crop = CROPS.find(c => c.id === plot.cropId);
               if (crop) {
                   const elapsed = (now - plot.plantedAt) / 1000;
                   if (elapsed >= crop.growthTime) {
-                      harvestedCount++;
+                      totalHarvestedCount++;
                       
                       const bonusExp = Math.floor(crop.exp * (expBonusPercent / 100));
                       expGained += (crop.exp + bonusExp);
@@ -684,13 +706,47 @@ export const useFarmGame = (
           }
       });
 
-      if (harvestedCount > 0) {
+      // 2. HARVEST ANIMALS
+      let newLivestockSlots = userState.livestockSlots ? [...userState.livestockSlots] : [];
+      newLivestockSlots = newLivestockSlots.map(slot => {
+          if (slot.animalId && slot.storage && slot.storage.length > 0) {
+              const animal = ANIMALS.find(a => a.id === slot.animalId);
+              if (animal) {
+                  totalHarvestedCount += slot.storage.length;
+                  const baseExp = animal.exp * slot.storage.length;
+                  expGained += baseExp + Math.floor(baseExp * (expBonusPercent / 100));
+                  
+                  newHarvestedCrops[animal.produceId] = (newHarvestedCrops[animal.produceId] || 0) + slot.storage.length;
+                  return { ...slot, storage: [] }; // Clear storage
+              }
+          }
+          return slot;
+      });
+
+      // 3. HARVEST MACHINES
+      let newMachineSlots = userState.machineSlots ? [...userState.machineSlots] : [];
+      newMachineSlots = newMachineSlots.map(slot => {
+          if (slot.machineId && slot.storage && slot.storage.length > 0) {
+              slot.storage.forEach(recipeId => {
+                  const recipe = RECIPES.find(r => r.id === recipeId);
+                  if (recipe) {
+                      totalHarvestedCount++;
+                      expGained += recipe.exp + Math.floor(recipe.exp * (expBonusPercent / 100));
+                      newHarvestedCrops[recipe.outputId] = (newHarvestedCrops[recipe.outputId] || 0) + 1;
+                  }
+              });
+              return { ...slot, storage: [] }; // Clear storage
+          }
+          return slot;
+      });
+
+      if (totalHarvestedCount > 0) {
           playSFX('success');
           onUpdateState(prev => {
               let newExp = (prev.farmExp || 0) + expGained;
               let newLevel = prev.farmLevel || 1;
               let loops = 0;
-              while (newExp >= newLevel * 100 && loops < 10) {
+              while (newExp >= newLevel * 100 && loops < 20) {
                   newExp -= newLevel * 100;
                   newLevel++;
                   loops++;
@@ -700,12 +756,14 @@ export const useFarmGame = (
                   ...prev,
                   harvestedCrops: newHarvestedCrops,
                   farmPlots: newFarmPlots,
+                  livestockSlots: newLivestockSlots,
+                  machineSlots: newMachineSlots,
                   farmExp: newExp,
                   farmLevel: newLevel
               };
           });
-          updateMissionProgress('HARVEST', harvestedCount);
-          return { success: true, count: harvestedCount };
+          updateMissionProgress('HARVEST', totalHarvestedCount);
+          return { success: true, count: totalHarvestedCount };
       }
       return { success: false, count: 0 };
   };
@@ -1066,9 +1124,10 @@ export const useFarmGame = (
       placeMachine,
       reclaimItem, 
       waterPlot, 
+      waterAll, // NEW
       resolvePest, 
       harvestPlot, 
-      harvestAll, 
+      harvestAll, // UPDATED
       buyItem, 
       feedAnimal, 
       collectProduct, 
