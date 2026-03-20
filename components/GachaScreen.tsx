@@ -82,7 +82,7 @@ const getImageEffects = (rarity: Rarity) => {
 };
 
 export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateState, onExit }) => {
-  const [view, setView] = useState<'MACHINE' | 'REVEAL' | 'COLLECTION' | 'QUIZ_SELECT' | 'BULK_SUMMARY'>('MACHINE');
+  const [view, setView] = useState<'MACHINE' | 'REVEAL' | 'COLLECTION' | 'QUIZ_SELECT' | 'BULK_SUMMARY' | 'FUSE_REVEAL'>('MACHINE');
   
   // Machine State
   const [slots, setSlots] = useState<Rarity[]>(INITIAL_PATTERN);
@@ -96,6 +96,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
   const [revealProgress, setRevealProgress] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [selectedItem, setSelectedItem] = useState<GachaItem | null>(null);
+  const [fuseSourceItem, setFuseSourceItem] = useState<GachaItem | null>(null);
 
   // Misc
   const [activeQuiz, setActiveQuiz] = useState<'EASY' | 'MEDIUM' | 'HARD' | null>(null);
@@ -272,6 +273,42 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       playSFX('click');
       setSelectedItem(null);
       setAlertConfig({ isOpen: true, message: `Đã chọn ${item.name} làm Avatar!`, type: 'INFO' });
+  };
+
+  const handleFuse = (item: GachaItem) => {
+      if ((ownedInventory[item.id] || 0) < 10) return;
+      if (item.rarity === 'LEGENDARY') return;
+
+      const nextRarity: Record<string, Rarity> = {
+          'COMMON': 'RARE',
+          'RARE': 'EPIC',
+          'EPIC': 'LEGENDARY'
+      };
+      
+      const targetRarity = nextRarity[item.rarity];
+      const candidates = GACHA_ITEMS.filter(i => i.rarity === targetRarity);
+      const winner = candidates[Math.floor(Math.random() * candidates.length)];
+
+      onUpdateState(prev => {
+          const newInv = { ...(prev.gachaInventory || {}) };
+          newInv[item.id] -= 10;
+          if (newInv[item.id] <= 0) delete newInv[item.id];
+          newInv[winner.id] = (newInv[winner.id] || 0) + 1;
+          return { ...prev, gachaInventory: newInv };
+      });
+
+      playSFX('success');
+      setSelectedItem(null);
+      
+      setFuseSourceItem(item);
+      setFinalItem(winner);
+      setView('FUSE_REVEAL');
+      setIsRevealed(false);
+      
+      setTimeout(() => {
+          playSFX('cheer');
+          setIsRevealed(true);
+      }, 2500);
   };
 
   const handleQuizSuccess = () => {
@@ -520,6 +557,77 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
       </div>
   );
 
+  const renderFuseReveal = () => {
+      const source = fuseSourceItem;
+      const target = finalItem;
+      
+      if (!source || !target) return null;
+
+      let bgGradient = "from-slate-800 to-slate-900";
+      let glowColor = "bg-white";
+      let rarityColor = "text-white/50";
+
+      if (target.rarity === 'LEGENDARY') { 
+          bgGradient = "from-yellow-900 to-slate-900"; 
+          glowColor = "bg-yellow-500"; 
+          rarityColor = "text-yellow-400";
+      }
+      if (target.rarity === 'EPIC') { 
+          bgGradient = "from-purple-900 to-slate-900"; 
+          glowColor = "bg-purple-500"; 
+          rarityColor = "text-purple-300";
+      }
+      if (target.rarity === 'RARE') { 
+          bgGradient = "from-blue-900 to-slate-900"; 
+          glowColor = "bg-blue-500"; 
+          rarityColor = "text-blue-300";
+      }
+
+      return (
+          <div className={`fixed inset-0 z-[120] flex flex-col items-center justify-center p-6 bg-gradient-to-b ${bgGradient} animate-fadeIn`}>
+              {!isRevealed ? (
+                  <div className="flex flex-col items-center justify-center w-full h-full">
+                      <h2 className="text-white text-3xl font-black uppercase mb-12 animate-pulse drop-shadow-lg text-center">Đang dung hợp...</h2>
+                      <div className="relative flex items-center justify-center w-64 h-64">
+                          <div className="absolute inset-0 bg-purple-500 rounded-full blur-3xl animate-pulse opacity-60"></div>
+                          <img 
+                              src={resolveImage(source.imageId)} 
+                              alt={source.name} 
+                              className="w-32 h-32 object-contain animate-shake brightness-150 relative z-10" 
+                          />
+                          {[...Array(3)].map((_, i) => (
+                              <div key={i} className="absolute w-full h-full animate-spin" style={{ animationDuration: `${0.5 + i * 0.2}s` }}>
+                                  <div className="w-6 h-6 absolute top-0 left-1/2 -translate-x-1/2 bg-white rounded-full blur-sm opacity-80"></div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              ) : (
+                  <div className="flex flex-col items-center animate-scaleIn w-full h-full justify-center">
+                      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200vw] h-[200vw] ${glowColor} opacity-20 animate-spin-slow pointer-events-none [mask-image:radial-gradient(circle,black_30%,transparent_70%)]`}></div>
+                      
+                      <div className={`text-2xl font-black uppercase tracking-[0.3em] mb-8 ${rarityColor} drop-shadow-lg animate-fadeIn delay-500`}>
+                          {getRarityLabel(target.rarity)}
+                      </div>
+
+                      <div className="relative z-10 mb-8">
+                          <img 
+                              src={resolveImage(target.imageId)} 
+                              alt={target.name} 
+                              className={`w-64 h-64 object-contain animate-float ${getImageEffects(target.rarity)}`} 
+                          />
+                      </div>
+                      
+                      <h1 className="text-4xl font-black text-white text-center mb-10 drop-shadow-md px-4">{target.name}</h1>
+                      <button onClick={() => { setView('COLLECTION'); setFuseSourceItem(null); setFinalItem(null); }} className="px-12 py-4 bg-white text-slate-900 rounded-full font-black text-xl shadow-xl hover:scale-105 active:scale-95 transition-all">
+                          TUYỆT VỜI
+                      </button>
+                  </div>
+              )}
+          </div>
+      );
+  };
+
   const renderCollection = () => {
       const pools = [
           { type: 'COMMON', label: 'Thường', bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-600', prob: 70 },
@@ -644,6 +752,14 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
                           >
                               <Check size={20}/> Đặt làm Avatar
                           </button>
+                          {ownedInventory[selectedItem.id] >= 10 && selectedItem.rarity !== 'LEGENDARY' && (
+                              <button 
+                                onClick={() => handleFuse(selectedItem)} 
+                                className="w-full py-4 bg-purple-500 text-white rounded-2xl font-bold shadow-lg shadow-purple-200 hover:bg-purple-600 transition-colors flex items-center justify-center gap-2 active:scale-95"
+                              >
+                                  <Zap size={20}/> Dung hợp 10 thẻ
+                              </button>
+                          )}
                       </div>
                   </div>
               </div>
@@ -672,7 +788,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
 
   return (
     <div className="flex flex-col h-full bg-slate-50 animate-fadeIn relative overflow-hidden" onClick={initAudio}>
-        {view !== 'QUIZ_SELECT' && view !== 'REVEAL' && view !== 'BULK_SUMMARY' && (
+        {view !== 'QUIZ_SELECT' && view !== 'REVEAL' && view !== 'BULK_SUMMARY' && view !== 'FUSE_REVEAL' && (
             <div className="bg-indigo-600 px-4 py-3 flex items-center justify-between shadow-md z-30 text-white hidden">
                {/* Header hidden in Machine view for full immersion, shown in others */}
             </div>
@@ -684,6 +800,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ userState, onUpdateSta
              {view === 'BULK_SUMMARY' && renderBulkSummary()}
              {view === 'COLLECTION' && renderCollection()}
              {view === 'QUIZ_SELECT' && renderQuizSelect()}
+             {view === 'FUSE_REVEAL' && renderFuseReveal()}
         </div>
 
         {activeQuiz && (
